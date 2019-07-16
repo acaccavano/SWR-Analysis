@@ -1,6 +1,9 @@
 function [data, hand] = analyzeCaFile(data, hand, param, saveFile, expCaFile, expSWRFile)
 %% [data, hand] = analyzeCaFile(data, hand, param, saveFile, expCaFile, expSWRFile)
 
+%  Script to detect Ca transients above thresholds (previously calculated).
+%  Will correlate to previosuly detected SWR events if option selected
+
 %% Handle input arguments - if not entered
 if (nargin < 6) expSWRFile = []; end
 if (nargin < 5) expCaFile  = []; end
