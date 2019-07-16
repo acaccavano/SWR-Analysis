@@ -1,4 +1,7 @@
 function [data, hand] = analyzePSCFile(data, hand, param, saveFile, pscFile, expPSCFile, expSWRFile)
+%% [data, hand] = analyzePSCFile(data, hand, param, saveFile, pscFile, expPSCFile, expSWRFile)
+
+%  function to correlate detected PSCs (both IPSCs and EPSCs) with previosuly analyzed SWR events
 
 %% Handle input arguments - if not entered
 if (nargin < 7) expSWRFile = []; end
