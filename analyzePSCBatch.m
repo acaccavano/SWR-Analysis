@@ -12,17 +12,26 @@ if (nargin < 1) param        = struct; end
 if isempty(param) param      = struct; end
 
 % Set default parameters if not specified
-if ~isfield(param,'fileNum')              param.fileNum = 2; end
-if ~isfield(param,'importPSCOption')      param.importPSCOption = 1; end
-if ~isfield(param,'swrPSCOption')         param.swrPSCOption = 1; end
-if ~isfield(param,'useSWRDurationOption') param.useSWRDurationOption = 0; end
-if ~isfield(param,'useSWRWindowOption')   param.useSWRWindowOption = 1; end
-if ~isfield(param,'swrWindow')            param.swrWindow = 100; end
-if ~isfield(param,'parsePSCOption')       param.parsePSCOption = 1; end
-if ~isfield(param,'calcEvMatrixOption')   param.calcEvMatrixOption = 1; end
-if ~isfield(param,'expPSCEvOption')       param.expPSCEvOption = 1; end
-if ~isfield(param,'expSWREvOption')       param.expSWREvOption = 1;   end
-if ~isfield(param,'reAnalyzeOption')      param.reAnalyzeOption = 0; end
+if ~isfield(param,'fileNum')              param.fileNum              = 2;   end
+if ~isfield(param,'importPSCOption')      param.importPSCOption      = 1;   end
+if ~isfield(param,'swrPSCOption')         param.swrPSCOption         = 1;   end
+if ~isfield(param,'useSWRDurationOption') param.useSWRDurationOption = 0;   end
+if ~isfield(param,'useSWRWindowOption')   param.useSWRWindowOption   = 1;   end
+if ~isfield(param,'swrWindow')            param.swrWindow            = 100; end
+if ~isfield(param,'parsePSCOption')       param.parsePSCOption       = 1;   end
+if ~isfield(param,'calcEvMatrixOption')   param.calcEvMatrixOption   = 1;   end
+if ~isfield(param,'expPSCEvOption')       param.expPSCEvOption       = 1;   end
+if ~isfield(param,'expSWREvOption')       param.expSWREvOption       = 1;   end
+if ~isfield(param,'gammaOption')          param.gammaOption          = 1;   end
+if ~isfield(param,'gammaLim1')            param.gammaLim1            = 20;  end
+if ~isfield(param,'gammaLim2')            param.gammaLim2            = 50;  end
+if ~isfield(param,'rOption')              param.rOption              = 1;   end
+if ~isfield(param,'rLim1')                param.rLim1                = 120; end
+if ~isfield(param,'rLim2')                param.rLim2                = 220; end
+if ~isfield(param,'spectOption')          param.spectOption          = 1;   end
+if ~isfield(param,'spectLim1')            param.spectLim1            = 1;   end
+if ~isfield(param,'spectLim2')            param.spectLim2            = 600; end
+if ~isfield(param,'reAnalyzeOption')      param.reAnalyzeOption      = 0;   end
 
 % Assign OS specific variables:
 if ispc

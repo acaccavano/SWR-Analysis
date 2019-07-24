@@ -347,13 +347,19 @@ if param.parseSpkOption
       data.C.SWR.spike.evPeakA{swr}   = data.C.spike.evPeakA(data.C.spike.evStartA>=loWin & data.C.spike.evEndA<=hiWin) - (loWin - 1);
       data.C.SWR.spike.evEndA{swr}    = data.C.spike.evEndA(data.C.spike.evStartA>=loWin & data.C.spike.evEndA<=hiWin) - (loWin - 1);
       data.C.SWR.spike.evStatusA{swr} = data.C.spike.evStatusA(loWin : hiWin);
-      
+
     end
-    
+
     data.C.SWR.spike.evStartA  = data.C.SWR.spike.evStartA';
     data.C.SWR.spike.evPeakA   = data.C.SWR.spike.evPeakA';
     data.C.SWR.spike.evEndA    = data.C.SWR.spike.evEndA';
     data.C.SWR.spike.evStatusA = data.C.SWR.spike.evStatusA';
+    
+    % Calculate summed event spike status over all SWR events:
+    data.C.SWR.spike.evStatusSum = zeros(length(data.C.SWR.spike.evStatusA{1}),1);
+    for swr = 1:length(data.C.SWR.spike.evStatusA) 
+      data.C.SWR.spike.evStatusSum = data.C.SWR.spike.evStatusSum + data.C.SWR.spike.evStatusA{swr};
+    end
     
   end
 end

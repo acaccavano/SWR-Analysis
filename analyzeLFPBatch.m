@@ -79,6 +79,7 @@ if ~isfield(param,'dsFactor')         param.dsFactor          = 1;    end
 if ~isfield(param,'lfpChannel')       param.lfpChannel        = 1;    end
 if ~isfield(param,'cellOption')       param.cellOption        = 1;    end
 if ~isfield(param,'cellChannel')      param.cellChannel       = 2;    end
+if ~isfield(param,'notchOption')      param.notchOption       = 0;    end
 if ~isfield(param,'lfpOption')        param.lfpOption         = 1;    end
 if ~isfield(param,'lfpLim1')          param.lfpLim1           = 1;    end
 if ~isfield(param,'lfpLim2')          param.lfpLim2           = 1000; end
@@ -109,9 +110,12 @@ if ~isfield(param,'gammaLim2')        param.gammaLim2         = 55;   end
 if ~isfield(param,'hgammaOption')     param.hgammaOption      = 0;    end
 if ~isfield(param,'hgammaLim1')       param.hgammaLim1        = 65;   end
 if ~isfield(param,'hgammaLim2')       param.hgammaLim2        = 85;   end
+if ~isfield(param,'fROption')         param.fROption          = 1;    end
+if ~isfield(param,'fRLim1')           param.fRLim1            = 250;  end
+if ~isfield(param,'fRLim2')           param.fRLim2            = 600;  end
 if ~isfield(param,'spectOption')      param.spectOption       = 1;    end
 if ~isfield(param,'spectLim1')        param.spectLim1         = 1;    end
-if ~isfield(param,'spectLim2')        param.spectLim2         = 250;  end
+if ~isfield(param,'spectLim2')        param.spectLim2         = 600;  end
 if ~isfield(param,'reAnalyzeOption')  param.reAnalyzeOption   = 0;    end
 
 % Assign OS specific variables:

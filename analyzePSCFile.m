@@ -18,17 +18,26 @@ if isempty(hand)  hand     = struct; end
 if isempty(data)  data     = struct; end
 
 % Set default parameters if not specified
-if ~isfield(param,'fileNum')              param.fileNum = 1; end
-if ~isfield(param,'importPSCOption')      param.importPSCOption = 1; end
-if ~isfield(param,'swrPSCOption')         param.swrPSCOption = 1; end
-if ~isfield(param,'useSWRDurationOption') param.useSWRDurationOption = 0; end
-if ~isfield(param,'useSWRWindowOption')   param.useSWRWindowOption = 1; end
-if ~isfield(param,'swrWindow')            param.swrWindow = 100; end
-if ~isfield(param,'parsePSCOption')       param.parsePSCOption = 1; end
-if ~isfield(param,'calcEvMatrixOption')   param.calcEvMatrixOption = 1; end
-if ~isfield(param,'expPSCEvOption')       param.expPSCEvOption = 1; end
-if ~isfield(param,'expSWREvOption')       param.expSWREvOption = 1; end
-if ~isfield(param,'reAnalyzeOption')      param.reAnalyzeOption = 0; end
+if ~isfield(param,'fileNum')              param.fileNum              = 1;   end
+if ~isfield(param,'importPSCOption')      param.importPSCOption      = 1;   end
+if ~isfield(param,'swrPSCOption')         param.swrPSCOption         = 1;   end
+if ~isfield(param,'useSWRDurationOption') param.useSWRDurationOption = 0;   end
+if ~isfield(param,'useSWRWindowOption')   param.useSWRWindowOption   = 1;   end
+if ~isfield(param,'swrWindow')            param.swrWindow            = 100; end
+if ~isfield(param,'parsePSCOption')       param.parsePSCOption       = 1;   end
+if ~isfield(param,'calcEvMatrixOption')   param.calcEvMatrixOption   = 1;   end
+if ~isfield(param,'expPSCEvOption')       param.expPSCEvOption       = 1;   end
+if ~isfield(param,'expSWREvOption')       param.expSWREvOption       = 1;   end
+if ~isfield(param,'gammaOption')          param.gammaOption          = 1;   end
+if ~isfield(param,'gammaLim1')            param.gammaLim1            = 20;  end
+if ~isfield(param,'gammaLim2')            param.gammaLim2            = 50;  end
+if ~isfield(param,'rOption')              param.rOption              = 1;   end
+if ~isfield(param,'rLim1')                param.rLim1                = 120; end
+if ~isfield(param,'rLim2')                param.rLim2                = 220; end
+if ~isfield(param,'spectOption')          param.spectOption          = 1;   end
+if ~isfield(param,'spectLim1')            param.spectLim1            = 1;   end
+if ~isfield(param,'spectLim2')            param.spectLim2            = 600; end
+if ~isfield(param,'reAnalyzeOption')      param.reAnalyzeOption      = 0;   end
 
 if ~isfield(data, 'LFP')
   [fileName, filePath] = uigetfile('.mat', 'Select *.mat file of analyzed LFP + imported cell channel');
@@ -41,6 +50,9 @@ end
 if ~isfield(data,'LFP') error('Must import LFP channel to data structure before proceeding'); end
 if ~isfield(data,'C')   error('Must import cell channel to data structure before proceeding'); end
 if ~isfield(data.C,'PSC') data.C.spike = struct; end
+
+% Fix in case Fs not calculated correctly:
+data.LFP.param.Fs = round(1000/data.LFP.samplingInt);
 
 if param.swrPSCOption
   if ~isfield(data,'SWR') error('Must analyze SWRs before proceeding'); end
@@ -369,7 +381,113 @@ if param.swrPSCOption
   
 end
 
+%% Optional filters
+if param.gammaOption
+  % Apply Gaussian filter to extract gamma signal
+  fprintf(['band-pass filtering gamma between %4.1f-%4.1fHz (file ' dataFileName ')... '], param.gammaLim1, param.gammaLim2);
+  if ~isfield(data,'gammaC') data.gammaC = struct; end
+  data.gammaC.tSeries = gaussianFilt(data.C.tSeries, param.gammaLim1, param.gammaLim2, data.C.samplingInt, 1);
+  data.gammaC.tPower  = bandpower(data.gammaC.tSeries);
+  data.gammaC.lim1    = param.gammaLim1;
+  data.gammaC.lim2    = param.gammaLim2;
+  fprintf('done\n');
+end
+
+if param.rOption
+  % Apply Gaussian filter to extract ripple signal
+  fprintf(['band-pass filtering ripple between %4.1f-%4.1fHz (file ' dataFileName ')... '], param.rLim1, param.rLim2);
+  if ~isfield(data,'RC') data.RC = struct; end
+  data.RC.tSeries = gaussianFilt(data.C.tSeries, param.rLim1, param.rLim2, data.C.samplingInt, 1);
+  data.RC.tPower  = bandpower(data.RC.tSeries);
+  data.RC.lim1    = param.rLim1;
+  data.RC.lim2    = param.rLim2;
+  fprintf('done\n');
+end
+
+% Calculate SWR event-locked gamma, ripple, and/or spectrograms of PSC signal
+if isfield(data,'SWR') && (isfield(data,'gammaC') || isfield(data,'RC') || param.spectOption)
+  
+  if isfield(data,'gammaC')
+    if ~isfield(data.gammaC,'SWR') data.gammaC.SWR = struct; end
+    data.gammaC.SWR.event = [];
+    data.gammaC.SWR.power = [];
+  end
+  
+  if isfield(data,'RC')
+    if ~isfield(data.RC,'SWR') data.RC.SWR = struct; end
+    data.RC.SWR.event = [];
+    data.RC.SWR.power = [];
+  end
+  
+  if ~isnan(data.SWR.evStart)
+    
+    % Initialize event locked data window cell arrays
+    if isfield(data,'gammaC')  data.gammaC.SWR.event{length(data.SWR.evStart)} = []; end
+    if isfield(data,'RC')      data.RC.SWR.event{length(data.SWR.evStart)}     = []; end
+    
+    for i = 1:length(data.SWR.evStart)
+      loWin = max(round(data.SWR.evPeak(i) - param.swrWindow / data.LFP.samplingInt), 1);
+      hiWin = min(round(data.SWR.evPeak(i) + param.swrWindow / data.LFP.samplingInt), length(data.LFP.tSeries));
+      loBaseWin = max(round(data.SWR.evPeak(i) - 0.5 * param.swrWindow / data.LFP.samplingInt), 1);
+      hiBaseWin = min(round(data.SWR.evPeak(i) + 0.5 * param.swrWindow / data.LFP.samplingInt), length(data.LFP.tSeries));
+      
+      if isfield(data,'gammaC')
+        data.gammaC.SWR.event{i} = data.gammaC.tSeries(loWin : hiWin);
+        data.gammaC.SWR.power(i) = bandpower(data.gammaC.tSeries(loBaseWin : hiBaseWin));
+      end
+      
+      if isfield(data,'RC')
+        data.RC.SWR.event{i} = data.RC.tSeries(loWin : hiWin);
+        data.RC.SWR.power(i) = bandpower(data.RC.tSeries(loBaseWin : hiBaseWin));
+      end
+    end
+    
+    % Transpose arrays:
+    if isfield(data,'gammaC')
+      data.gammaC.SWR.event = data.gammaC.SWR.event';
+      data.gammaC.SWR.power = data.gammaC.SWR.power';
+    end
+    
+    if isfield(data,'RC')
+      data.RC.SWR.event = data.RC.SWR.event';
+      data.RC.SWR.power = data.RC.SWR.power';
+    end
+    
+    % Spectral analysis:
+    if param.spectOption
+      fprintf(['spectral analysis of SWR-locked events (file ' dataFileName ')... ']);
+      fRange = param.spectLim1 : param.spectLim2;
+      [data.C.SWR, ~] = calcSpect(data.C.SWR, [], fRange, data.LFP.param.Fs, 3);
+      data.C.SWR = calcEvFFT(data.C.SWR, data.LFP.param, param.spectLim1, param.spectLim2);
+      
+      if isfield(data,'gammaC')
+        data.gammaC.SWR = calcEvFFT(data.gammaC.SWR, data.LFP.param, data.gammaC.lim1, data.gammaC.lim2);
+        data.gammaC.SWR = calcEvPhase(data.gammaC.SWR, data.SWR, data.gammaC.lim2);
+      end
+      
+      if isfield(data,'RC')
+        data.RC.SWR = calcEvFFT(data.RC.SWR, data.LFP.param, data.RC.lim1, data.RC.lim2);
+        data.RC.SWR = calcEvPhase(data.RC.SWR, data.SWR, data.RC.lim2);
+      end
+      
+      fprintf('done\n');
+    end
+    
+    if isfield(data,'gammaC')
+      data.gammaC.SWR = orderStruct(data.gammaC.SWR);
+      data.gammaC = orderStruct(data.gammaC);
+    end
+    
+    if isfield(data,'RC')
+      data.RC.SWR = orderStruct(data.RC.SWR);
+      data.RC = orderStruct(data.RC);
+    end
+    
+  end
+end
+
 % Re-order structure arrays:
+data         = orderStruct(data);
 data.C       = orderStruct(data.C);
 data.C.PSC   = orderStruct(data.C.PSC);
 data.C.param = orderStruct(data.C.param);

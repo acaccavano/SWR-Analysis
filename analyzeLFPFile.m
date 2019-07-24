@@ -84,6 +84,7 @@ if ~isfield(param,'dsFactor')         param.dsFactor          = 1;    end
 if ~isfield(param,'lfpChannel')       param.lfpChannel        = 1;    end
 if ~isfield(param,'cellOption')       param.cellOption        = 1;    end
 if ~isfield(param,'cellChannel')      param.cellChannel       = 2;    end
+if ~isfield(param,'notchOption')      param.notchOption       = 0;    end
 if ~isfield(param,'lfpOption')        param.lfpOption         = 1;    end
 if ~isfield(param,'lfpLim1')          param.lfpLim1           = 1;    end
 if ~isfield(param,'lfpLim2')          param.lfpLim2           = 1000; end
@@ -109,16 +110,18 @@ if ~isfield(param,'betaOption')       param.betaOption        = 0;    end
 if ~isfield(param,'betaLim1')         param.betaLim1          = 13;   end
 if ~isfield(param,'betaLim2')         param.betaLim2          = 24;   end
 if ~isfield(param,'gammaOption')      param.gammaOption       = 1;    end
-if ~isfield(param,'gammaLim1')        param.gammaLim1         = 25;   end
-if ~isfield(param,'gammaLim2')        param.gammaLim2         = 55;   end
+if ~isfield(param,'gammaLim1')        param.gammaLim1         = 20;   end
+if ~isfield(param,'gammaLim2')        param.gammaLim2         = 50;   end
 if ~isfield(param,'hgammaOption')     param.hgammaOption      = 0;    end
 if ~isfield(param,'hgammaLim1')       param.hgammaLim1        = 65;   end
 if ~isfield(param,'hgammaLim2')       param.hgammaLim2        = 85;   end
+if ~isfield(param,'fROption')         param.fROption          = 1;    end
+if ~isfield(param,'fRLim1')           param.fRLim1            = 250;  end
+if ~isfield(param,'fRLim2')           param.fRLim2            = 600;  end
 if ~isfield(param,'spectOption')      param.spectOption       = 1;    end
 if ~isfield(param,'spectLim1')        param.spectLim1         = 1;    end
-if ~isfield(param,'spectLim2')        param.spectLim2         = 250;  end
+if ~isfield(param,'spectLim2')        param.spectLim2         = 600;  end
 if ~isfield(param,'reAnalyzeOption')  param.reAnalyzeOption   = 0;    end
-if ~isfield(param,'notchFilter')      param.notchFilter       = 0;    end
 
 % Initialize LFP structure if it doesn't already exist
 if ~isfield(data,'LFP') data.LFP = struct; end
@@ -299,11 +302,12 @@ end
 data.saveFile  = saveFile;
 [~, saveName, saveExt] = parsePath(saveFile);
 data.saveName  = [saveName '.' saveExt];
-data.param     = param;
-data.LFP.param = param; % Save to LFP structure, as subsequent analysis may alter data.param
 
 % Assign Fs based on samplingInt imported (may differ from input Fs)
-data.param.Fs = 1000 / data.LFP.samplingInt;
+param.Fs = 1000 / data.LFP.samplingInt;
+
+data.param     = param;
+data.LFP.param = param; % Save to LFP structure, as subsequent analysis may alter data.param
 
 %% Filter data
 if param.lfpOption
@@ -314,7 +318,7 @@ if param.lfpOption
   data.LFP.lim1    = param.lfpLim1;
   data.LFP.lim2    = param.lfpLim2;
   
-  if param.notchFilter
+  if param.notchOption
     fprintf('Notch filter 60Hz noise... ');
     
     Ord   = 50;  % Order
@@ -392,6 +396,17 @@ if param.hgammaOption
   data.hgamma.tPower  = bandpower(data.hgamma.tSeries);
   data.hgamma.lim1    = param.hgammaLim1;
   data.hgamma.lim2    = param.hgammaLim2;
+  fprintf('done\n');
+end
+
+if param.fROption
+  % Apply Gaussian filter to extract fast ripple signal
+  fprintf('band-pass filtering fast ripple between %4.1f-%4.1fHz... ', param.fRLim1, param.fRLim2);
+  if ~isfield(data,'fR') data.fR = struct; end
+  data.fR.tSeries = gaussianFilt(data.LFP.tSeries, param.fRLim1, param.fRLim2, data.LFP.samplingInt, 1);
+  data.fR.tPower  = bandpower(data.fR.tSeries);
+  data.fR.lim1    = param.fRLim1;
+  data.fR.lim2    = param.fRLim2;
   fprintf('done\n');
 end
 
@@ -519,6 +534,13 @@ if param.swrOption
       data.gamma.SWR.power = [];
     end
     
+    % Fast ripple arrays:
+    if isfield(data,'fR')
+      if ~isfield(data.fR,'SWR') data.fR.SWR = struct; end
+      data.fR.SWR.event = [];
+      data.fR.SWR.power = [];
+    end
+    
     % Cell data arrays:
     if param.cellOption
       if ~isfield(data.C,'SWR') data.C.SWR = struct; end
@@ -540,6 +562,7 @@ if param.swrOption
       data.SW.SWR.event{length(data.SWR.evStart)} = [];
       data.R.SWR.event{length(data.SWR.evStart)}  = [];
       if isfield(data,'gamma') data.gamma.SWR.event{length(data.SWR.evStart)} = []; end
+      if isfield(data,'fR')    data.fR.SWR.event{length(data.SWR.evStart)}    = []; end
       if param.cellOption
         data.C.SWR.event{length(data.SWR.evStart)}  = [];
         data.C.SWR.evNorm{length(data.SWR.evStart)} = [];
@@ -580,6 +603,12 @@ if param.swrOption
         if isfield(data,'gamma')
           data.gamma.SWR.event{i} = data.gamma.tSeries(loWin : hiWin);
           data.gamma.SWR.power(i) = bandpower(data.gamma.tSeries(loBaseWin : hiBaseWin));
+        end
+
+        % Fast ripple data:
+        if isfield(data,'fR')
+          data.fR.SWR.event{i} = data.fR.tSeries(loWin : hiWin);
+          data.fR.SWR.power(i) = bandpower(data.fR.tSeries(loBaseWin : hiBaseWin));
         end
         
         % Cell data:
@@ -631,6 +660,11 @@ if param.swrOption
         data.gamma.SWR.power = data.gamma.SWR.power';
       end
       
+      if isfield(data,'fR')
+        data.fR.SWR.event = data.fR.SWR.event';
+        data.fR.SWR.power = data.fR.SWR.power';
+      end
+      
       if param.cellOption
         data.C.SWR.event    = data.C.SWR.event';
         data.C.SWR.baseline = data.C.SWR.baseline';
@@ -651,62 +685,28 @@ end
 if param.spectOption
   fprintf('spectral analysis of total LFP signal... ');
   fRange = param.spectLim1 : param.spectLim2;
-  [data.LFP, ~] = calcSpect(data.LFP, [], fRange, data.param.Fs);
+  [data.LFP, ~] = calcSpect(data.LFP, [], fRange, data.param.Fs, 30);
   fprintf('done\n');
   
   % If SWR events analyzed, detect spectrogram for event-locked data
   if (param.swrOption)
     fprintf('spectral analysis of SWR-locked events... ');
-    
-    if ~isfield(data.SWR,'spect') data.SWR.spect = struct; end
-    
-    nWin = round(15 * data.param.Fs / 1000);  % works out to 5ms windows
-    nOv  = round(0.8 * nWin);
-    spectSamples = max(cellfun(@length, data.SWR.event));
-    spectTiming  = (0 : data.LFP.samplingInt : (spectSamples-1) * data.LFP.samplingInt);
-    
-    % Count number of valid events and determine size for array initialization:
-    fTemp = [];
-    ev = 0;
-    for i = 1:length(data.SWR.event)
-      if ~isempty(data.SWR.event{i}) && (length(data.SWR.event{i}) == spectSamples)
-        if (length(fTemp) == 0)
-          [~, fTemp, tTemp, ~] = spectrogram(data.SWR.event{i}, nWin, nOv, fRange, data.param.Fs, 'yaxis');
-        end
-        ev = ev + 1;
-      end
-    end
-    
-    data.SWR.spect.power = zeros(ev, length(fTemp), length(tTemp));
-    
-    % Spectral Analysis for valid events:
-    ev = 1;
-    for i = 1:length(data.SWR.event)
-      if ~isempty(data.SWR.event{i}) && (length(data.SWR.event{i}) == spectSamples)
-        [~, data.SWR.spect.fRange, data.SWR.spect.tRange, data.SWR.spect.power(ev,:,:)] = spectrogram(data.SWR.event{i}, nWin, nOv, fRange, data.param.Fs, 'yaxis');
-        ev = ev + 1;
-      end
-    end
-    
-    % Calculate average power
-    data.SWR.spect.powerAve = mean(data.SWR.spect.power(:,:,:));
-    data.SWR.spect.powerAve = permute(data.SWR.spect.powerAve, [2 3 1]);
-    
-    % Calculate Z-Score
-    pTimeAve = mean(data.SWR.spect.powerAve')';
-    pTimeStd = std(data.SWR.spect.powerAve')';
-    pTimeAve = pTimeAve(:, ones(1, length(data.SWR.spect.tRange)));
-    pTimeStd = pTimeStd(:, ones(1, length(data.SWR.spect.tRange)));
-    data.SWR.spect.pZScore = (data.SWR.spect.powerAve - pTimeAve) ./ pTimeStd;
+    [data.SWR, ~] = calcSpect(data.SWR, [], fRange, data.param.Fs, 3);
+    data.SWR = calcEvFFT(data.SWR, data.param, param.spectLim1, param.spectLim2);
     fprintf('done\n');
     
     % Compute FFTs and phase over time for SWR-locked ripple & gamma (if selected)
     data.R.SWR = calcEvFFT(data.R.SWR, data.param, data.R.lim1, data.R.lim2);
-    data.R.SWR = calcEvPhase(data.R.SWR, data.SWR.evTiming, data.R.lim2);
-    
+    data.R.SWR = calcEvPhase(data.R.SWR, data.SWR, data.R.lim2);
+
     if isfield(data,'gamma')
       data.gamma.SWR = calcEvFFT(data.gamma.SWR, data.param, data.gamma.lim1, data.gamma.lim2);
-      data.gamma.SWR = calcEvPhase(data.gamma.SWR, data.SWR.evTiming, data.gamma.lim2);
+      data.gamma.SWR = calcEvPhase(data.gamma.SWR, data.SWR, data.gamma.lim2);
+    end
+    
+    if isfield(data,'fR')
+      data.fR.SWR = calcEvFFT(data.fR.SWR, data.param, data.fR.lim1, data.fR.lim2);
+      data.fR.SWR = calcEvPhase(data.fR.SWR, data.SWR, data.fR.lim2);
     end
     
   end
@@ -738,6 +738,11 @@ if (param.gammaOption)
 end
 
 if (param.hgammaOption) data.hgamma = orderStruct(data.hgamma); end
+
+if (param.fROption)
+  data.fR = orderStruct(data.fR);
+  if isfield(data.fR, 'SWR') data.fR.SWR = orderStruct(data.fR.SWR); end
+end
 
 if (param.cellOption)
   data.C = orderStruct(data.C);

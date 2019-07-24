@@ -15,7 +15,7 @@ S.FFT.F  = S.FFT.F';
 S.FFT.F1 = S.FFT.F1';
 S.FFT.F2 = S.FFT.F2';
 
-S.FFT.pkFreq = zeros(length(S.event),1);
+S.FFT.pkFreq = NaN * zeros(length(S.event), 1);
 
 % Compute FFT for valid events:
 nSamples = max(cellfun(@length,S.event));
@@ -32,6 +32,11 @@ for ev = 1:length(S.event)
   end
 end
 
+% Calculate average FFT and peak frequency:
+S.FFT.fftAve    = mean(cat(2, S.FFT.F1{:}), 2);
+S.FFT.fftAve    = S.FFT.fftAve';
+[~, pkFreqInd]  = max(S.FFT.fftAve(S.FFT.subRange));
+S.FFT.pkFreqAve = S.FFT.fftRange(S.FFT.subRange(pkFreqInd));
 S.FFT = orderStruct(S.FFT);
 
 end
