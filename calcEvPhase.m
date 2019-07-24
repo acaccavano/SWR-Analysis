@@ -63,8 +63,14 @@ for ev = 1:length(S.event)
     end
     
     %% Calculate number of cycles and frequency
-    evStartStand = 2001 - (SWR.evPeak(ev) - SWR.evStart(ev));
-    evEndStand   = 2001 + (SWR.evEnd(ev)  - SWR.evPeak(ev));
+    firstPeak = find(min(S.phase.minLoc{ev}(1), S.phase.maxLoc{ev}(1)) == SWR.evTiming);
+    lastPeak = find(max(S.phase.minLoc{ev}(end), S.phase.maxLoc{ev}(end)) == SWR.evTiming);
+    
+    if isempty(firstPeak) firstPeak = 1; end
+    if isempty(lastPeak) lastPeak = length(SWR.evTiming); end
+    
+    evStartStand = max(2001 - (SWR.evPeak(ev) - SWR.evStart(ev)), firstPeak);
+    evEndStand   = min(2001 + (SWR.evEnd(ev)  - SWR.evPeak(ev)), lastPeak);
     
     contPhase = S.phase.evPhase{ev}(evStartStand:evEndStand);
     nCycle = 0;
