@@ -181,7 +181,7 @@ end
 
 %% Import data
 if ~isfield(data.LFP, 'dataFile')
-  fprintf('importing data... ');
+  fprintf(['importing file ' dataFileName '... ']);
   if (param.fileType == 1)
     [dataIn, samplingInt] = abfload(dataFile);
     data.LFP.samplingInt = samplingInt;
@@ -277,7 +277,7 @@ if ~isfield(data.LFP, 'dataFile')
   
   % Downsample data if selected
   if (param.dsFactor >= 2)
-    fprintf(['downsampling by factor of ' num2str(param.dsFactor) '...']);
+    fprintf(['downsampling by factor of ' num2str(param.dsFactor) ' (file ' dataFileName ')... ']);
     data.LFP.samplingInt = data.LFP.samplingInt * param.dsFactor;
     data.LFP.tSeries = downsampleMean(data.LFP.tSeries, param.dsFactor);
     
@@ -312,14 +312,14 @@ data.LFP.param = param; % Save to LFP structure, as subsequent analysis may alte
 %% Filter data
 if param.lfpOption
   % Apply Gaussian filter to LFP signal for DC drift and HF noise
-  fprintf('band-pass filtering LFP between %4.1f-%4.1fHz... ', param.lfpLim1, param.lfpLim2);
+  fprintf(['band-pass filtering LFP between %4.1f-%4.1fHz (file ' dataFileName ')... '], param.lfpLim1, param.lfpLim2);
   data.LFP.tSeries = gaussianFilt(data.LFP.tSeries, param.lfpLim1, param.lfpLim2, data.LFP.samplingInt, 5);
   data.LFP.tPower  = bandpower(data.LFP.tSeries);
   data.LFP.lim1    = param.lfpLim1;
   data.LFP.lim2    = param.lfpLim2;
   
   if param.notchOption
-    fprintf('Notch filter 60Hz noise... ');
+    fprintf(['Notch filter 60Hz noise (file ' dataFileName ')... ']);
     
     Ord   = 50;  % Order
     BW    = 10;  % Bandwidth
@@ -335,7 +335,7 @@ end
 
 if param.swOption
   % Apply Gaussian filter to extract SW signal
-  fprintf('band-pass filtering sharp wave between %4.1f-%4.1fHz... ', param.swLim1, param.swLim2);
+  fprintf(['band-pass filtering sharp wave between %4.1f-%4.1fHz (file ' dataFileName ')... '], param.swLim1, param.swLim2);
   if ~isfield(data,'SW') data.SW = struct; end
   data.SW.tSeries = gaussianFilt(data.LFP.tSeries, param.swLim1, param.swLim2, data.LFP.samplingInt, 3);
   data.SW.tPower  = bandpower(data.SW.tSeries);
@@ -346,7 +346,7 @@ end
 
 if param.rOption
   % Apply Gaussian filter to extract ripple signal
-  fprintf('band-pass filtering ripple between %4.1f-%4.1fHz... ', param.rLim1, param.rLim2);
+  fprintf(['band-pass filtering ripple between %4.1f-%4.1fHz (file ' dataFileName ')... '], param.rLim1, param.rLim2);
   if ~isfield(data,'R') data.R = struct; end
   data.R.tSeries = gaussianFilt(data.LFP.tSeries, param.rLim1, param.rLim2, data.LFP.samplingInt, 1);
   data.R.tPower  = bandpower(data.R.tSeries);
@@ -357,7 +357,7 @@ end
 
 if param.thetaOption
   % Apply Gaussian filter to extract theta signal
-  fprintf('band-pass filtering theta between %4.1f-%4.1fHz... ', param.thetaLim1, param.thetaLim2);
+  fprintf(['band-pass filtering theta between %4.1f-%4.1fHz (file ' dataFileName ')... '], param.thetaLim1, param.thetaLim2);
   if ~isfield(data,'theta') data.theta = struct; end
   data.theta.tSeries = gaussianFilt(data.LFP.tSeries, param.thetaLim1, param.thetaLim2, data.LFP.samplingInt, 2);
   data.theta.tPower  = bandpower(data.theta.tSeries);
@@ -368,7 +368,7 @@ end
 
 if param.betaOption
   % Apply Gaussian filter to extract beta signal
-  fprintf('band-pass filtering beta between %4.1f-%4.1fHz... ', param.betaLim1, param.betaLim2);
+  fprintf(['band-pass filtering beta between %4.1f-%4.1fHz (file ' dataFileName ')... '], param.betaLim1, param.betaLim2);
   if ~isfield(data,'beta') data.beta = struct; end
   data.beta.tSeries = gaussianFilt(data.LFP.tSeries, param.betaLim1, param.betaLim2, data.LFP.samplingInt, 1);
   data.beta.tPower  = bandpower(data.beta.tSeries);
@@ -379,7 +379,7 @@ end
 
 if param.gammaOption
   % Apply Gaussian filter to extract gamma signal
-  fprintf('band-pass filtering gamma between %4.1f-%4.1fHz... ', param.gammaLim1, param.gammaLim2);
+  fprintf(['band-pass filtering gamma between %4.1f-%4.1fHz (file ' dataFileName ')... '], param.gammaLim1, param.gammaLim2);
   if ~isfield(data,'gamma') data.gamma = struct; end
   data.gamma.tSeries = gaussianFilt(data.LFP.tSeries, param.gammaLim1, param.gammaLim2, data.LFP.samplingInt, 1);
   data.gamma.tPower  = bandpower(data.gamma.tSeries);
@@ -390,7 +390,7 @@ end
 
 if param.hgammaOption
   % Apply Gaussian filter to extract high gamma signal
-  fprintf('band-pass filtering high gamma between %4.1f-%4.1fHz... ', param.hgammaLim1, param.hgammaLim2);
+  fprintf(['band-pass filtering high gamma between %4.1f-%4.1fHz (file ' dataFileName ')... '], param.hgammaLim1, param.hgammaLim2);
   if ~isfield(data,'hgamma') data.hgamma = struct; end
   data.hgamma.tSeries = gaussianFilt(data.LFP.tSeries, param.hgammaLim1, param.hgammaLim2, data.LFP.samplingInt, 1);
   data.hgamma.tPower  = bandpower(data.hgamma.tSeries);
@@ -401,7 +401,7 @@ end
 
 if param.fROption
   % Apply Gaussian filter to extract fast ripple signal
-  fprintf('band-pass filtering fast ripple between %4.1f-%4.1fHz... ', param.fRLim1, param.fRLim2);
+  fprintf(['band-pass filtering fast ripple between %4.1f-%4.1fHz (file ' dataFileName ')... '], param.fRLim1, param.fRLim2);
   if ~isfield(data,'fR') data.fR = struct; end
   data.fR.tSeries = gaussianFilt(data.LFP.tSeries, param.fRLim1, param.fRLim2, data.LFP.samplingInt, 1);
   data.fR.tPower  = bandpower(data.fR.tSeries);
@@ -417,7 +417,7 @@ if param.swrOption
   
   % RMS Signal calculations for SWR detection
   if param.rmsOption
-    fprintf('calculating root mean square (RMS) in a %4.1fms sliding window... ', param.rmsPeriod);
+    fprintf(['calculating root mean square (RMS) in a %4.1fms sliding window (file ' dataFileName ')... '], param.rmsPeriod);
     rmsFactor = round(param.rmsPeriod / data.LFP.samplingInt);
     nSamplesRMS = floor(data.LFP.nSamples / rmsFactor);
     data.SW.RMS = zeros(nSamplesRMS, 1);
@@ -438,7 +438,7 @@ if param.swrOption
   
   %% Event Detection
   if param.peakDetectOption
-    fprintf('detecting events %4.0f standard deviations above baseline (%4.2f quantile)... ', param.sdMult, param.baseQuant);
+    fprintf(['detecting events %4.0f standard deviations above baseline (%4.2f quantile) (file ' dataFileName ')... '], param.sdMult, param.baseQuant);
     
     %% Find sharp wave peak based on standard deviation of RMS of SW signal
     % Re-initialize data structures
@@ -683,14 +683,14 @@ end
 
 %% Spectral Analysis
 if param.spectOption
-  fprintf('spectral analysis of total LFP signal... ');
+  fprintf(['spectral analysis of total LFP signal (file ' dataFileName ')... ']);
   fRange = param.spectLim1 : param.spectLim2;
   [data.LFP, ~] = calcSpect(data.LFP, [], fRange, data.param.Fs, 30);
   fprintf('done\n');
   
   % If SWR events analyzed, detect spectrogram for event-locked data
   if (param.swrOption)
-    fprintf('spectral analysis of SWR-locked events... ');
+    fprintf(['spectral analysis of SWR-locked events (file ' dataFileName ')... ']);
     [data.SWR, ~] = calcSpect(data.SWR, [], fRange, data.param.Fs, 3);
     data.SWR = calcEvFFT(data.SWR, data.param, param.spectLim1, param.spectLim2);
     fprintf('done\n');
@@ -751,14 +751,14 @@ end
 
 %% Save file
 if all(saveFile)
-  fprintf('saving file... ');
+  fprintf(['saving file ' dataFileName '... ']);
   save(saveFile,'-struct','data');
   fprintf('done\n');
 end
 
 %% Export SWR event table
 if all(expEvFile) && param.expSWREvOption && param.swrOption
-  fprintf('exporting SWR events... ');
+  fprintf(['exporting SWR events (file ' dataFileName ')... ']);
   exportSWREvents(data, saveFile, expEvFile);
   data.SWR.expEvFile = expEvFile;
   fprintf('done\n');
@@ -766,7 +766,7 @@ end
 
 %% Export SWR event-locked episodic data files
 if all(expDataFile) && param.expSWRDataOption && param.swrOption
-  fprintf('exporting SWR event-locked data file... ');
+  fprintf(['exporting SWR event-locked data (file ' dataFileName ')... ']);
   exportSWRData(data, param, saveFile, expDataFile);
   data.SWR.expDataFile = expDataFile;
   fprintf('done\n');
