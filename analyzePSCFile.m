@@ -266,9 +266,12 @@ if param.parsePSCOption
     data.C.SWR.PSC.evStatusSum  = data.C.SWR.PSC.evStatusSum';
     
     % Calculate cumulative event PSC status over all SWR events:
-    data.C.SWR.PSC.evStatusPeakSum = zeros(length(data.C.SWR.PSC.evStatusPeak{1}), 1);
-    for swr = 1:length(data.C.SWR.PSC.evStatusPeak) 
-      data.C.SWR.PSC.evStatusPeakSum = data.C.SWR.PSC.evStatusPeakSum + data.C.SWR.PSC.evStatusPeak{swr};
+    nSamples = max(cellfun(@length, data.C.SWR.PSC.evStatusPeak));
+    data.C.SWR.PSC.evStatusPeakSum = zeros(nSamples, 1);
+    for swr = 1:length(data.C.SWR.PSC.evStatusPeak)
+      if length(data.C.SWR.PSC.evStatusPeak{swr}) == nSamples
+        data.C.SWR.PSC.evStatusPeakSum = data.C.SWR.PSC.evStatusPeakSum + data.C.SWR.PSC.evStatusPeak{swr};
+      end
     end
     
     % Rebin histogram - peak times too short to show reasonable distribution
