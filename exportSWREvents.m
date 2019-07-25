@@ -57,6 +57,15 @@ if isfield(data, 'gammaC')
   end
 end
 
+% LFP-Cell Gamma Correlation
+if isfield(data, 'gamma') && isfield(data, 'gammaC')
+  if isfield(data.gammaC, 'SWR')
+    if isfield(data.gammaC.SWR, 'oCorr') 
+      outTable = [outTable table(data.gammaC.SWR.oCorr(:,1), data.gammaC.SWR.minCorr(:,1), data.gammaC.SWR.minCorr(:,2), data.gammaC.SWR.maxCorr(:,1), data.gammaC.SWR.maxCorr(:,2), 'VariableNames', {'Gamma_Corr', 'Gamma_minCorr', 'Gamma_minTime_ms', 'Gamma_maxCorr', 'Gamma_maxTime_ms'})]; 
+    end
+  end
+end
+
 % LFP Ripple
 if isfield(data, 'R')
   if isfield(data.R, 'SWR')
@@ -79,6 +88,15 @@ if isfield(data, 'RC')
     end
     if isfield(data.RC.SWR, 'phase')
       if isfield(data.RC.SWR.phase, 'phFreq') outTable = [outTable table(data.RC.SWR.phase.phFreq, 'VariableNames', {'RippleCell_phFreq_Hz'})]; end
+    end
+  end
+end
+
+% LFP-Cell Ripple Correlation
+if isfield(data, 'R') && isfield(data, 'RC')
+  if isfield(data.RC, 'SWR')
+    if isfield(data.RC.SWR, 'oCorr') 
+      outTable = [outTable table(data.RC.SWR.oCorr(:,1), data.RC.SWR.minCorr(:,1), data.RC.SWR.minCorr(:,2), data.RC.SWR.maxCorr(:,1), data.RC.SWR.maxCorr(:,2), 'VariableNames', {'Ripple_Corr', 'Ripple_minCorr', 'Ripple_minTime_ms', 'Ripple_maxCorr', 'Ripple_maxTime_ms'})]; 
     end
   end
 end

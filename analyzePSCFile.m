@@ -238,6 +238,7 @@ end
 if param.parsePSCOption
   data.C.SWR.PSC.evPeak = [];
   data.C.SWR.PSC.evStatusPeak = [];
+  data.C.SWR.PSC.evStatusSum  = [];
   
   if ~isempty(data.SWR.evStart)
     
@@ -264,7 +265,24 @@ if param.parsePSCOption
     data.C.SWR.PSC.evStatusPeak = data.C.SWR.PSC.evStatusPeak';
     data.C.SWR.PSC.evStatusSum  = data.C.SWR.PSC.evStatusSum';
     
-  end
+    % Calculate cumulative event PSC status over all SWR events:
+    data.C.SWR.PSC.evStatusPeakSum = zeros(length(data.C.SWR.PSC.evStatusPeak{1}), 1);
+    for swr = 1:length(data.C.SWR.PSC.evStatusPeak) 
+      data.C.SWR.PSC.evStatusPeakSum = data.C.SWR.PSC.evStatusPeakSum + data.C.SWR.PSC.evStatusPeak{swr};
+    end
+    
+    % Rebin histogram - peak times too short to show reasonable distribution
+    binTime  = 1; % ms
+    nBins    = round((data.SWR.evTiming(end) - data.SWR.evTiming(1))/binTime);
+    binSize  = round(length(data.SWR.evTiming)/nBins);
+    binStart = 1;
+    binEnd   = binSize;
+    
+    for bin = 1:nBins
+      data.C.SWR.PSC.evStatusPeakSum(binStart:binEnd) = sum(data.C.SWR.PSC.evStatusPeakSum(binStart:binEnd));
+      binStart = binStart + binSize;
+      binEnd   = min(binEnd + binSize, length(data.SWR.evTiming));
+    end
 end
 
 %% Calculate overlap of SWRs and PSCs
@@ -411,34 +429,70 @@ if isfield(data,'SWR') && (isfield(data,'gammaC') || isfield(data,'RC') || param
     if ~isfield(data.gammaC,'SWR') data.gammaC.SWR = struct; end
     data.gammaC.SWR.event = [];
     data.gammaC.SWR.power = [];
+    if isfield(data,'gamma') data.gammaC.SWR.xCorr = []; end
   end
   
   if isfield(data,'RC')
     if ~isfield(data.RC,'SWR') data.RC.SWR = struct; end
     data.RC.SWR.event = [];
     data.RC.SWR.power = [];
+    data.RC.SWR.xCorr = [];
   end
   
   if ~isnan(data.SWR.evStart)
     
-    % Initialize event locked data window cell arrays
-    if isfield(data,'gammaC')  data.gammaC.SWR.event{length(data.SWR.evStart)} = []; end
-    if isfield(data,'RC')      data.RC.SWR.event{length(data.SWR.evStart)}     = []; end
+    % Initialize event-locked data window and correlation cell arrays
+    if isfield(data,'gammaC')  
+      data.gammaC.SWR.event{length(data.SWR.evStart)} = []; 
+      if isfield(data,'gamma') data.gammaC.SWR.xCorr{length(data.SWR.evStart)} = []; end
+    end
     
-    for i = 1:length(data.SWR.evStart)
-      loWin = max(round(data.SWR.evPeak(i) - param.swrWindow / data.LFP.samplingInt), 1);
-      hiWin = min(round(data.SWR.evPeak(i) + param.swrWindow / data.LFP.samplingInt), length(data.LFP.tSeries));
-      loBaseWin = max(round(data.SWR.evPeak(i) - 0.5 * param.swrWindow / data.LFP.samplingInt), 1);
-      hiBaseWin = min(round(data.SWR.evPeak(i) + 0.5 * param.swrWindow / data.LFP.samplingInt), length(data.LFP.tSeries));
+    if isfield(data,'RC') 
+      data.RC.SWR.event{length(data.SWR.evStart)} = []; 
+      data.RC.SWR.xCorr{length(data.SWR.evStart)} = [];
+    end
+    
+    for ev = 1:length(data.SWR.evStart)
+      loWin = max(round(data.SWR.evPeak(ev) - param.swrWindow / data.LFP.samplingInt), 1);
+      hiWin = min(round(data.SWR.evPeak(ev) + param.swrWindow / data.LFP.samplingInt), length(data.LFP.tSeries));
+      loBaseWin = max(round(data.SWR.evPeak(ev) - 0.5 * param.swrWindow / data.LFP.samplingInt), 1);
+      hiBaseWin = min(round(data.SWR.evPeak(ev) + 0.5 * param.swrWindow / data.LFP.samplingInt), length(data.LFP.tSeries));
       
       if isfield(data,'gammaC')
-        data.gammaC.SWR.event{i} = data.gammaC.tSeries(loWin : hiWin);
-        data.gammaC.SWR.power(i) = bandpower(data.gammaC.tSeries(loBaseWin : hiBaseWin));
+        data.gammaC.SWR.event{ev} = data.gammaC.tSeries(loWin : hiWin);
+        data.gammaC.SWR.power(ev) = bandpower(data.gammaC.tSeries(loBaseWin : hiBaseWin));
+        
+        % Cross-correlation of gamma between LFP and cell:
+        if isfield(data,'gamma')
+          data.gammaC.SWR.xCorr{ev} = xcorr(data.gamma.SWR.event{ev}, data.gammaC.SWR.event{ev}, 0.5*(length(data.gammaC.SWR.event{ev}) - 1), 'normalized');
+          
+          data.gammaC.SWR.oCorr(ev,1) = data.gammaC.SWR.xCorr{ev}(0.5*(length(data.gammaC.SWR.event{ev}) - 1) + 1);
+          data.gammaC.SWR.oCorr(ev,2) = 0;
+          
+          [data.gammaC.SWR.maxCorr(ev,1), corrInd] = max(data.gammaC.SWR.xCorr{ev});
+          data.gammaC.SWR.maxCorr(ev,2) = data.SWR.evTiming(corrInd);
+          
+          [data.gammaC.SWR.minCorr(ev,1), corrInd] = min(data.gammaC.SWR.xCorr{ev});
+          data.gammaC.SWR.minCorr(ev,2) = data.SWR.evTiming(corrInd);
+        end
       end
       
       if isfield(data,'RC')
-        data.RC.SWR.event{i} = data.RC.tSeries(loWin : hiWin);
-        data.RC.SWR.power(i) = bandpower(data.RC.tSeries(loBaseWin : hiBaseWin));
+        data.RC.SWR.event{ev} = data.RC.tSeries(loWin : hiWin);
+        data.RC.SWR.power(ev) = bandpower(data.RC.tSeries(loBaseWin : hiBaseWin));
+        
+        % Cross-correlation of ripple between LFP and cell:
+        data.RC.SWR.xCorr{ev} = xcorr(data.R.SWR.event{ev}, data.RC.SWR.event{ev}, 0.5*(length(data.RC.SWR.event{ev}) - 1), 'normalized');
+        
+        data.RC.SWR.oCorr(ev,1) = data.RC.SWR.xCorr{ev}(0.5*(length(data.RC.SWR.event{ev}) - 1) + 1);
+        data.RC.SWR.oCorr(ev,2) = 0;
+        
+        [data.RC.SWR.maxCorr(ev,1), corrInd] = max(data.RC.SWR.xCorr{ev});
+        data.RC.SWR.maxCorr(ev,2) = data.SWR.evTiming(corrInd);
+        
+        [data.RC.SWR.minCorr(ev,1), corrInd] = min(data.RC.SWR.xCorr{ev});
+        data.RC.SWR.minCorr(ev,2) = data.SWR.evTiming(corrInd);
+        
       end
     end
     
@@ -446,18 +500,20 @@ if isfield(data,'SWR') && (isfield(data,'gammaC') || isfield(data,'RC') || param
     if isfield(data,'gammaC')
       data.gammaC.SWR.event = data.gammaC.SWR.event';
       data.gammaC.SWR.power = data.gammaC.SWR.power';
+      if isfield(data,'gamma') data.gammaC.SWR.xCorr = data.gammaC.SWR.xCorr'; end
     end
     
     if isfield(data,'RC')
       data.RC.SWR.event = data.RC.SWR.event';
       data.RC.SWR.power = data.RC.SWR.power';
+      if isfield(data,'RC') data.RC.SWR.xCorr = data.RC.SWR.xCorr'; end
     end
     
     % Spectral analysis:
     if param.spectOption
       fprintf(['spectral analysis of SWR-locked events (file ' dataFileName ')... ']);
       fRange = param.spectLim1 : param.spectLim2;
-      [data.C.SWR, ~] = calcSpect(data.C.SWR, [], fRange, data.LFP.param.Fs, 3);
+      [data.C.SWR, ~] = calcSpect(data.C.SWR, [], fRange, data.LFP.param.Fs, 3, 0);
       data.C.SWR = calcEvFFT(data.C.SWR, data.LFP.param, param.spectLim1, param.spectLim2);
       
       if isfield(data,'gammaC')

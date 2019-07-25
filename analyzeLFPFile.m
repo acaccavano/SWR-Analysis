@@ -685,13 +685,13 @@ end
 if param.spectOption
   fprintf(['spectral analysis of total LFP signal (file ' dataFileName ')... ']);
   fRange = param.spectLim1 : param.spectLim2;
-  [data.LFP, ~] = calcSpect(data.LFP, [], fRange, data.param.Fs, 30);
+  [data.LFP, ~] = calcSpect(data.LFP, [], fRange, data.param.Fs, 30, 0);
   fprintf('done\n');
   
   % If SWR events analyzed, detect spectrogram for event-locked data
   if (param.swrOption)
     fprintf(['spectral analysis of SWR-locked events (file ' dataFileName ')... ']);
-    [data.SWR, ~] = calcSpect(data.SWR, [], fRange, data.param.Fs, 3);
+    [data.SWR, ~] = calcSpect(data.SWR, [], fRange, data.param.Fs, 3, 0);
     data.SWR = calcEvFFT(data.SWR, data.param, param.spectLim1, param.spectLim2);
     fprintf('done\n');
     

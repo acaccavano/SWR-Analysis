@@ -356,7 +356,7 @@ if param.parseSpkOption
     data.C.SWR.spike.evStatusA = data.C.SWR.spike.evStatusA';
     
     % Calculate summed event spike status over all SWR events:
-    data.C.SWR.spike.evStatusSum = zeros(length(data.C.SWR.spike.evStatusA{1}),1);
+    data.C.SWR.spike.evStatusSum = zeros(length(data.C.SWR.spike.evStatusA{1}), 1);
     for swr = 1:length(data.C.SWR.spike.evStatusA) 
       data.C.SWR.spike.evStatusSum = data.C.SWR.spike.evStatusSum + data.C.SWR.spike.evStatusA{swr};
     end
