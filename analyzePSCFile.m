@@ -521,12 +521,12 @@ if isfield(data,'SWR') && (isfield(data,'gammaC') || isfield(data,'RC') || param
       
       if isfield(data,'gammaC')
         data.gammaC.SWR = calcEvFFT(data.gammaC.SWR, data.LFP.param, data.gammaC.lim1, data.gammaC.lim2);
-        data.gammaC.SWR = calcEvPhase(data.gammaC.SWR, data.SWR, data.gammaC.lim2);
+        data.gammaC.SWR = calcEvPhase(data.gammaC.SWR, data.SWR, data.gammaC.lim1, data.gammaC.lim2);
       end
       
       if isfield(data,'RC')
         data.RC.SWR = calcEvFFT(data.RC.SWR, data.LFP.param, data.RC.lim1, data.RC.lim2);
-        data.RC.SWR = calcEvPhase(data.RC.SWR, data.SWR, data.RC.lim2);
+        data.RC.SWR = calcEvPhase(data.RC.SWR, data.SWR, data.RC.lim1, data.RC.lim2);
       end
       
       fprintf('done\n');

@@ -1,4 +1,4 @@
-function S = calcEvPhase(S, SWR, maxFreq)
+function S = calcEvPhase(S, SWR, minFreq, maxFreq)
 
 if ~isfield(S,'phase') S.phase = struct; end
 
@@ -63,8 +63,8 @@ for ev = 1:length(S.event)
     end
     
     %% Calculate number of cycles and frequency
-    firstPeak = find(min(S.phase.minLoc{ev}(1), S.phase.maxLoc{ev}(1)) == SWR.evTiming);
-    lastPeak = find(max(S.phase.minLoc{ev}(end), S.phase.maxLoc{ev}(end)) == SWR.evTiming);
+    firstPeak = find(S.phase.maxLoc{ev}(1) == SWR.evTiming);
+    lastPeak = find(S.phase.maxLoc{ev}(end) == SWR.evTiming);
     
     if isempty(firstPeak) firstPeak = 1; end
     if isempty(lastPeak) lastPeak = length(SWR.evTiming); end
@@ -82,6 +82,15 @@ for ev = 1:length(S.event)
     
     S.phase.nCycle(ev) = (contPhase(end) - contPhase(1)) / (2*pi);
     S.phase.phFreq(ev) = S.phase.nCycle(ev) / (SWR.duration(ev)/1000);
+    
+    % Error handling: limit phase frequency in case it exceeds frequency bounds
+    if S.phase.phFreq(ev) < minFreq
+      S.phase.phFreq(ev) = minFreq;
+      S.phase.nCycle(ev) = S.phase.phFreq(ev) * (SWR.duration(ev)/1000);
+    elseif S.phase.phFreq(ev) > maxFreq
+      S.phase.phFreq(ev) = maxFreq;
+      S.phase.nCycle(ev) = S.phase.phFreq(ev) * (SWR.duration(ev)/1000);
+    end
     
   end
 end

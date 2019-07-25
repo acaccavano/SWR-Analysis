@@ -697,16 +697,16 @@ if param.spectOption
     
     % Compute FFTs and phase over time for SWR-locked ripple & gamma (if selected)
     data.R.SWR = calcEvFFT(data.R.SWR, data.param, data.R.lim1, data.R.lim2);
-    data.R.SWR = calcEvPhase(data.R.SWR, data.SWR, data.R.lim2);
+    data.R.SWR = calcEvPhase(data.R.SWR, data.SWR, data.R.lim1, data.R.lim2);
 
     if isfield(data,'gamma')
       data.gamma.SWR = calcEvFFT(data.gamma.SWR, data.param, data.gamma.lim1, data.gamma.lim2);
-      data.gamma.SWR = calcEvPhase(data.gamma.SWR, data.SWR, data.gamma.lim2);
+      data.gamma.SWR = calcEvPhase(data.gamma.SWR, data.SWR, data.gamma.lim1, data.gamma.lim2);
     end
     
     if isfield(data,'fR')
       data.fR.SWR = calcEvFFT(data.fR.SWR, data.param, data.fR.lim1, data.fR.lim2);
-      data.fR.SWR = calcEvPhase(data.fR.SWR, data.SWR, data.fR.lim2);
+      data.fR.SWR = calcEvPhase(data.fR.SWR, data.SWR, data.fR.lim1, data.fR.lim2);
     end
     
   end
