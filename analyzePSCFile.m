@@ -154,8 +154,8 @@ if param.importPSCOption && ~param.reAnalyzeOption
     if ~isempty(strfind(pscTable.Properties.VariableNames{i},"EventStartTime"))
       pscStartTime = pscTable{:,i};
       for ev = 1:length(pscStartTime)
-        if ~isempty(find(data.C.timing >= pscStartTime(ev), 1))
-          data.C.PSC.evStart(ev) = find(data.C.timing >= pscStartTime(ev), 1);
+        if ~isempty(find(data.C.timing >= pscStartTime(swr), 1))
+          data.C.PSC.evStart(swr) = find(data.C.timing >= pscStartTime(swr), 1);
         end
       end
       data.C.PSC.evStart = data.C.PSC.evStart';
@@ -164,8 +164,8 @@ if param.importPSCOption && ~param.reAnalyzeOption
     if ~isempty(strfind(pscTable.Properties.VariableNames{i},"EventEndTime"))
       pscEndTime = pscTable{:,i};
       for ev = 1:length(pscEndTime)
-        if ~isempty(find(data.C.timing <= pscEndTime(ev), 1, 'last'))
-          data.C.PSC.evEnd(ev) = find(data.C.timing <= pscEndTime(ev), 1, 'last');
+        if ~isempty(find(data.C.timing <= pscEndTime(swr), 1, 'last'))
+          data.C.PSC.evEnd(swr) = find(data.C.timing <= pscEndTime(swr), 1, 'last');
         end
       end
       data.C.PSC.evEnd = data.C.PSC.evEnd';
@@ -182,8 +182,8 @@ if param.importPSCOption && ~param.reAnalyzeOption
     if ~isempty(strfind(pscTable.Properties.VariableNames{i},"TimeOfPeak"))
       pscPeakTime = pscTable{:,i};
       for ev = 1:length(pscPeakTime)
-        if ~isempty(find(data.C.timing >= pscPeakTime(ev), 1, 'last'))
-          data.C.PSC.evPeak(ev) = find(data.C.timing >= pscPeakTime(ev), 1);
+        if ~isempty(find(data.C.timing >= pscPeakTime(swr), 1, 'last'))
+          data.C.PSC.evPeak(swr) = find(data.C.timing >= pscPeakTime(swr), 1);
         end
       end
       data.C.PSC.evPeak = data.C.PSC.evPeak';
@@ -445,57 +445,67 @@ if isfield(data,'SWR') && (isfield(data,'gammaC') || isfield(data,'RC') || param
   if ~isnan(data.SWR.evStart)
     
     % Initialize event-locked data window and correlation cell arrays
+    nSamples = max(cellfun(@length, data.SWR.event));
     if isfield(data,'gammaC')  
       data.gammaC.SWR.event{length(data.SWR.evStart)} = []; 
-      if isfield(data,'gamma') data.gammaC.SWR.xCorr{length(data.SWR.evStart)} = []; end
+      if isfield(data,'gamma') 
+        data.gammaC.SWR.xCorr{length(data.SWR.evStart)} = []; 
+        data.gammaC.SWR.oCorr   = NaN * ones(length(data.SWR.event), 2);
+        data.gammaC.SWR.minCorr = NaN * ones(length(data.SWR.event), 2);
+        data.gammaC.SWR.maxCorr = NaN * ones(length(data.SWR.event), 2);
+      end
     end
     
     if isfield(data,'RC') 
       data.RC.SWR.event{length(data.SWR.evStart)} = []; 
       data.RC.SWR.xCorr{length(data.SWR.evStart)} = [];
+      data.RC.SWR.oCorr   = NaN * ones(length(data.SWR.event), 2);
+      data.RC.SWR.minCorr = NaN * ones(length(data.SWR.event), 2);
+      data.RC.SWR.maxCorr = NaN * ones(length(data.SWR.event), 2);
     end
     
-    for ev = 1:length(data.SWR.evStart)
-      loWin = max(round(data.SWR.evPeak(ev) - param.swrWindow / data.LFP.samplingInt), 1);
-      hiWin = min(round(data.SWR.evPeak(ev) + param.swrWindow / data.LFP.samplingInt), length(data.LFP.tSeries));
-      loBaseWin = max(round(data.SWR.evPeak(ev) - 0.5 * param.swrWindow / data.LFP.samplingInt), 1);
-      hiBaseWin = min(round(data.SWR.evPeak(ev) + 0.5 * param.swrWindow / data.LFP.samplingInt), length(data.LFP.tSeries));
+    for swr = 1:length(data.SWR.evStart)
+      loWin = max(round(data.SWR.evPeak(swr) - param.swrWindow / data.LFP.samplingInt), 1);
+      hiWin = min(round(data.SWR.evPeak(swr) + param.swrWindow / data.LFP.samplingInt), length(data.LFP.tSeries));
+      loBaseWin = max(round(data.SWR.evPeak(swr) - 0.5 * param.swrWindow / data.LFP.samplingInt), 1);
+      hiBaseWin = min(round(data.SWR.evPeak(swr) + 0.5 * param.swrWindow / data.LFP.samplingInt), length(data.LFP.tSeries));
       
       if isfield(data,'gammaC')
-        data.gammaC.SWR.event{ev} = data.gammaC.tSeries(loWin : hiWin);
-        data.gammaC.SWR.power(ev) = bandpower(data.gammaC.tSeries(loBaseWin : hiBaseWin));
+        data.gammaC.SWR.event{swr} = data.gammaC.tSeries(loWin : hiWin);
+        data.gammaC.SWR.power(swr) = bandpower(data.gammaC.tSeries(loBaseWin : hiBaseWin));
         
         % Cross-correlation of gamma between LFP and cell:
-        if isfield(data,'gamma')
-          data.gammaC.SWR.xCorr{ev} = xcorr(data.gamma.SWR.event{ev}, data.gammaC.SWR.event{ev}, 0.5*(length(data.gammaC.SWR.event{ev}) - 1), 'normalized');
+        if isfield(data,'gamma') && (length(data.gamma.SWR.event{swr}) == nSamples)
+          data.gammaC.SWR.xCorr{swr} = xcorr(data.gamma.SWR.event{swr}, data.gammaC.SWR.event{swr}, round(0.5*(length(data.gammaC.SWR.event{swr}) - 1)), 'normalized');
           
-          data.gammaC.SWR.oCorr(ev,1) = data.gammaC.SWR.xCorr{ev}(0.5*(length(data.gammaC.SWR.event{ev}) - 1) + 1);
-          data.gammaC.SWR.oCorr(ev,2) = 0;
+          data.gammaC.SWR.oCorr(swr,1) = data.gammaC.SWR.xCorr{swr}(0.5*(length(data.gammaC.SWR.event{swr}) - 1) + 1);
+          data.gammaC.SWR.oCorr(swr,2) = 0;
           
-          [data.gammaC.SWR.maxCorr(ev,1), corrInd] = max(data.gammaC.SWR.xCorr{ev});
-          data.gammaC.SWR.maxCorr(ev,2) = data.SWR.evTiming(corrInd);
+          [data.gammaC.SWR.maxCorr(swr,1), corrInd] = max(data.gammaC.SWR.xCorr{swr});
+          data.gammaC.SWR.maxCorr(swr,2) = data.SWR.evTiming(corrInd);
           
-          [data.gammaC.SWR.minCorr(ev,1), corrInd] = min(data.gammaC.SWR.xCorr{ev});
-          data.gammaC.SWR.minCorr(ev,2) = data.SWR.evTiming(corrInd);
+          [data.gammaC.SWR.minCorr(swr,1), corrInd] = min(data.gammaC.SWR.xCorr{swr});
+          data.gammaC.SWR.minCorr(swr,2) = data.SWR.evTiming(corrInd);
         end
       end
       
       if isfield(data,'RC')
-        data.RC.SWR.event{ev} = data.RC.tSeries(loWin : hiWin);
-        data.RC.SWR.power(ev) = bandpower(data.RC.tSeries(loBaseWin : hiBaseWin));
+        data.RC.SWR.event{swr} = data.RC.tSeries(loWin : hiWin);
+        data.RC.SWR.power(swr) = bandpower(data.RC.tSeries(loBaseWin : hiBaseWin));
         
         % Cross-correlation of ripple between LFP and cell:
-        data.RC.SWR.xCorr{ev} = xcorr(data.R.SWR.event{ev}, data.RC.SWR.event{ev}, 0.5*(length(data.RC.SWR.event{ev}) - 1), 'normalized');
-        
-        data.RC.SWR.oCorr(ev,1) = data.RC.SWR.xCorr{ev}(0.5*(length(data.RC.SWR.event{ev}) - 1) + 1);
-        data.RC.SWR.oCorr(ev,2) = 0;
-        
-        [data.RC.SWR.maxCorr(ev,1), corrInd] = max(data.RC.SWR.xCorr{ev});
-        data.RC.SWR.maxCorr(ev,2) = data.SWR.evTiming(corrInd);
-        
-        [data.RC.SWR.minCorr(ev,1), corrInd] = min(data.RC.SWR.xCorr{ev});
-        data.RC.SWR.minCorr(ev,2) = data.SWR.evTiming(corrInd);
-        
+        if length(data.R.SWR.event{swr}) == nSamples
+          data.RC.SWR.xCorr{swr} = xcorr(data.R.SWR.event{swr}, data.RC.SWR.event{swr}, round(0.5*(length(data.RC.SWR.event{swr}) - 1)), 'normalized');
+          
+          data.RC.SWR.oCorr(swr,1) = data.RC.SWR.xCorr{swr}(0.5*(length(data.RC.SWR.event{swr}) - 1) + 1);
+          data.RC.SWR.oCorr(swr,2) = 0;
+          
+          [data.RC.SWR.maxCorr(swr,1), corrInd] = max(data.RC.SWR.xCorr{swr});
+          data.RC.SWR.maxCorr(swr,2) = data.SWR.evTiming(corrInd);
+          
+          [data.RC.SWR.minCorr(swr,1), corrInd] = min(data.RC.SWR.xCorr{swr});
+          data.RC.SWR.minCorr(swr,2) = data.SWR.evTiming(corrInd);
+        end
       end
     end
     
