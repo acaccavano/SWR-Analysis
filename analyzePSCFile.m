@@ -372,6 +372,11 @@ if param.swrPSCOption
     end
     
     nSamples = max(cellfun(@length, data.SWR.event));
+    
+    % Thresholds for phase using previously saved param.sdMult from analyzeLFP
+    minAmpR = std(data.R.tSeries) * data.LFP.param.sdMult;
+    if isfield(data.C.SWR.PSC, 'gammaPhase') minAmpG = std(data.gamma.tSeries) * data.LFP.param.sdMult; end
+    
     for psc1 = 1:data.C.PSC.nEventsA
       if (data.C.PSC.swrMatrix(psc1) == 1) % Coincident PSC
         pscInd = data.C.PSC.evIndex(:, 2);
@@ -381,25 +386,59 @@ if param.swrPSCOption
         
         % Only consider non-truncated SWR windows with PSCs
         if(length(data.SWR.event{swr}) == nSamples) && ~isempty(psc2)
-          data.C.SWR.PSC.ripplePhase{swr}(psc2) = data.R.SWR.phase.evPhase{swr}(data.C.SWR.PSC.evPeak{swr}(psc2));
-          data.C.PSC.ripplePhase(psc1)  = data.C.SWR.PSC.ripplePhase{swr}(psc2);
-          data.C.PSC.ripplePhaseX(psc1) = cos(data.C.PSC.ripplePhase(psc1));
-          data.C.PSC.ripplePhaseY(psc1) = sin(data.C.PSC.ripplePhase(psc1));
+          
+          peakTime = data.SWR.evTiming(data.C.SWR.PSC.evPeak{swr}(psc2));
+          
+          % Only select PSCs for which trough-to-peak amplitude is greater than minAmpR
+          precMin  = max(data.R.SWR.phase.minLoc{swr}(data.R.SWR.phase.minLoc{swr} < peakTime));
+          procMin  = min(data.R.SWR.phase.minLoc{swr}(data.R.SWR.phase.minLoc{swr} >= peakTime));
+          precMax  = max(data.R.SWR.phase.maxLoc{swr}(data.R.SWR.phase.maxLoc{swr} < peakTime));
+          procMax  = min(data.R.SWR.phase.maxLoc{swr}(data.R.SWR.phase.maxLoc{swr} >= peakTime));
+          
+          if ~isempty(precMin) && ~isempty(precMax) && ~isempty(procMin) && ~isempty(procMax)
+            if precMin > precMax
+              ampR = data.R.SWR.phase.maxVal{swr}(data.R.SWR.phase.maxLoc{swr} == procMax) - data.R.SWR.phase.minVal{swr}(data.R.SWR.phase.minLoc{swr} == precMin);
+            else
+              ampR = data.R.SWR.phase.maxVal{swr}(data.R.SWR.phase.maxLoc{swr} == precMax) - data.R.SWR.phase.minVal{swr}(data.R.SWR.phase.minLoc{swr} == procMin);
+            end
+            
+            if ampR > minAmpR
+              data.C.SWR.PSC.ripplePhase{swr}(psc2) = data.R.SWR.phase.evPhase{swr}(data.C.SWR.PSC.evPeak{swr}(psc2));
+              data.C.PSC.ripplePhase(psc1)  = data.C.SWR.PSC.ripplePhase{swr}(psc2);
+              data.C.PSC.ripplePhaseX(psc1) = cos(data.C.PSC.ripplePhase(psc1));
+              data.C.PSC.ripplePhaseY(psc1) = sin(data.C.PSC.ripplePhase(psc1));
+            end
+          end
           
           % Calculate gamma phase if available
           if isfield(data.C.SWR.PSC, 'gammaPhase')
-            data.C.SWR.PSC.gammaPhase{swr}(psc2) = data.gamma.SWR.phase.evPhase{swr}(data.C.SWR.PSC.evPeak{swr}(psc2));
-            data.C.PSC.gammaPhase(psc1) = data.C.SWR.PSC.gammaPhase{swr}(psc2);
-            data.C.PSC.gammaPhaseX(psc1) = cos(data.C.PSC.gammaPhase(psc1));
-            data.C.PSC.gammaPhaseY(psc1) = sin(data.C.PSC.gammaPhase(psc1));
+            
+            % Only select PSCs for which trough-to-peak amplitude is greater than minAmpG
+            precMin  = max(data.gamma.SWR.phase.minLoc{swr}(data.gamma.SWR.phase.minLoc{swr} < peakTime));
+            procMin  = min(data.gamma.SWR.phase.minLoc{swr}(data.gamma.SWR.phase.minLoc{swr} >= peakTime));
+            precMax  = max(data.gamma.SWR.phase.maxLoc{swr}(data.gamma.SWR.phase.maxLoc{swr} < peakTime));
+            procMax  = min(data.gamma.SWR.phase.maxLoc{swr}(data.gamma.SWR.phase.maxLoc{swr} >= peakTime));
+            
+            if ~isempty(precMin) && ~isempty(precMax) && ~isempty(procMin) && ~isempty(procMax)
+              if precMin > precMax
+                ampG = data.gamma.SWR.phase.maxVal{swr}(data.gamma.SWR.phase.maxLoc{swr} == procMax) - data.gamma.SWR.phase.minVal{swr}(data.gamma.SWR.phase.minLoc{swr} == precMin);
+              else
+                ampG = data.gamma.SWR.phase.maxVal{swr}(data.gamma.SWR.phase.maxLoc{swr} == precMax) - data.gamma.SWR.phase.minVal{swr}(data.gamma.SWR.phase.minLoc{swr} == procMin);
+              end
+              
+              if ampG > minAmpG
+                data.C.SWR.PSC.gammaPhase{swr}(psc2) = data.gamma.SWR.phase.evPhase{swr}(data.C.SWR.PSC.evPeak{swr}(psc2));
+                data.C.PSC.gammaPhase(psc1) = data.C.SWR.PSC.gammaPhase{swr}(psc2);
+                data.C.PSC.gammaPhaseX(psc1) = cos(data.C.PSC.gammaPhase(psc1));
+                data.C.PSC.gammaPhaseY(psc1) = sin(data.C.PSC.gammaPhase(psc1));
+              end
+            end
           end
-          
         end
       end
     end
     fprintf('done\n');
   end
-  
 end
 
 %% Optional filters
