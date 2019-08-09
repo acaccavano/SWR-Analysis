@@ -17,8 +17,8 @@ if isempty(exportFile)
   if ~all(exportFile) error('No PSC events to be exported - no file selected'); end
 end
 
-varNames = {'evStart', 'evPeak', 'evEnd', 'swrCoinc', 'Baseline_pA', 'PeakAmp_pA', 'RiseTau_ms', 'DecayTau_ms'};
-outTable = table(data.C.PSC.evStart, data.C.PSC.evPeak, data.C.PSC.evEnd, data.C.PSC.swrMatrix, data.C.PSC.baseline, data.C.PSC.amp, data.C.PSC.riseTau, data.C.PSC.decayTau, 'VariableNames', varNames);
+varNames = {'evStart', 'evPeak', 'evEnd', 'swrCoinc', 'Baseline_pA', 'PeakAmp_pA', 'RiseTau_ms', 'DecayTau_ms', 'area'};
+outTable = table(data.C.PSC.evStart, data.C.PSC.evPeak, data.C.PSC.evEnd, data.C.PSC.swrMatrix, data.C.PSC.baseline, data.C.PSC.amp, data.C.PSC.riseTau, data.C.PSC.decayTau, data.C.PSC.area, 'VariableNames', varNames);
 
 if isfield(data.C.PSC, 'gammaPhase') 
   outTable = [outTable table(data.C.PSC.gammaPhase, data.C.PSC.gammaPhaseX, data.C.PSC.gammaPhaseY, 'VariableNames', {'gammaPhase', 'gammaPhaseX', 'gammaPhaseY'})];

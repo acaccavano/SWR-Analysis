@@ -79,7 +79,7 @@ if isempty(saveFile)
 end
 
 % Prompt for event file(s) exported from pClamp if not supplied
-if param.importPSCOption && ~param.reAnalyzeOption
+if param.importPSCOption %% && ~param.reAnalyzeOption %% Commented out want to have option to re-import events but may have unintended consequences
   if isempty(pscFile)
     [fileName, filePath] = uigetfile('.txt', 'Select PSC event *.txt file exported from pClamp', parentPath);
     pscFile = [filePath fileName];
@@ -129,7 +129,7 @@ data.param    = param;
 data.C.param  = param; % Save to Cell structure, as subsequent analysis may alter data.param
 
 %% Import and process event file(s)
-if param.importPSCOption && ~param.reAnalyzeOption
+if param.importPSCOption %% && ~param.reAnalyzeOption %% Commented out want to have option to re-import events but may have unintended consequences
   
   % Import event files into matlab tables
   warning('off')
@@ -148,14 +148,15 @@ if param.importPSCOption && ~param.reAnalyzeOption
   data.C.PSC.amp      = [];
   data.C.PSC.riseTau  = [];
   data.C.PSC.decayTau = [];
+  data.C.PSC.area     = [];
   
   fprintf(['processing PSC events (file ' dataFileName ')... ']);
   for i = 1:size(pscTable,2)
     if ~isempty(strfind(pscTable.Properties.VariableNames{i},"EventStartTime"))
       pscStartTime = pscTable{:,i};
-      for ev = 1:length(pscStartTime)
-        if ~isempty(find(data.C.timing >= pscStartTime(swr), 1))
-          data.C.PSC.evStart(swr) = find(data.C.timing >= pscStartTime(swr), 1);
+      for psc = 1:length(pscStartTime)
+        if ~isempty(find(data.C.timing >= pscStartTime(psc), 1))
+          data.C.PSC.evStart(psc) = find(data.C.timing >= pscStartTime(psc), 1);
         end
       end
       data.C.PSC.evStart = data.C.PSC.evStart';
@@ -163,9 +164,9 @@ if param.importPSCOption && ~param.reAnalyzeOption
     
     if ~isempty(strfind(pscTable.Properties.VariableNames{i},"EventEndTime"))
       pscEndTime = pscTable{:,i};
-      for ev = 1:length(pscEndTime)
-        if ~isempty(find(data.C.timing <= pscEndTime(swr), 1, 'last'))
-          data.C.PSC.evEnd(swr) = find(data.C.timing <= pscEndTime(swr), 1, 'last');
+      for psc = 1:length(pscEndTime)
+        if ~isempty(find(data.C.timing <= pscEndTime(psc), 1, 'last'))
+          data.C.PSC.evEnd(psc) = find(data.C.timing <= pscEndTime(psc), 1, 'last');
         end
       end
       data.C.PSC.evEnd = data.C.PSC.evEnd';
@@ -181,9 +182,9 @@ if param.importPSCOption && ~param.reAnalyzeOption
     
     if ~isempty(strfind(pscTable.Properties.VariableNames{i},"TimeOfPeak"))
       pscPeakTime = pscTable{:,i};
-      for ev = 1:length(pscPeakTime)
-        if ~isempty(find(data.C.timing >= pscPeakTime(swr), 1, 'last'))
-          data.C.PSC.evPeak(swr) = find(data.C.timing >= pscPeakTime(swr), 1);
+      for psc = 1:length(pscPeakTime)
+        if ~isempty(find(data.C.timing >= pscPeakTime(psc), 1, 'last'))
+          data.C.PSC.evPeak(psc) = find(data.C.timing >= pscPeakTime(psc), 1);
         end
       end
       data.C.PSC.evPeak = data.C.PSC.evPeak';
@@ -195,6 +196,10 @@ if param.importPSCOption && ~param.reAnalyzeOption
     
     if ~isempty(strfind(pscTable.Properties.VariableNames{i},"DecayTau"))
       data.C.PSC.decayTau = pscTable{:,i};
+    end
+    
+    if ~isempty(strfind(pscTable.Properties.VariableNames{i},"Area"))
+      data.C.PSC.area = pscTable{:,i};
     end
     
   end

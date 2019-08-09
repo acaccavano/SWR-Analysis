@@ -59,7 +59,7 @@ if isempty(saveFolder)
 end
 
 % Select folder of PSC events exported from pClamp
-if isempty(pscFolder) && param.importPSCOption && ~param.reAnalyzeOption
+if isempty(pscFolder) && param.importPSCOption %% && ~param.reAnalyzeOption %% Commented out wanted to have option to re-import events but may have unintended consequences
   pscFolder = uigetdir(parentPath, 'Select folder of PSC event *.txt files exported from pClamp');
   if (pscFolder == 0) error('No PSC event folder selected'); end
   [parentPath, ~, ~] = parsePath(pscFolder);
@@ -92,7 +92,7 @@ names      = {dir_temp.name}; % extract all the names in the struct returned by 
 dataFiles  = names([dir_temp.isdir] == 0); % extract the name for all files, but no "." and ".."
 nDataFiles = length(dataFiles);
 
-if param.importPSCOption && ~param.reAnalyzeOption
+if param.importPSCOption %% && ~param.reAnalyzeOption %% Commented out wanted to have option to re-import events but may have unintended consequences
   cd (pscFolder);
   dir_temp   = dir('*.txt'); % Find only *.txt files
   names      = {dir_temp.name}; % extract all the names in the struct returned by 'dir': ".", "..", file 1,2....
@@ -103,7 +103,7 @@ end
 cd (curPath);
 
 % Error handling - file number mismatch:
-if param.importPSCOption && ~param.reAnalyzeOption
+if param.importPSCOption %% && ~param.reAnalyzeOption %% Commented out wanted to have option to re-import events but may have unintended consequences
   if (nDataFiles ~= nPSCFiles)
     error('Unequal number of files in data and PSC folders - analysis will be mismatched');
   end
@@ -121,7 +121,7 @@ for i = 1:nDataFiles
   dataFile{i} = [dataFolder slash dataFiles{i}];
   [~, dataFileName, ~] = parsePath(dataFile{i});
   
-  if param.importPSCOption && ~param.reAnalyzeOption
+  if param.importPSCOption %% && ~param.reAnalyzeOption %% Commented out wanted to have option to re-import events but may have unintended consequences
     pscFile{i}  = [pscFolder slash pscFiles{i}];
   end
   
