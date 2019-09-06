@@ -127,7 +127,7 @@ end
 
 % Select re-export file for SWR events (if selected)
 if param.expSWREvOption
-  if isempty(expBstFile)
+  if isempty(expSWRFile)
     defaultName = [parentPath dataFileName '_swrEvents.csv'];
     [exportName, exportPath] = uiputfile('.csv','Select *.csv file to export updated table of SWR events', defaultName);
     expSWRFile = [exportPath exportName];
@@ -491,7 +491,7 @@ if param.swrSpkOption
         
         % Only consider non-truncated SWRs with spikes
         if(length(data.SWR.event{swr}) == nSamples) && ~isempty(spk2)
-          
+          swr
           peakTime = data.SWR.evTiming(data.C.SWR.spike.evPeakA{swr}(spk2));
           
           % Only select spikes for which trough-to-peak amplitude is greater than minAmpR
