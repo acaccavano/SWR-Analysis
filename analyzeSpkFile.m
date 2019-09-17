@@ -337,7 +337,7 @@ if param.parseSpkOption
     
     % For each SWR event, parse spike events
     for swr = 1:length(data.SWR.spike.evStartA)
-      
+
       % Re-calculate start and end windows for each SWR event:
       loWin = max(round(data.SWR.spike.evPeakA(swr) - param.swrWindow / data.LFP.samplingInt), 1);
       hiWin = min(round(data.SWR.spike.evPeakA(swr) + param.swrWindow / data.LFP.samplingInt), length(data.C.spike.evStatusA));
@@ -491,7 +491,7 @@ if param.swrSpkOption
         
         % Only consider non-truncated SWRs with spikes
         if(length(data.SWR.event{swr}) == nSamples) && ~isempty(spk2)
-          swr
+
           peakTime = data.SWR.evTiming(data.C.SWR.spike.evPeakA{swr}(spk2));
           
           % Only select spikes for which trough-to-peak amplitude is greater than minAmpR
