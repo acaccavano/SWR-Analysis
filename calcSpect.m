@@ -89,21 +89,22 @@ if length(tSeries) > 1
   end
   
   S.spect.powerAve = mean(power, 3);
+  S.spect.pZScoreAve = mean(pZScore, 3);
   
-  % Normalize to average spectrogram unless baseline supplied:
-  if isempty(BL)
-    pAve = mean(S.spect.powerAve, 2);
-    pStd = std(S.spect.powerAve, 0, 2);
-    pAve = pAve(:,ones(1, length(S.spect.tRange)));
-    pStd = pStd(:,ones(1, length(S.spect.tRange)));
-  else
-    pAve = mean(BL.spect.power, 2);
-    pStd = std(BL.spect.power, 0, 2);
-    pAve = pAve(:,ones(1, length(S.spect.tRange)));
-    pStd = pStd(:,ones(1, length(S.spect.tRange)));
-  end
-  
-  S.spect.pZScoreAve = (S.spect.powerAve - pAve) ./ pStd;
+%   % Normalize to average spectrogram unless baseline supplied:
+%   if isempty(BL)
+%     pAve = mean(S.spect.powerAve, 2);
+%     pStd = std(S.spect.powerAve, 0, 2);
+%     pAve = pAve(:,ones(1, length(S.spect.tRange)));
+%     pStd = pStd(:,ones(1, length(S.spect.tRange)));
+%   else
+%     pAve = mean(BL.spect.power, 2);
+%     pStd = std(BL.spect.power, 0, 2);
+%     pAve = pAve(:,ones(1, length(S.spect.tRange)));
+%     pStd = pStd(:,ones(1, length(S.spect.tRange)));
+%   end
+%   
+%   S.spect.pZScoreAve = (S.spect.powerAve - pAve) ./ pStd;
   
 else % only one tSeries - save spectra
   S.spect.power   = power;
