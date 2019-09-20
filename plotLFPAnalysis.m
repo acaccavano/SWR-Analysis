@@ -8,6 +8,8 @@ convFact = 1000; % Convert from mV to uV
 nData    = length(data);
 nTrace   = 1;
 nRaster  = 0;
+limSpectCol = true;
+maxPZScore = 10;
 
 % Timing and LFP array - always necessary
 for i = 1:nData
@@ -129,34 +131,19 @@ if param.spectOption
   maxC =  -999999;
   
   for i = 1:nData
+    if limSpectCol % Option to remove outliers to get better dynamic range
+      data(i).LFP.spect.pZScore(data(i).LFP.spect.pZScore > maxPZScore) = maxPZScore;
+    end
+    
     hand.axSp(i) = subplot('Position',[xPos yPos plotWidth spectSz]);
-    imagesc(hand.axSp(i),'XData', data(i).LFP.spect.tRange,'YData', data(i).LFP.spect.fRange, 'CData', data(i).LFP.spect.pZScore);
-    axis(hand.axSp(i), [data(i).LFP.spect.tRange(1) data(i).LFP.spect.tRange(length(data(i).LFP.spect.tRange)) data(i).LFP.spect.fRange(1) data(i).LFP.spect.fRange(length(data(i).LFP.spect.fRange))]);
+    imagesc(hand.axSp(i),'XData', data(i).LFP.spect.tRange,'YData', param.spectLim1:param.spectLim2, 'CData', data(i).LFP.spect.pZScore(param.spectLim1:param.spectLim2,:));
+    axis(hand.axSp(i), [data(i).LFP.spect.tRange(1) data(i).LFP.spect.tRange(length(data(i).LFP.spect.tRange)) param.spectLim1 param.spectLim2]);
     set(hand.axSp(i),'FontSize',fontSz);
     
     minC = min(minC, min(min(data(i).LFP.spect.pZScore)));
     maxC = max(maxC, max(max(data(i).LFP.spect.pZScore)));
     xPos = xPos + plotWidth + marginSz;
   end
-   
-%   if dualPlot
-%     hand.axSp2 = subplot('Position',[0.5*(1+marginSz) yPos plotWidth spectSz]);
-%     
-%     % Recompute z-score - using the 1st file as a baseline:
-%     pAve = mean(data(i).LFP.spect.power')';
-%     pStd = std(data(i).LFP.spect.power')';
-%     pAve = pAve(:,ones(1, length(data2.LFP.spect.tRange)));
-%     pStd = pStd(:,ones(1, length(data2.LFP.spect.tRange)));
-%     data2.LFP.spect.pZScoreComp = (data2.LFP.spect.power - pAve) ./ pStd;
-%     
-%     imagesc(hand.axSp2,'XData', data2.LFP.spect.tRange,'YData', data2.LFP.spect.fRange, 'CData', data2.LFP.spect.pZScoreComp);
-%     axis(hand.axSp2, [data2.LFP.spect.tRange(1) data2.LFP.spect.tRange(length(data2.LFP.spect.tRange)) data2.LFP.spect.fRange(1) data2.LFP.spect.fRange(length(data2.LFP.spect.fRange))]);
-%     set(hand.axSp2,'FontSize',fontSz);
-%     
-%     % Adjust color scale of both spectrogams to same:
-%     caxis(hand.axSp, [0 max(max(max(data(i).LFP.spect.pZScore)), max(max(data2.LFP.spect.pZScoreComp)))]);
-%     caxis(hand.axSp2, [0 max(max(max(data(i).LFP.spect.pZScore)), max(max(data2.LFP.spect.pZScoreComp)))]);
-%   end
   
   colormap jet
   hand.lblSp  = text(hand.axSp(1), hand.axSp(1).XLim(1), hand.axSp(1).YLim(2) - tFact * (hand.axSp(1).YLim(2) - hand.axSp(1).YLim(1)), 'Spectrogram Z-Score', 'FontSize', fontSz, 'Color', [1 1 1]);
@@ -265,18 +252,7 @@ for i = 1:nData
     linkaxes(hand.axTr(i,:), 'x');
   end
 end
-% else   % Link data2 axes
-%   if isfield(hand, 'axRs') && isfield(hand, 'axSp')
-%     linkaxes([hand.axTr(1,:), hand.axRs(1,:), hand.axSp, hand.axTr(2,:), hand.axRs(2,:), hand.axSp2], 'x');
-%   elseif isfield(hand, 'axRs')
-%     linkaxes([hand.axTr(1,:), hand.axRs(1,:), hand.axTr(2,:), hand.axRs(2,:)], 'x');
-%   elseif isfield(hand, 'axSp')
-%     linkaxes([hand.axTr(1,:), hand.axSp, hand.axTr(2,:), hand.axSp2], 'x');
-%   else
-%     linkaxes([hand.axTr(1,:), hand.axTr(2,:)], 'x');
-%   end
-%   linkaxes([hand.axTr(1,1), hand.axTr(2,1)], 'y'); % If need to manually zoom LFP for spiking
-% end
+linkaxes(hand.axTr(:,:), 'y'); % Comment out - usually don't want this behavior (helpful for making figures)
 
 end
 
