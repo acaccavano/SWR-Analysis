@@ -11,7 +11,9 @@ if ~isempty(data1)
   % combining data2 structure:
   if ~isempty(data2)
     f2 = fieldnames(data2);
-    diff = setdiff(f1, f2);
+    diff1 = setdiff(f1, f2);
+    diff2 = setdiff(f2, f1);
+    diff = union(diff1, diff2);
     if ~isempty(diff)
       for i = 1:length(diff)
         if ~isfield(data(1), diff{i}) data(1).(diff{i}) = struct; end
@@ -24,7 +26,9 @@ if ~isempty(data1)
     if ~isempty(data3)
       f1 = fieldnames(data(1));
       f3 = fieldnames(data3);
-      diff = setdiff(f1, f3);
+      diff1 = setdiff(f1, f3);
+      diff3 = setdiff(f3, f1);
+      diff = union(diff1, diff3);
       if ~isempty(diff)
         for i = 1:length(diff)
           if ~isfield(data(1), diff{i}) data(1).(diff{i}) = struct; end
