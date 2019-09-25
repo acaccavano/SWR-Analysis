@@ -3,9 +3,12 @@ function hand = plotCaAnalysis(data, hand, param, dsPlot)
 nData = length(data);
 
 % Set default parameters if not specified
-if ~isfield(param,'skipDetectLim')        param.skipDetectLim        = 2;   end
-if ~isfield(param,'swrCaOption')          param.swrCaOption          = 0;   end
-if ~isfield(param,'spkCaOption')          param.spkCaOption          = 0;   end
+if ~isfield(param,'skipDetectLim') param.skipDetectLim = 2; end
+if ~isfield(param,'swrCaOption')   param.swrCaOption   = 0; end
+if ~isfield(param,'spkCaOption')   param.spkCaOption   = 0; end
+if ~isfield(param,'colOption')     param.colOption     = 1; end % If enabled plots keeps all traces same colors, reserves below defined colors for different datasets
+if ~isfield(param,'threshOption')  param.threshOption  = 1; end
+if ~isfield(param,'peakOption')    param.peakOption    = 1; end
 
 % Plot dimension parameters
 convFact     = 1000;
@@ -13,10 +16,20 @@ marginSz     = 0.04;
 spacerSz     = 0.02;
 fontSz       = 5 * (5 - nData);
 tFact        = 0.01;
-lnWidth      = 1.5;
+lnWidth      = 1;
 markerSz     = 3;
 colInd       = 1;
 axWidth      = (1 - (nData + 1) * marginSz) / nData;
+
+% Plot colors (for colOption = 1)
+lfpCol{1}  = [ 48  70 160]/255;
+lfpCol{2}  = [ 50  50  50]/255;
+cellCol    = [  0  90   0]/255;
+swrCol     = [180 180 180]/255;
+swrCCol    = cellCol;
+CaCol      = swrCol;
+CaCCol{1}  = lfpCol{1};
+CaCCol{2}  = lfpCol{2};
 
 % Initialize graphical structures
 hand.scale   = struct;
@@ -24,7 +37,7 @@ hand.axCaTr  = gobjects(nData, 1);
 hand.axCaRs  = gobjects(nData, 1);
 hand.lblCaTr = gobjects(nData, 1);
 nChannelsMax = 1;
-axCaRsSz     = 0.22;
+axCaRsSz     = 0.20;
 axCaTrSz     = 1 - axCaRsSz - spacerSz - 2*marginSz;
 
 % Calcium timing arrays and dFoF data - always necessary
@@ -72,7 +85,7 @@ end
 if param.swrCaOption
   hand.axLFPTr = gobjects(nData, 1);
   hand.axSWRRs = gobjects(nData, 1);
-  axLFPTrSz    = 0.04;
+  axLFPTrSz    = 0.22;
   axSWRRsSz    = 0.02;
   colInd       = colInd + 1;
   axCaTrSz     = axCaTrSz - (axLFPTrSz + axSWRRsSz + 2*spacerSz);
@@ -171,28 +184,54 @@ for i = 1:nData
   colInd = hand.axCaRs(i).ColorOrderIndex;
 
   % Plot dFoF as lines
-  plot(hand.axCaTr(i), timingCa{i}, offsetArray + tSeriesCa{i}, 'LineWidth', lnWidth);
   hand.axCaTr(i).ColorOrderIndex = colInd;
+  if param.colOption
+    plot(hand.axCaTr(i), timingCa{i}, offsetArray + tSeriesCa{i}, 'LineWidth', lnWidth, 'Color', cellCol);
+  else
+    plot(hand.axCaTr(i), timingCa{i}, offsetArray + tSeriesCa{i}, 'LineWidth', lnWidth);
+  end
   
   % Add thresholds channel by channel
-  for ch = 1:data(i).Ca.nChannels
-    offsetThresh = offsetArray(1,ch) + data(i).Ca.peakThresh(ch);
-    plot(hand.axCaTr(i), [timingCaRs{i}(1) timingCaRs{i}(length(timingCaRs{i}))],[offsetThresh offsetThresh], 'LineWidth', 0.25, 'LineStyle', '--');
+  if param.threshOption
+    for ch = 1:data(i).Ca.nChannels
+      offsetThresh = offsetArray(1,ch) + data(i).Ca.peakThresh(ch);
+      if param.colOption
+        plot(hand.axCaTr(i), [timingCaRs{i}(1) timingCaRs{i}(length(timingCaRs{i}))],[offsetThresh offsetThresh], 'LineWidth', 0.25, 'LineStyle', '--', 'Color', cellCol);
+      else
+        plot(hand.axCaTr(i), [timingCaRs{i}(1) timingCaRs{i}(length(timingCaRs{i}))],[offsetThresh offsetThresh], 'LineWidth', 0.25, 'LineStyle', '--');
+      end
+    end
+    hand.axCaTr(i).ColorOrderIndex = colInd;
   end
-  hand.axCaTr(i).ColorOrderIndex = colInd;
   
   % Add peaks channel by channel, and plot raster data
   for ch = 1:data(i).Ca.nChannels
-    rasterCol = hand.axCaRs(i).ColorOrder(hand.axCaRs(i).ColorOrderIndex,:);
+    
+    if param.colOption
+      rasterCol = CaCol;
+    else
+      rasterCol = hand.axCaRs(i).ColorOrder(hand.axCaRs(i).ColorOrderIndex,:);
+    end
     
     % Assign Ca events to raster:
     if (sum(rasterCa{i}(:,ch)) == 0)
+      
       plot(hand.axCaTr(i), timingCaRs{i}, NaN * ones(length(timingCaRs{i}), 1));
       evPoints  = timingCaRs{i};
       evChannel = NaN * ones(length(timingCaRs{i}), 1);
+      
     else
-      offsetPeaks = tSeriesEv{i}(data(i).Ca.evPeak{ch}, ch) + offsetArray(1,ch) + 0.2;
-      plot(hand.axCaTr(i), timingCaEv{i}(data(i).Ca.evPeak{ch}), offsetPeaks, 'v', 'MarkerSize', markerSz);
+      
+      % Plot peaks:
+      if param.peakOption
+        offsetPeaks = tSeriesEv{i}(data(i).Ca.evPeak{ch}, ch) + offsetArray(1,ch) + 0.2;
+        if param.colOption
+          plot(hand.axCaTr(i), timingCaEv{i}(data(i).Ca.evPeak{ch}), offsetPeaks, 'v', 'MarkerSize', markerSz - 1, 'Color', cellCol);
+        else
+          plot(hand.axCaTr(i), timingCaEv{i}(data(i).Ca.evPeak{ch}), offsetPeaks, 'v', 'MarkerSize', markerSz - 1);
+        end
+      end
+      
       evPoints  = timingCaRs{i}(find(rasterCa{i}(:,ch) .* timingCaRs{i}));
       evChannel = ch * ones(size(evPoints,1),1);
     end
@@ -200,7 +239,13 @@ for i = 1:nData
     
     % Assign Calcium events coicident with SWRs to an additional raster:
     if param.swrCaOption
-      rasterCol = [0 0 0];
+      
+      if param.colOption
+        rasterCol = CaCCol{i};
+      else
+        rasterCol = [0 0 0];
+      end
+      
       if (sum(rasterCaC{i}(:,ch)) == 0)
         evPoints  = timingCaRs{i};
         evChannel = NaN * ones(length(timingCaRs{i}), 1);
@@ -231,9 +276,14 @@ end
 %% Plot LFP trace and SWR raster (if selected)
 if param.swrCaOption
   for i = 1:nData
-
+    
     % Assign SWR events to raster:
-    rasterCol = hand.axSWRRs(i).ColorOrder(hand.axSWRRs(i).ColorOrderIndex,:);
+    if param.colOption
+      rasterCol = swrCol;
+    else
+      rasterCol = hand.axSWRRs(i).ColorOrder(hand.axSWRRs(i).ColorOrderIndex,:);
+    end
+
     if (sum(rasterSWR{i}) == 0)
       evPoints  = timingLFPRs{i};
       evChannel = NaN * ones(1,20);
@@ -242,10 +292,15 @@ if param.swrCaOption
       evChannel = (1:20);
     end
     evChannel = evChannel(ones(1,length(evPoints)),:);
-    plot(hand.axSWRRs(i), evPoints, evChannel, '.', 'MarkerSize', 1, 'Color', rasterCol);
+    plot(hand.axSWRRs(i), evPoints, evChannel, '.', 'MarkerSize', markerSz, 'Color', rasterCol);
     
     % Assign SWR events coincident with at least one Ca transient to an additional raster:
-    rasterCol = [0 0 0];
+    if param.colOption
+      rasterCol = swrCCol;
+    else
+      rasterCol = [0 0 0];
+    end
+
     if (sum(rasterSWRC{i}) == 0)
       evPoints  = timingLFPRs{i};
       evChannel = NaN * ones(1,20);
@@ -254,7 +309,7 @@ if param.swrCaOption
       evChannel = (1:20);
     end
     evChannel = evChannel(ones(1,length(evPoints)),:);
-    plot(hand.axSWRRs(i), evPoints, evChannel, '.', 'MarkerSize', 1, 'Color', rasterCol);
+    plot(hand.axSWRRs(i), evPoints, evChannel, '.', 'MarkerSize', markerSz, 'Color', rasterCol);
     
     axis(hand.axSWRRs(i), [timingLFPRs{i}(1) timingLFPRs{i}(length(timingLFPRs{i})) -inf inf]);
   end
@@ -263,7 +318,11 @@ if param.swrCaOption
   minY =  999999;
   maxY = -999999;
   for i = 1:nData
-    plot(hand.axLFPTr(i), timingLFP{i}, tSeriesLFP{i}, 'LineWidth', lnWidth);
+    if param.swrCaOption
+      plot(hand.axLFPTr(i), timingLFP{i}, tSeriesLFP{i}, 'LineWidth', lnWidth, 'Color', lfpCol{i});
+    else
+      plot(hand.axLFPTr(i), timingLFP{i}, tSeriesLFP{i}, 'LineWidth', lnWidth);
+    end
     minY = min(minY, min(tSeriesLFP{i}));
     maxY = max(maxY, max(tSeriesLFP{i}));
   end
@@ -288,7 +347,9 @@ for i = 1:nData
     linkaxes([hand.axCaTr(i), hand.axCaRs(i)], 'x');
   end
 end
-% 
+
+% Usually comment below out, only for making figures
+linkaxes([hand.axCaTr, hand.axCaRs, hand.axLFPTr, hand.axSWRRs], 'x');
 % linkaxes([hand.axCaTr(1), hand.axCaTr(2)], 'y');
 % linkaxes([hand.axCaRs(1), hand.axCaRs(2)], 'y');
 
