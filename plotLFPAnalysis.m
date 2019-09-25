@@ -10,6 +10,9 @@ nTrace   = 1;
 nRaster  = 0;
 limSpectCol = true;
 maxPZScore = 10;
+colOption  = true; % If true will plot all traces of one data structure the same below defined colors, otherwise uses default ColorOrder
+dataCol{1} = [48 70 160]/255;
+dataCol{2} = [50 50  50]/255;
 
 % Timing and LFP array - always necessary
 for i = 1:nData
@@ -145,7 +148,7 @@ if param.spectOption
     xPos = xPos + plotWidth + marginSz;
   end
   
-  colormap jet
+  colormap hot
   hand.lblSp  = text(hand.axSp(1), hand.axSp(1).XLim(1), hand.axSp(1).YLim(2) - tFact * (hand.axSp(1).YLim(2) - hand.axSp(1).YLim(1)), 'Spectrogram Z-Score', 'FontSize', fontSz, 'Color', [1 1 1]);
   hand.colbar = colorbar(hand.axSp(nData), 'Position', [1.01-marginSz marginSz 0.01 spectSz]);
   
@@ -169,7 +172,11 @@ for tr = nTrace : -1 : 1
       
       hand.axRs(i, rs) = subplot('Position',[xPos yPos plotWidth rasterSz]);
       hand.axRs(i, rs).ColorOrderIndex = colInd;
-      rasterCol = hand.axRs(i, rs).ColorOrder(hand.axRs(i, rs).ColorOrderIndex,:);
+      if colOption
+        rasterCol = dataCol{i};
+      else
+        rasterCol = hand.axRs(i, rs).ColorOrder(hand.axRs(i, rs).ColorOrderIndex,:);
+      end
       
       % Assign points to raster
       if (sum(dataRaster{i, rs}) == 0)
@@ -202,7 +209,11 @@ for tr = nTrace : -1 : 1
     hand.axTr(i, tr) = subplot('Position',[xPos yPos plotWidth plotSz]);
     hold(hand.axTr(i, tr), 'on');
     hand.axTr(i, tr).ColorOrderIndex = colInd;
-    hand.plot = plot(hand.axTr(i, tr), timingPlot{i}, dataPlot{i, tr}, 'LineWidth', lnWidth);
+    if colOption
+      hand.plot = plot(hand.axTr(i, tr), timingPlot{i}, dataPlot{i, tr}, 'LineWidth', lnWidth, 'Color', dataCol{i});
+    else
+      hand.plot = plot(hand.axTr(i, tr), timingPlot{i}, dataPlot{i, tr}, 'LineWidth', lnWidth);
+    end
     
     % If RMS selected, plot thresholds for peak detection:
     if strcmp(dataName{i, tr},'SW RMS')

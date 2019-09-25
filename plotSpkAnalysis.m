@@ -10,23 +10,36 @@ convFact = 1000;
 marginSz = 0.04;
 rasterSz = 0.04;
 spacerSz = 0.01;
-markerSz = 3;
+markerSz = 1;
 fontSz   = 5 * (5 - nData);
 tFact    = 0.1;
-lnWidth  = 1.5;
+lnWidth  = 1.0;
 axWidth  = (1 - (nData + 1) * marginSz) / nData;
 axSz     = (1 - 2*marginSz - 2*rasterSz - 5*spacerSz)/2;
 
 % Plot colors
-lfpCol     = [0.2 0.2 0.5];
-cellCol    = [0.5 0.2 0.2];
-swrCol     = [0.5 0.5 0.8];
-swrSpkCCol = [0.6 0.3 0.3];
-swrBstCCol = [0.3 0.0 0.0];
-spkCol     = [0.8 0.5 0.5];
-spkCCol    = [0.0 0.0 0.3];
-bstCol     = [0.8 0.5 0.5];
-bstCCol    = [0.0 0.0 0.3];
+% lfpCol     = [0.2 0.2 0.5];
+% cellCol    = [0.5 0.2 0.2];
+% swrCol     = [0.5 0.5 0.8];
+% swrSpkCCol = [0.6 0.3 0.3];
+% swrBstCCol = [0.3 0.0 0.0];
+% spkCol     = [0.8 0.5 0.5];
+% spkCCol    = [0.0 0.0 0.3];
+% bstCol     = [0.8 0.5 0.5];
+% bstCCol    = [0.0 0.0 0.3];
+
+lfpCol{1}  = [ 48  70 160]/255;
+lfpCol{2}  = [ 50  50  50]/255;
+cellCol    = [  0  90   0]/255;
+swrCol     = [180 180 180]/255;
+swrSpkCCol = cellCol;
+swrBstCCol = cellCol/2;
+spkCol     = swrCol;
+spkCCol{1} = lfpCol{1};
+spkCCol{2} = lfpCol{2};
+bstCol     = swrCol;
+bstCCol{1} = lfpCol{1};
+bstCCol{2} = lfpCol{2};
 
 % Initialize graphical structures
 hand.axTrLFP   = gobjects(nData, 1);
@@ -41,19 +54,19 @@ hand.scaleCell = struct;
 
 % Initialize plot data
 for i = 1:nData
-  maxIndex     = length(data.SWR.spike.timingA);
-  timing{i}    = downsampleMean(data.SWR.spike.timingA/1000, dsPlot);
-  trLFP{i}     = downsampleMean(convFact * data.LFP.tSeries(1:maxIndex), dsPlot);
-  trCell{i}    = downsampleMean(data.C.tSeries(1:maxIndex), dsPlot);
-  rsSWR{i}     = downsampleMax(data.SWR.spike.evStatusA, dsPlot);
-  rsSWRSpkC{i} = downsampleMax(data.SWR.spike.evStatusC, dsPlot);
-  rsSpk{i}     = downsampleMax(data.C.spike.evStatusA, dsPlot);
-  rsSpkC{i}    = downsampleMax(data.C.spike.evStatusC, dsPlot);
+  maxIndex     = length(data(i).SWR.spike.timingA);
+  timing{i}    = downsampleMean(data(i).SWR.spike.timingA/1000, dsPlot);
+  trLFP{i}     = downsampleMean(convFact * data(i).LFP.tSeries(1:maxIndex), dsPlot);
+  trCell{i}    = downsampleMean(data(i).C.tSeries(1:maxIndex), dsPlot);
+  rsSWR{i}     = downsampleMax(data(i).SWR.spike.evStatusA, dsPlot);
+  rsSWRSpkC{i} = downsampleMax(data(i).SWR.spike.evStatusC, dsPlot);
+  rsSpk{i}     = downsampleMax(data(i).C.spike.evStatusA, dsPlot);
+  rsSpkC{i}    = downsampleMax(data(i).C.spike.evStatusC, dsPlot);
   
   if param.procBstOption
-    rsSWRBstC{i} = downsampleMax(data.SWR.burst.evStatusC, dsPlot);
-    rsBst{i}     = downsampleMax(data.C.burst.evStatusA, dsPlot);
-    rsBstC{i}    = downsampleMax(data.C.burst.evStatusC, dsPlot);
+    rsSWRBstC{i} = downsampleMax(data(i).SWR.burst.evStatusC, dsPlot);
+    rsBst{i}     = downsampleMax(data(i).C.burst.evStatusA, dsPlot);
+    rsBstC{i}    = downsampleMax(data(i).C.burst.evStatusC, dsPlot);
   end
 end
 
@@ -106,7 +119,7 @@ minY =  999999;
 maxY = -999999;
 
 for i = 1:nData
-  plot(hand.axTrLFP(i), timing{i}, trLFP{i}, 'LineWidth', lnWidth, 'Color', lfpCol);
+  plot(hand.axTrLFP(i), timing{i}, trLFP{i}, 'LineWidth', lnWidth, 'Color', lfpCol{i});
   minY = min(minY, min(trLFP{i}));
   maxY = max(maxY, max(trLFP{i}));
 end
@@ -208,7 +221,7 @@ for i = 1:nData
     spkCChannel = (1:20);
   end
   spkCChannel = spkCChannel(ones(1,size(spkCPoints,1)),:);
-  plot(hand.axRsSpk(i), spkCPoints, spkCChannel,'.','MarkerSize', markerSz, 'Color', spkCCol);
+  plot(hand.axRsSpk(i), spkCPoints, spkCChannel,'.','MarkerSize', markerSz, 'Color', spkCCol{i});
   
   axis(hand.axRsSpk(i), [timing{i}(1) timing{i}(length(timing{i})) 1 20]);
   axis(hand.axRsSpk(i), 'off');
@@ -242,7 +255,7 @@ if param.procBstOption
       bstCChannel = (1:20);
     end
     bstCChannel = bstCChannel(ones(1,size(bstCPoints,1)),:);
-    plot(hand.axRsBst(i), bstCPoints, bstCChannel,'.','MarkerSize', markerSz, 'Color', bstCCol);
+    plot(hand.axRsBst(i), bstCPoints, bstCChannel,'.','MarkerSize', markerSz, 'Color', bstCCol{i});
     
     axis(hand.axRsBst(i), [timing{i}(1) timing{i}(length(timing{i})) 1 20]);
     axis(hand.axRsBst(i), 'off');
