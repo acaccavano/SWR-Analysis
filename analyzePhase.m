@@ -4,14 +4,30 @@ if (nargin < 2) param = struct; end
 
 hand  = struct;
 
-if ~isfield(param,'sz') param.sz = 20;  end
-if ~isfield(param,'al') param.al = 0.8; end
-if ~isfield(param,'lw') param.lw = 1.8; end
+if ~isfield(param,'sz') param.sz = 60;  end
+if ~isfield(param,'al') param.al = 0.6; end
+if ~isfield(param,'lwm') param.lwm = 2; end
+if ~isfield(param,'lwl') param.lwl = 4; end
+if ~isfield(param,'fontSz') param.fontSz = 14;  end
 
-cMark_CT = [99  143 235]/256;
-cMark_AD = [224 140  65]/256;
-cLine_CT = [ 35  51 116]/256;
-cLine_AD = [143  75   7]/256;
+% PC
+% cMark_CT = [  0  90   0]/255;
+% cLine_CT = [  0  90   0]/255;
+
+% % PVBC
+% cMark_CT = [128   0   0]/255;
+% cLine_CT = [128   0   0]/255;
+
+% PVBSC
+cMark_CT = [ 65   2  87]/255;
+cLine_CT = [ 65   2  87]/255;
+
+% PVAAC
+% cMark_CT = [192  96   0]/255;
+% cLine_CT = [192  96   0]/255;
+
+cMark_AD = [ 50  50  50]/255;
+cLine_AD = [ 50  50  50]/255;
 
 % Copy over imported table fields to new structure array:
 S       = struct;
@@ -30,13 +46,22 @@ S.R.Len = 1 - T.rVar;
 % Calculate gamma stats
 [S.G.avePhCT, S.G.avePhLoCT, S.G.avePhHiCT, S.G.aveVarCT, S.G.aveLenCT] = calcPhaseStats(S.G.Ph(S.gen=="CT"), S.G.Len(S.gen=="CT"));
 [S.G.avePhAD, S.G.avePhLoAD, S.G.avePhHiAD, S.G.aveVarAD, S.G.aveLenAD] = calcPhaseStats(S.G.Ph(S.gen=="AD"), S.G.Len(S.gen=="AD"));
+[S.G.ralTest_p_CT, S.G.ralTest_Z_CT] = circ_rtest(S.G.Ph(S.gen=="CT"));
+[S.G.ralTest_p_AD, S.G.ralTest_Z_AD] = circ_rtest(S.G.Ph(S.gen=="AD"));
+[S.G.wwTest_p, S.G.wwTestTable] = circ_wwtest(S.G.Ph(S.gen=="CT"), S.G.Ph(S.gen=="AD"));
+[S.G.cmTest_p, S.G.cmTest_Med, S.G.cmTest_PStat] = circ_cmtest(S.G.Ph(S.gen=="CT"), S.G.Ph(S.gen=="AD"));
 
 % Calculate ripple stats
 [S.R.avePhCT, S.R.avePhLoCT, S.R.avePhHiCT, S.R.aveVarCT, S.R.aveLenCT] = calcPhaseStats(S.R.Ph(S.gen=="CT"), S.R.Len(S.gen=="CT"));
 [S.R.avePhAD, S.R.avePhLoAD, S.R.avePhHiAD, S.R.aveVarAD, S.R.aveLenAD] = calcPhaseStats(S.R.Ph(S.gen=="AD"), S.R.Len(S.gen=="AD"));
+[S.R.ralTest_p_CT, S.R.ralTest_Z_CT] = circ_rtest(S.R.Ph(S.gen=="CT"));
+[S.R.ralTest_p_AD, S.R.ralTest_Z_AD] = circ_rtest(S.R.Ph(S.gen=="AD"));
+[S.R.wwTest_p, S.R.wwTest_Table] = circ_wwtest(S.R.Ph(S.gen=="CT"), S.R.Ph(S.gen=="AD"));
+[S.R.cmTest_p, S.R.cmTest_Med, S.R.cmTest_PStat] = circ_cmtest(S.R.Ph(S.gen=="CT"), S.R.Ph(S.gen=="AD"));
 
 %% Plot Gamma scatter
 hand.gFig = figure('Name', 'Gamma Phase');
+set(gcf,'color','w');
 hand.gAx  = polaraxes(hand.gFig);
 
 hand.gPl_CT_M = polarscatter(hand.gAx, S.G.Ph(S.gen=="CT" & S.sex=="M"), S.G.Len(S.gen=="CT" & S.sex=="M"), param.sz, cMark_CT, 'filled');
@@ -62,20 +87,26 @@ gAvePhLL_AD_Plot = S.G.avePhLoAD * ones(1,100);
 gAvePhUL_AD_Plot = S.G.avePhHiAD * ones(1,100);
 gAveLen_AD_Plot = linspace(0, S.G.aveLenAD, 100);
 
-polarplot(hand.gAx, gAvePh_CT_Plot, gAveLen_CT_Plot, 'Color', cLine_CT, 'LineWidth', param.lw + 1);
-polarplot(hand.gAx, gAvePhLL_CT_Plot, gAveLen_CT_Plot, '--', 'Color', cLine_CT, 'LineWidth', param.lw - 1);
-polarplot(hand.gAx, gAvePhUL_CT_Plot, gAveLen_CT_Plot, '--', 'Color', cLine_CT, 'LineWidth', param.lw - 1);
+polarplot(hand.gAx, gAvePh_CT_Plot, gAveLen_CT_Plot, 'Color', cLine_CT, 'LineWidth', param.lwl);
+polarplot(hand.gAx, gAvePhLL_CT_Plot, gAveLen_CT_Plot, 'Color', cLine_CT, 'LineWidth', param.lwm);
+polarplot(hand.gAx, gAvePhUL_CT_Plot, gAveLen_CT_Plot, 'Color', cLine_CT, 'LineWidth', param.lwm);
 
-polarplot(hand.gAx, gAvePh_AD_Plot, gAveLen_AD_Plot, 'Color', cLine_AD, 'LineWidth', param.lw + 1);
-polarplot(hand.gAx, gAvePhLL_AD_Plot, gAveLen_AD_Plot, '--', 'Color', cLine_AD, 'LineWidth', param.lw - 1);
-polarplot(hand.gAx, gAvePhUL_AD_Plot, gAveLen_AD_Plot, '--', 'Color', cLine_AD, 'LineWidth', param.lw - 1);
+polarplot(hand.gAx, gAvePh_AD_Plot, gAveLen_AD_Plot, '-.', 'Color', cLine_AD, 'LineWidth', param.lwl);
+polarplot(hand.gAx, gAvePhLL_AD_Plot, gAveLen_AD_Plot, ':', 'Color', cLine_AD, 'LineWidth', param.lwm);
+polarplot(hand.gAx, gAvePhUL_AD_Plot, gAveLen_AD_Plot, ':', 'Color', cLine_AD, 'LineWidth', param.lwm);
 
 hand.gAx.ThetaTick = [0 90 180 270];
+hand.gAx.RTick = [0.5 1];
 hand.gAx.RLim  = [0 1];
-
+hand.gAx.FontSize = param.fontSz;
+hand.gAx.RColor = [0 0 0];
+hand.gAx.ThetaColor = [0 0 0];
+hand.gAx.GridColor  = [0 0 0];
+hand.gAx.GridAlpha  = 1;
 
 %% Plot Ripple scatter
 hand.rFig = figure('Name', 'Ripple Phase');
+set(gcf,'color','w');
 hand.rAx  = polaraxes(hand.rFig);
 
 hand.rPl_CT_M = polarscatter(hand.rAx, S.R.Ph(S.gen=="CT" & S.sex=="M"), S.R.Len(S.gen=="CT" & S.sex=="M"), param.sz, cMark_CT, 'filled');
@@ -101,16 +132,22 @@ rAvePhLL_AD_Plot = S.R.avePhLoAD * ones(1,100);
 rAvePhUL_AD_Plot = S.R.avePhHiAD * ones(1,100);
 rAveLen_AD_Plot = linspace(0, S.R.aveLenAD, 100);
 
-polarplot(hand.rAx, rAvePh_CT_Plot, rAveLen_CT_Plot, 'Color', cLine_CT, 'LineWidth', param.lw + 1);
-polarplot(hand.rAx, rAvePhLL_CT_Plot, rAveLen_CT_Plot, '--', 'Color', cLine_CT, 'LineWidth', param.lw - 1);
-polarplot(hand.rAx, rAvePhUL_CT_Plot, rAveLen_CT_Plot, '--', 'Color', cLine_CT, 'LineWidth', param.lw - 1);
+polarplot(hand.rAx, rAvePh_CT_Plot, rAveLen_CT_Plot, 'Color', cLine_CT, 'LineWidth', param.lwl);
+polarplot(hand.rAx, rAvePhLL_CT_Plot, rAveLen_CT_Plot, 'Color', cLine_CT, 'LineWidth', param.lwm);
+polarplot(hand.rAx, rAvePhUL_CT_Plot, rAveLen_CT_Plot, 'Color', cLine_CT, 'LineWidth', param.lwm);
 
-polarplot(hand.rAx, rAvePh_AD_Plot, rAveLen_AD_Plot, 'Color', cLine_AD, 'LineWidth', param.lw + 1);
-polarplot(hand.rAx, rAvePhLL_AD_Plot, rAveLen_AD_Plot, '--', 'Color', cLine_AD, 'LineWidth', param.lw - 1);
-polarplot(hand.rAx, rAvePhUL_AD_Plot, rAveLen_AD_Plot, '--', 'Color', cLine_AD, 'LineWidth', param.lw - 1);
+polarplot(hand.rAx, rAvePh_AD_Plot, rAveLen_AD_Plot, '-.', 'Color', cLine_AD, 'LineWidth', param.lwl);
+polarplot(hand.rAx, rAvePhLL_AD_Plot, rAveLen_AD_Plot, ':', 'Color', cLine_AD, 'LineWidth', param.lwm);
+polarplot(hand.rAx, rAvePhUL_AD_Plot, rAveLen_AD_Plot, ':', 'Color', cLine_AD, 'LineWidth', param.lwm);
 
 hand.rAx.ThetaTick = [0 90 180 270];
+hand.rAx.RTick = [0.5 1];
 hand.rAx.RLim  = [0 1];
+hand.rAx.FontSize = param.fontSz;
+hand.rAx.RColor = [0 0 0];
+hand.rAx.ThetaColor = [0 0 0];
+hand.rAx.GridColor  = [0 0 0];
+hand.rAx.GridAlpha  = 1;
 
 end
 
@@ -151,7 +188,7 @@ h.SizeData = param.sz;
 h.MarkerFaceAlpha = param.al;
 h.MarkerEdgeAlpha = param.al;
 h.MarkerEdgeColor = 'flat';
-h.LineWidth = param.lw;
+h.LineWidth = param.lwm;
 
 end
 
