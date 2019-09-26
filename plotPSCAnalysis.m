@@ -11,20 +11,29 @@ convFact = 1000;
 marginSz = 0.04;
 rasterSz = 0.04;
 spacerSz = 0.02;
-markerSz = 4;
+markerSz = 2;
 fontSz   = 5 * (5 - nData);
 tFact    = 0.1;
-lnWidth  = 1.5;
+lnWidth  = 1.0;
 axWidth  = (1 - (nData + 1) * marginSz) / nData;
 axSz     = (1 - 2*marginSz - 2*rasterSz - 4*spacerSz)/2;
 
 % Plot colors
-lfpCol  = [0.2 0.2 0.5];
-cellCol = [0.5 0.2 0.2];
-swrCol  = [0.5 0.5 0.8];
-swrCCol = [0.3 0.0 0.0];
-pscCol  = [0.8 0.5 0.5];
-pscCCol = [0.0 0.0 0.3];
+% lfpCol  = [0.2 0.2 0.5];
+% cellCol = [0.5 0.2 0.2];
+% swrCol  = [0.5 0.5 0.8];
+% swrCCol = [0.3 0.0 0.0];
+% pscCol  = [0.8 0.5 0.5];
+% pscCCol = [0.0 0.0 0.3];
+
+lfpCol{1}  = [ 48  70 160]/255;
+lfpCol{2}  = [ 50  50  50]/255;
+cellCol    = [  0  90   0]/255;
+swrCol     = [180 180 180]/255;
+swrCCol    = cellCol;
+pscCol     = swrCol;
+pscCCol{1} = lfpCol{1};
+pscCCol{2} = lfpCol{2};
 
 % Initialize graphical structures
 hand.axTrLFP   = gobjects(nData, 1);
@@ -93,7 +102,7 @@ minY =  999999;
 maxY = -999999;
 
 for i = 1:nData
-  plot(hand.axTrLFP(i), timing{i}, trLFP{i}, 'LineWidth', lnWidth, 'Color', lfpCol);
+  plot(hand.axTrLFP(i), timing{i}, trLFP{i}, 'LineWidth', lnWidth, 'Color', lfpCol{i});
   minY = min(minY, min(trLFP{i}));
   maxY = max(maxY, max(trLFP{i}));
 end
@@ -182,7 +191,7 @@ for i = 1:nData
     pscCChannel = (1:20);
   end
   pscCChannel = pscCChannel(ones(1,size(pscCPoints,1)),:);
-  plot(hand.axRsCell(i), pscCPoints, pscCChannel,'.','MarkerSize', markerSz, 'Color', pscCCol);
+  plot(hand.axRsCell(i), pscCPoints, pscCChannel,'.','MarkerSize', markerSz, 'Color', pscCCol{i});
   
   axis(hand.axRsCell(i), [timing{i}(1) timing{i}(length(timing{i})) 1 20]);
   axis(hand.axRsCell(i), 'off');
