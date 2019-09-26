@@ -38,6 +38,7 @@ if ~isfield(param,'spectOption')          param.spectOption          = 1;   end
 if ~isfield(param,'spectLim1')            param.spectLim1            = 1;   end
 if ~isfield(param,'spectLim2')            param.spectLim2            = 600; end
 if ~isfield(param,'reAnalyzeOption')      param.reAnalyzeOption      = 0;   end
+if ~isfield(param,'nBins')                param.nBins                = 100; end % For PSC peak histogram, not currently selectable from UI
 
 if ~isfield(data, 'LFP')
   [fileName, filePath] = uigetfile('.mat', 'Select *.mat file of analyzed LFP + imported cell channel');
@@ -272,25 +273,31 @@ if param.parsePSCOption
     
     % Calculate cumulative event PSC status over all SWR events:
     nSamples = max(cellfun(@length, data.C.SWR.PSC.evStatusPeak));
+    Bins     = linspace(data.SWR.evTiming(1), data.SWR.evTiming(length(data.SWR.evTiming)), param.nBins)';
+    binWidth = Bins(2) - Bins(1);
+    
     data.C.SWR.PSC.evStatusPeakSum = zeros(nSamples, 1);
+    data.C.SWR.PSC.evHist          = zeros(param.nBins, 1);
+    data.C.SWR.PSC.nPSCsHist       = 0;
+    
     for swr = 1:length(data.C.SWR.PSC.evStatusPeak)
+      
       if length(data.C.SWR.PSC.evStatusPeak{swr}) == nSamples
         data.C.SWR.PSC.evStatusPeakSum = data.C.SWR.PSC.evStatusPeakSum + data.C.SWR.PSC.evStatusPeak{swr};
       end
+      
+      nPSCSWR = length(data.C.SWR.PSC.evPeak{swr});
+      data.C.SWR.PSC.nPSCsHist = data.C.SWR.PSC.nPSCsHist + nPSCSWR;
+      
+      for psc = 1:nPSCSWR
+        peakTime = data.SWR.evTiming(data.C.SWR.PSC.evPeak{swr}(psc));
+        data.C.SWR.PSC.evHist = data.C.SWR.PSC.evHist + double(peakTime >= Bins & peakTime < Bins + binWidth);
+      end
     end
     
-    % Rebin histogram - peak times too short to show reasonable distribution
-    binTime  = 1; % ms
-    nBins    = round((data.SWR.evTiming(end) - data.SWR.evTiming(1))/binTime);
-    binSize  = round(length(data.SWR.evTiming)/nBins);
-    binStart = 1;
-    binEnd   = binSize;
-    
-    for bin = 1:nBins
-      data.C.SWR.PSC.evStatusPeakSum(binStart:binEnd) = sum(data.C.SWR.PSC.evStatusPeakSum(binStart:binEnd));
-      binStart = binStart + binSize;
-      binEnd   = min(binEnd + binSize, length(data.SWR.evTiming));
-    end
+    % Normalize histogram to all SWRs to get prob. of spiking per bin
+    data.C.SWR.PSC.evHist = data.C.SWR.PSC.evHist / length(data.C.SWR.PSC.evPeak);
+  end
 end
 
 %% Calculate overlap of SWRs and PSCs

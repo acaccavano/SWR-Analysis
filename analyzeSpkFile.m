@@ -17,19 +17,20 @@ if isempty(hand)  hand     = struct; end
 if isempty(data)  data     = struct; end
 
 % Set default parameters if not specified
-if ~isfield(param,'fileNum')              param.fileNum = 1; end
-if ~isfield(param,'importSpkOption')      param.importSpkOption = 1; end
-if ~isfield(param,'swrSpkOption')         param.swrSpkOption = 1; end
-if ~isfield(param,'swrBstOption')         param.swrBstOption = 1; end
-if ~isfield(param,'useSWRDurationOption') param.useSWRDurationOption = 1; end
-if ~isfield(param,'useSWRWindowOption')   param.useSWRWindowOption = 0; end
-if ~isfield(param,'swrWindow')            param.swrWindow = 100; end
-if ~isfield(param,'parseSpkOption')       param.parseSpkOption = 1; end
-if ~isfield(param,'calcEvMatrixOption')   param.calcEvMatrixOption = 1; end
-if ~isfield(param,'expSpkEvOption')       param.expSpkEvOption = 1; end
-if ~isfield(param,'expBstEvOption')       param.expBstEvOption = 1; end
-if ~isfield(param,'expSWREvOption')       param.expSWREvOption = 1; end
-if ~isfield(param,'reAnalyzeOption')      param.reAnalyzeOption = 0; end
+if ~isfield(param,'fileNum')              param.fileNum              = 1;   end
+if ~isfield(param,'importSpkOption')      param.importSpkOption      = 1;   end
+if ~isfield(param,'swrSpkOption')         param.swrSpkOption         = 1;   end
+if ~isfield(param,'swrBstOption')         param.swrBstOption         = 1;   end
+if ~isfield(param,'useSWRDurationOption') param.useSWRDurationOption = 1;   end
+if ~isfield(param,'useSWRWindowOption')   param.useSWRWindowOption   = 0;   end
+if ~isfield(param,'swrWindow')            param.swrWindow            = 100; end
+if ~isfield(param,'parseSpkOption')       param.parseSpkOption       = 1;   end
+if ~isfield(param,'calcEvMatrixOption')   param.calcEvMatrixOption   = 1;   end
+if ~isfield(param,'expSpkEvOption')       param.expSpkEvOption       = 1;   end
+if ~isfield(param,'expBstEvOption')       param.expBstEvOption       = 1;   end
+if ~isfield(param,'expSWREvOption')       param.expSWREvOption       = 1;   end
+if ~isfield(param,'reAnalyzeOption')      param.reAnalyzeOption      = 0;   end
+if ~isfield(param,'nBins')                param.nBins                = 100; end % For spike histogram, not currently selectable from UI
 
 if ~isfield(data, 'LFP')
   [fileName, filePath] = uigetfile('.mat', 'Select *.mat file of analyzed LFP + imported cell channel');
@@ -355,15 +356,31 @@ if param.parseSpkOption
     data.C.SWR.spike.evEndA    = data.C.SWR.spike.evEndA';
     data.C.SWR.spike.evStatusA = data.C.SWR.spike.evStatusA';
     
-    % Calculate summed event spike status over all SWR events:
+    % Calculate summed event spike status and normalized histogram over all SWR events 
     nSamples = max(cellfun(@length, data.C.SWR.spike.evStatusA));
+    Bins     = linspace(data.SWR.evTiming(1), data.SWR.evTiming(length(data.SWR.evTiming)), param.nBins)';
+    binWidth = Bins(2) - Bins(1);
+    
     data.C.SWR.spike.evStatusSum = zeros(nSamples, 1);
+    data.C.SWR.spike.evHist      = zeros(param.nBins, 1);
+    data.C.SWR.spike.nSpksHist   = 0;
+    
     for swr = 1:length(data.C.SWR.spike.evStatusA)
+      
       if length(data.C.SWR.spike.evStatusA{swr}) == nSamples
         data.C.SWR.spike.evStatusSum = data.C.SWR.spike.evStatusSum + data.C.SWR.spike.evStatusA{swr};
       end
+      
+      nSpkSWR = length(data.C.SWR.spike.evPeakA{swr});
+      data.C.SWR.spike.nSpksHist = data.C.SWR.spike.nSpksHist + nSpkSWR;
+      
+      for spk = 1:nSpkSWR
+        peakTime = data.SWR.evTiming(data.C.SWR.spike.evPeakA{swr}(spk));
+        data.C.SWR.spike.evHist = data.C.SWR.spike.evHist + double(peakTime >= Bins & peakTime < Bins + binWidth);
+      end
     end
-    
+    % Normalize histogram to all SWRs to get prob. of spiking per bin
+    data.C.SWR.spike.evHist = data.C.SWR.spike.evHist / length(data.C.SWR.spike.evPeakA); 
   end
 end
 
