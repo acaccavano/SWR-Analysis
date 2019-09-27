@@ -255,7 +255,7 @@ if ~isfield(data.LFP, 'dataFile')
       % Import LFP channel
       dataIn{i} = dataTemp(:, param.lfpChannel);
       
-      % Import cell channel is selected
+      % Import cell channel if selected
       if param.cellOption
         dataIn{i} = horzcat(dataIn{i}, dataTemp(:, param.cellChannel));
       end
@@ -541,19 +541,6 @@ if param.swrOption
       data.fR.SWR.power = [];
     end
     
-    % Cell data arrays:
-    if param.cellOption
-      if ~isfield(data.C,'SWR') data.C.SWR = struct; end
-      data.C.SWR.event    = [];
-      data.C.SWR.baseline = [];
-      data.C.SWR.evNorm   = [];
-      data.C.SWR.area     = [];
-      data.C.SWR.areaQ1   = [];
-      data.C.SWR.areaQ2   = [];
-      data.C.SWR.areaQ3   = [];
-      data.C.SWR.areaQ4   = [];
-    end
-    
     [data.SWR.evStatus, data.SWR.evStart, data.SWR.evEnd, data.SWR.evIndex] = eventOverlap(data.SW.evStatus, data.SW.evStart, data.SW.evEnd, data.R.evStatus, data.R.evStart, data.R.evEnd, data.LFP.timing, 0);
     if ~isnan(data.SWR.evStart)
       
@@ -563,10 +550,6 @@ if param.swrOption
       data.R.SWR.event{length(data.SWR.evStart)}  = [];
       if isfield(data,'gamma') data.gamma.SWR.event{length(data.SWR.evStart)} = []; end
       if isfield(data,'fR')    data.fR.SWR.event{length(data.SWR.evStart)}    = []; end
-      if param.cellOption
-        data.C.SWR.event{length(data.SWR.evStart)}  = [];
-        data.C.SWR.evNorm{length(data.SWR.evStart)} = [];
-      end
       
       baseAmp = data.SW.tSeries;
       baseAmp(baseAmp > quantile(baseAmp, param.baseQuant)) = [];
@@ -611,29 +594,6 @@ if param.swrOption
           data.fR.SWR.power(i) = bandpower(data.fR.tSeries(loBaseWin : hiBaseWin));
         end
         
-        % Cell data:
-        if param.cellOption
-          data.C.SWR.event{i} = data.C.tSeries(loWin : hiWin);
-          
-          % Determine baseline:
-          baseCell = vertcat(data.C.tSeries(loWin : loBaseWin-1), data.C.tSeries(hiBaseWin+1 : hiWin));
-          
-          % Only consider baseline data in lower 50% quantile:
-          if param.cellEventPolarity
-            baseCell(baseCell > quantile(baseCell, 0.50)) = [];
-          else
-            baseCell(baseCell < quantile(baseCell, 0.50)) = [];
-          end
-          data.C.SWR.baseline(i) = mean(baseCell);
-          data.C.SWR.evNorm{i}   = data.C.SWR.event{i} - data.C.SWR.baseline(i);
-          
-          % Calculate area, defined as from -50:+50, and in 4 quarters: Q1=-100:-50, Q2=-50:0,Q3=0:50, Q4=50:100
-          data.C.SWR.area(i)   = data.C.samplingInt * sum(sum(data.C.tSeries(loBaseWin : hiBaseWin) - data.C.SWR.baseline(i)));
-          data.C.SWR.areaQ1(i) = data.C.samplingInt * sum(sum(data.C.tSeries(loWin : loBaseWin-1) - data.C.SWR.baseline(i)));
-          data.C.SWR.areaQ2(i) = data.C.samplingInt * sum(sum(data.C.tSeries(loBaseWin : data.SWR.evPeak(i)-1) - data.C.SWR.baseline(i)));
-          data.C.SWR.areaQ3(i) = data.C.samplingInt * sum(sum(data.C.tSeries(data.SWR.evPeak(i) : hiBaseWin) - data.C.SWR.baseline(i)));
-          data.C.SWR.areaQ4(i) = data.C.samplingInt * sum(sum(data.C.tSeries(hiBaseWin+1 : hiWin) - data.C.SWR.baseline(i)));
-        end
       end
       
       data.SWR.frequency = length(data.SWR.evStart) / ((data.LFP.timing(length(data.LFP.timing)) - data.LFP.timing(1)) / 1000);
@@ -663,17 +623,6 @@ if param.swrOption
       if isfield(data,'fR')
         data.fR.SWR.event = data.fR.SWR.event';
         data.fR.SWR.power = data.fR.SWR.power';
-      end
-      
-      if param.cellOption
-        data.C.SWR.event    = data.C.SWR.event';
-        data.C.SWR.baseline = data.C.SWR.baseline';
-        data.C.SWR.evNorm   = data.C.SWR.evNorm';
-        data.C.SWR.area     = data.C.SWR.area';
-        data.C.SWR.areaQ1   = data.C.SWR.areaQ1';
-        data.C.SWR.areaQ2   = data.C.SWR.areaQ2';
-        data.C.SWR.areaQ3   = data.C.SWR.areaQ3';
-        data.C.SWR.areaQ4   = data.C.SWR.areaQ4';
       end
       
     end

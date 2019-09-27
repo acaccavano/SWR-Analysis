@@ -19,6 +19,8 @@ if isempty(data)  data     = struct; end
 
 % Set default parameters if not specified
 if ~isfield(param,'fileNum')              param.fileNum              = 1;   end
+if ~isfield(param,'pscEventPolarity')     param.pscEventPolarity     = 0;   end
+if ~isfield(param,'swrPSQOption')         param.swrPSQOption         = 1;   end
 if ~isfield(param,'importPSCOption')      param.importPSCOption      = 1;   end
 if ~isfield(param,'swrPSCOption')         param.swrPSCOption         = 1;   end
 if ~isfield(param,'useSWRDurationOption') param.useSWRDurationOption = 0;   end
@@ -53,7 +55,7 @@ if ~isfield(data,'C')   error('Must import cell channel to data structure before
 if ~isfield(data.C,'PSC') data.C.spike = struct; end
 
 % Fix in case Fs not calculated correctly:
-data.LFP.param.Fs = round(1000/data.LFP.samplingInt);
+data.LFP.param.Fs = round(1000 / data.LFP.samplingInt);
 
 if param.swrPSCOption
   if ~isfield(data,'SWR') error('Must analyze SWRs before proceeding'); end
@@ -94,7 +96,7 @@ end
 if param.expPSCEvOption
   if isempty(expPSCFile)
     defaultPath = [parentPath dataFileName '_pscEvents.csv'];
-    [exportName, exportPath] = uiputfile('.txt','Select *.csv file to export table of PSC events', defaultPath);
+    [exportName, exportPath] = uiputfile('.csv','Select *.csv file to export table of PSC events', defaultPath);
     expPSCFile = [exportPath exportName];
     if ~all(expPSCFile)
       warning('No PSC events to be exported - no file selected');
@@ -128,6 +130,112 @@ data.saveFile = saveFile;
 data.saveName = [saveName '.' saveExt];
 data.param    = param;
 data.C.param  = param; % Save to Cell structure, as subsequent analysis may alter data.param
+
+%% Calculate peri-SWR areas (charge or PSQ)
+if param.swrPSQOption
+  fprintf(['integrating cell charge over all SWR events (file ' dataFileName ')... ']);
+  
+  % Initialize data arrays:
+  if ~isfield(data.C,'SWR') data.C.SWR = struct; end
+  data.C.SWR.event    = [];
+  data.C.SWR.evNorm   = [];
+  data.C.SWR.evArea   = [];
+  data.C.SWR.baseline = [];
+  data.C.SWR.area     = [];
+  data.C.SWR.areaQ1   = [];
+  data.C.SWR.areaQ2   = [];
+  data.C.SWR.areaQ3   = [];
+  data.C.SWR.areaQ4   = [];
+  
+  if ~isnan(data.SWR.evStart)
+    
+    data.C.SWR.event{length(data.SWR.evStart)}  = [];
+    data.C.SWR.evNorm{length(data.SWR.evStart)} = [];
+    data.C.SWR.evArea{length(data.SWR.evStart)} = [];
+    
+    for i = 1:length(data.SWR.evStart)
+      
+      % Calculate SWR windows:
+      loWin = max(round(data.SWR.evPeak(i) - param.swrWindow / data.LFP.samplingInt), 1);
+      hiWin = min(round(data.SWR.evPeak(i) + param.swrWindow / data.LFP.samplingInt), length(data.LFP.tSeries));
+      
+      loBaseWin = max(round(data.SWR.evPeak(i) - 0.5 * param.swrWindow / data.LFP.samplingInt), 1);
+      hiBaseWin = min(round(data.SWR.evPeak(i) + 0.5 * param.swrWindow / data.LFP.samplingInt), length(data.LFP.tSeries));
+
+      data.C.SWR.event{i} = data.C.tSeries(loWin : hiWin);
+      
+      % Determine baseline:
+      baseCell = vertcat(data.C.tSeries(loWin : loBaseWin-1), data.C.tSeries(hiBaseWin+1 : hiWin));
+      
+      % Only consider baseline data in lower 50% quantile:
+      if param.pscEventPolarity
+        baseCell(baseCell > quantile(baseCell, 0.50)) = [];
+      else
+        baseCell(baseCell < quantile(baseCell, 0.50)) = [];
+      end
+      data.C.SWR.baseline(i) = mean(baseCell);
+      data.C.SWR.evNorm{i}   = data.C.SWR.event{i} - data.C.SWR.baseline(i);
+      
+      % Calculate area, defined as from -50:+50, and in 4 quarters: Q1=-100:-50, Q2=-50:0,Q3=0:50, Q4=50:100
+      data.C.SWR.area(i)   = data.C.samplingInt * sum(sum(data.C.tSeries(loBaseWin : hiBaseWin) - data.C.SWR.baseline(i)));
+      data.C.SWR.areaQ1(i) = data.C.samplingInt * sum(sum(data.C.tSeries(loWin : loBaseWin-1) - data.C.SWR.baseline(i)));
+      data.C.SWR.areaQ2(i) = data.C.samplingInt * sum(sum(data.C.tSeries(loBaseWin : data.SWR.evPeak(i)-1) - data.C.SWR.baseline(i)));
+      data.C.SWR.areaQ3(i) = data.C.samplingInt * sum(sum(data.C.tSeries(data.SWR.evPeak(i) : hiBaseWin) - data.C.SWR.baseline(i)));
+      data.C.SWR.areaQ4(i) = data.C.samplingInt * sum(sum(data.C.tSeries(hiBaseWin+1 : hiWin) - data.C.SWR.baseline(i)));
+      
+      % Calculate running integrated charge over swrWindow (warning: computationally intensive)
+      for j = 1 : length(data.C.SWR.event{i})
+        loAreaWin = max(round(loWin + (j - 1) - 0.5 * param.swrWindow / data.LFP.samplingInt), 1);
+        hiAreaWin = min(round(loWin + (j - 1) + 0.5 * param.swrWindow / data.LFP.samplingInt), length(data.LFP.tSeries));
+        data.C.SWR.evArea{i}(j) = data.C.samplingInt * sum(sum(data.C.tSeries(loAreaWin : hiAreaWin) - data.C.SWR.baseline(i)));
+      end
+      data.C.SWR.evArea{i} = data.C.SWR.evArea{i}';
+    end
+
+    % Calculate average evArea
+    nSWRsValid = length(data.C.SWR.evArea);
+    nSamples   = max(cellfun(@length, data.C.SWR.evArea));
+    
+    if length(data.C.SWR.evArea{1}) == nSamples
+      data.C.SWR.evAreaAve = data.C.SWR.evArea{1};
+      iStart = 2;
+    else
+      data.C.SWR.evAreaAve = data.C.SWR.evArea{2};
+      nSWRsValid = nSWRsValid - 1;
+      iStart = 3;
+    end
+    
+    for i = iStart:length(data.C.SWR.evArea)
+      if length(data.C.SWR.evArea{i}) == nSamples
+        data.C.SWR.evAreaAve = data.C.SWR.evAreaAve + data.C.SWR.evArea{i}; 
+      else
+        nSWRsValid = nSWRsValid - 1;
+      end
+    end
+    data.C.SWR.evAreaAve = data.C.SWR.evAreaAve / nSWRsValid;
+    
+    % Calculate SEM of evArea
+    data.C.SWR.evAreaSEM = (data.C.SWR.evArea{iStart - 1} - data.C.SWR.evAreaAve).*(data.C.SWR.evArea{iStart - 1} - data.C.SWR.evAreaAve);
+    for i = iStart:length(data.C.SWR.evArea)
+      if length(data.C.SWR.evArea{i}) == nSamples
+        data.C.SWR.evAreaSEM = data.C.SWR.evAreaSEM + (data.C.SWR.evArea{i} - data.C.SWR.evAreaAve).*(data.C.SWR.evArea{i} - data.C.SWR.evAreaAve);
+      end
+    end
+    data.C.SWR.evAreaSEM = sqrt(data.C.SWR.evAreaSEM/(nSWRsValid * (nSWRsValid - 1)));
+
+    % Transpose arrays
+    data.C.SWR.event    = data.C.SWR.event';
+    data.C.SWR.evNorm   = data.C.SWR.evNorm';
+    data.C.SWR.evArea   = data.C.SWR.evArea';
+    data.C.SWR.baseline = data.C.SWR.baseline';
+    data.C.SWR.area     = data.C.SWR.area';
+    data.C.SWR.areaQ1   = data.C.SWR.areaQ1';
+    data.C.SWR.areaQ2   = data.C.SWR.areaQ2';
+    data.C.SWR.areaQ3   = data.C.SWR.areaQ3';
+    data.C.SWR.areaQ4   = data.C.SWR.areaQ4';
+  end
+  fprintf('done\n');
+end
 
 %% Import and process event file(s)
 if param.importPSCOption %% && ~param.reAnalyzeOption %% Commented out want to have option to re-import events but may have unintended consequences
