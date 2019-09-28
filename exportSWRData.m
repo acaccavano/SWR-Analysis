@@ -15,13 +15,15 @@ if isempty(expDataFile)
 end
 
 % Set default parameters
-if ~isfield(param,'gammaOption')   param.gammaOption   = 1; end
-if ~isfield(param,'rOption')       param.rOption       = 1; end
-if ~isfield(param,'cellOption')    param.cellOption    = 1; end
-if ~isfield(param,'cellRawOption') param.cellRawOption = 0; end
-if ~isfield(param,'truncateEvs')   param.truncateEvs   = 1; end
-if ~isfield(param,'maxNumEvs')     param.maxNumEvs   = 100; end
-if ~isfield(param,'swrWindow')     param.swrWindow   = 100; end
+if ~isfield(param,'gammaOption')      param.gammaOption      = 1; end
+if ~isfield(param,'rOption')          param.rOption          = 1; end
+if ~isfield(param,'cellOption')       param.cellOption       = 1; end
+if ~isfield(param,'cellRawOption')    param.cellRawOption    = 0; end
+if ~isfield(param,'cellGammaOption')  param.cellGammaOption  = 1; end
+if ~isfield(param,'cellRippleOption') param.cellRippleOption = 1; end
+if ~isfield(param,'truncateEvs')      param.truncateEvs      = 1; end
+if ~isfield(param,'maxNumEvs')        param.maxNumEvs        =  50; end
+if ~isfield(param,'swrWindow')        param.swrWindow        = 100; end
 
 if param.truncateEvs
   nEvs = param.maxNumEvs;
@@ -39,8 +41,10 @@ if (dataOutSize(1) < max(dataOutSize))
   if param.gammaOption   data.gamma.SWR.event(1) = []; end
   if param.rOption       data.R.SWR.event(1)     = []; end
   if param.cellOption
-    if param.cellRawOption data.C.SWR.event(1)   = []; end
+    if param.cellRawOption    data.C.SWR.event(1)      = []; end
     data.C.SWR.evNorm(1) = [];
+    if param.cellGammaOption  data.gammaC.SWR.event(1) = []; end
+    if param.cellRippleOption data.RC.SWR.event(1)     = []; end
   end
   dataOutSize(1) = [];
   nEvs = nEvs - 1;
@@ -51,15 +55,18 @@ if (dataOutSize(nEvs) < max(dataOutSize))
   if param.gammaOption   data.gamma.SWR.event(nEvs) = []; end
   if param.rOption       data.R.SWR.event(nEvs)     = []; end
   if param.cellOption
-    if param.cellRawOption data.C.SWR.event(nEvs)   = []; end
+    if param.cellRawOption    data.C.SWR.event(nEvs)      = []; end
     data.C.SWR.evNorm(nEvs) = [];
+    if param.cellGammaOption  data.gammaC.SWR.event(nEvs) = []; end
+    if param.cellRippleOption data.RC.SWR.event(nEvs)     = []; end
   end
   dataOutSize(nEvs) = [];
   nEvs = nEvs - 1;
 end
 
 dataOut = (0: data.LFP.samplingInt : 2*param.swrWindow)';
-nSignals = 1 + param.gammaOption + param.rOption + (param.cellOption && param.cellRawOption) + param.cellOption;
+nSignals = 1 + param.gammaOption + param.rOption;
+if param.cellOption nSignals = nSignals + 1 + param.cellRawOption + param.cellGammaOption + param.cellRippleOption; end
 
 % Output table names
 tableVarNames = cell(1, 1 + nSignals*nEvs);
@@ -68,6 +75,7 @@ nameInd = 2;
 
 % Sort cell array into output table
 for i = 1:nEvs
+  
   % LFP event-locked data:
   dataOut = horzcat(dataOut, data.SWR.event{i});
   tableVarNames{nameInd} = ['LFP_' num2str(i)];
@@ -92,14 +100,28 @@ for i = 1:nEvs
     % cell event-locked data:
     if param.cellRawOption
       dataOut = horzcat(dataOut, data.C.SWR.event{i});
-      tableVarNames{nameInd} = ['Cell_' num2str(i)];
+      tableVarNames{nameInd} = ['C_' num2str(i)];
       nameInd = nameInd + 1;
     end
     
     % cell (normalized) event-locked data:
     dataOut = horzcat(dataOut, data.C.SWR.evNorm{i});
-    tableVarNames{nameInd} = ['CellNorm_' num2str(i)];
+    tableVarNames{nameInd} = ['CNorm_' num2str(i)];
     nameInd = nameInd + 1;
+    
+    % cell gamma-filtered event-locked data:
+    if param.cellGammaOption
+      dataOut = horzcat(dataOut, data.gammaC.SWR.event{i});
+      tableVarNames{nameInd} = ['GC_' num2str(i)];
+      nameInd = nameInd + 1;
+    end
+    
+    % cell ripple-filtered  event-locked data:
+    if param.cellRippleOption
+      dataOut = horzcat(dataOut, data.RC.SWR.event{i});
+      tableVarNames{nameInd} = ['RC_' num2str(i)];
+      nameInd = nameInd + 1;
+    end
   end
 end
 
