@@ -1,4 +1,4 @@
-function S = analyzeSpkHistBatch(param, dataFolder, saveFile)
+function S = combSpkHist(param, dataFolder, saveFile)
 
 % Handle optional arguments
 if (nargin < 3) saveFile   = []; end
