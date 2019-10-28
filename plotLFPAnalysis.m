@@ -263,7 +263,7 @@ for i = 1:nData
     linkaxes(hand.axTr(i,:), 'x');
   end
 end
-linkaxes(hand.axTr(:,:), 'y'); % Comment out - usually don't want this behavior (helpful for making figures)
+% linkaxes(hand.axTr(:,:), 'y'); % Comment out - usually don't want this behavior (helpful for making figures)
 
 end
 

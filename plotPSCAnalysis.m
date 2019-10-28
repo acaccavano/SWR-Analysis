@@ -14,7 +14,7 @@ spacerSz = 0.02;
 markerSz = 2;
 fontSz   = 5 * (5 - nData);
 tFact    = 0.1;
-lnWidth  = 1.0;
+lnWidth  = 0.5;
 axWidth  = (1 - (nData + 1) * marginSz) / nData;
 axSz     = (1 - 2*marginSz - 2*rasterSz - 4*spacerSz)/2;
 
@@ -28,9 +28,13 @@ axSz     = (1 - 2*marginSz - 2*rasterSz - 4*spacerSz)/2;
 
 lfpCol{1}  = [ 48  70 160]/255;
 lfpCol{2}  = [ 50  50  50]/255;
-cellCol    = [  0  90   0]/255;
+% cellCol    = [  0  90   0]/255; % PC
+cellCol    = [128   0   0]/255; % PVBC
+% cellCol    = [ 65   2  87]/255; % PVBSC
+% cellCol    = [192  96   0]/255; % PVAAC
 swrCol     = [180 180 180]/255;
-swrCCol    = cellCol;
+swrCCol{1} = lfpCol{1};
+swrCCol{2} = lfpCol{2};
 pscCol     = swrCol;
 pscCCol{1} = lfpCol{1};
 pscCCol{2} = lfpCol{2};
@@ -140,7 +144,7 @@ for i = 1:nData
     swrCChannel = (1:20);
   end
   swrCChannel = swrCChannel(ones(1,size(swrCPoints,1)),:);
-  plot(hand.axRsLFP(i), swrCPoints, swrCChannel,'.','MarkerSize', markerSz, 'Color', swrCCol);
+  plot(hand.axRsLFP(i), swrCPoints, swrCChannel,'.','MarkerSize', markerSz, 'Color', swrCCol{i});
   
   axis(hand.axRsLFP(i), [timing{i}(1) timing{i}(length(timing{i})) 1 20]);
   axis(hand.axRsLFP(i), 'off');
