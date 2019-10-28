@@ -716,7 +716,7 @@ end
 %% Export SWR event-locked episodic data files
 if all(expDataFile) && param.expSWRDataOption && param.swrOption
   fprintf(['exporting SWR event-locked data (file ' dataFileName ')... ']);
-  exportSWRData(data, param, saveFile, expDataFile);
+  exportSWRData(data, param, expDataFile);
   data.SWR.expDataFile = expDataFile;
   fprintf('done\n');
 end
