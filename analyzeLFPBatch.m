@@ -93,8 +93,9 @@ if ~isfield(param,'rLim2')            param.rLim2             = 220;  end
 if ~isfield(param,'rmsOption')        param.rmsOption         = 1;    end
 if ~isfield(param,'rmsPeriod')        param.rmsPeriod         = 5;    end
 if ~isfield(param,'peakDetectOption') param.peakDetectOption  = 1;    end
-if ~isfield(param,'sdMult')           param.sdMult            = 3;    end
+if ~isfield(param,'sdMult')           param.sdMult            = 4;    end
 if ~isfield(param,'baseQuant')        param.baseQuant         = 0.95; end
+if ~isfield(param,'swrType')          param.swrType           = 1;    end
 if ~isfield(param,'swrWindow')        param.swrWindow         = 100;  end
 if ~isfield(param,'expSWREvOption')   param.expSWREvOption    = 1;    end
 if ~isfield(param,'expSWRDataOption') param.expSWRDataOption  = 1;    end
@@ -112,10 +113,10 @@ if ~isfield(param,'hgammaLim1')       param.hgammaLim1        = 65;   end
 if ~isfield(param,'hgammaLim2')       param.hgammaLim2        = 85;   end
 if ~isfield(param,'fROption')         param.fROption          = 1;    end
 if ~isfield(param,'fRLim1')           param.fRLim1            = 250;  end
-if ~isfield(param,'fRLim2')           param.fRLim2            = 600;  end
+if ~isfield(param,'fRLim2')           param.fRLim2            = 500;  end
 if ~isfield(param,'spectOption')      param.spectOption       = 1;    end
 if ~isfield(param,'spectLim1')        param.spectLim1         = 1;    end
-if ~isfield(param,'spectLim2')        param.spectLim2         = 600;  end
+if ~isfield(param,'spectLim2')        param.spectLim2         = 500;  end
 if ~isfield(param,'reAnalyzeOption')  param.reAnalyzeOption   = 0;    end
 
 % Assign OS specific variables:

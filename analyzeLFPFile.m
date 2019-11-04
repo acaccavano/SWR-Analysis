@@ -85,6 +85,7 @@ if ~isfield(param,'lfpChannel')       param.lfpChannel        = 1;    end
 if ~isfield(param,'cellOption')       param.cellOption        = 1;    end
 if ~isfield(param,'cellChannel')      param.cellChannel       = 2;    end
 if ~isfield(param,'notchOption')      param.notchOption       = 0;    end
+if ~isfield(param,'notchFreq')        param.notchFreq         = 60;   end
 if ~isfield(param,'lfpOption')        param.lfpOption         = 1;    end
 if ~isfield(param,'lfpLim1')          param.lfpLim1           = 1;    end
 if ~isfield(param,'lfpLim2')          param.lfpLim2           = 1000; end
@@ -98,8 +99,9 @@ if ~isfield(param,'rLim2')            param.rLim2             = 220;  end
 if ~isfield(param,'rmsOption')        param.rmsOption         = 1;    end
 if ~isfield(param,'rmsPeriod')        param.rmsPeriod         = 5;    end
 if ~isfield(param,'peakDetectOption') param.peakDetectOption  = 1;    end
-if ~isfield(param,'sdMult')           param.sdMult            = 3;    end
+if ~isfield(param,'sdMult')           param.sdMult            = 4;    end
 if ~isfield(param,'baseQuant')        param.baseQuant         = 0.95; end
+if ~isfield(param,'swrType')          param.swrType           = 1;    end
 if ~isfield(param,'swrWindow')        param.swrWindow         = 100;  end
 if ~isfield(param,'expSWREvOption')   param.expSWREvOption    = 1;    end
 if ~isfield(param,'expSWRDataOption') param.expSWRDataOption  = 1;    end
@@ -110,17 +112,17 @@ if ~isfield(param,'betaOption')       param.betaOption        = 0;    end
 if ~isfield(param,'betaLim1')         param.betaLim1          = 13;   end
 if ~isfield(param,'betaLim2')         param.betaLim2          = 24;   end
 if ~isfield(param,'gammaOption')      param.gammaOption       = 1;    end
-if ~isfield(param,'gammaLim1')        param.gammaLim1         = 20;   end
-if ~isfield(param,'gammaLim2')        param.gammaLim2         = 50;   end
+if ~isfield(param,'gammaLim1')        param.gammaLim1         = 25;   end
+if ~isfield(param,'gammaLim2')        param.gammaLim2         = 55;   end
 if ~isfield(param,'hgammaOption')     param.hgammaOption      = 0;    end
 if ~isfield(param,'hgammaLim1')       param.hgammaLim1        = 65;   end
 if ~isfield(param,'hgammaLim2')       param.hgammaLim2        = 85;   end
 if ~isfield(param,'fROption')         param.fROption          = 1;    end
 if ~isfield(param,'fRLim1')           param.fRLim1            = 250;  end
-if ~isfield(param,'fRLim2')           param.fRLim2            = 600;  end
+if ~isfield(param,'fRLim2')           param.fRLim2            = 500;  end
 if ~isfield(param,'spectOption')      param.spectOption       = 1;    end
 if ~isfield(param,'spectLim1')        param.spectLim1         = 1;    end
-if ~isfield(param,'spectLim2')        param.spectLim2         = 600;  end
+if ~isfield(param,'spectLim2')        param.spectLim2         = 500;  end
 if ~isfield(param,'reAnalyzeOption')  param.reAnalyzeOption   = 0;    end
 
 % Initialize LFP structure if it doesn't already exist
@@ -321,7 +323,7 @@ if param.lfpOption
   if param.notchOption
     fprintf(['Notch filter 60Hz noise (file ' dataFileName ')... ']);
     
-    Ord   = 50;  % Order
+    Ord   = round(data.param.Fs / param.notchFreq);  % Order
     BW    = 10;  % Bandwidth
     Apass = 1;   % Bandwidth Attenuation
     
@@ -526,7 +528,7 @@ if param.swrOption
     if ~isfield(data.R,'SWR') data.R.SWR = struct; end
     data.R.SWR.event  = [];
     data.R.SWR.power  = [];
-    
+
     % Gamma arrays:
     if isfield(data,'gamma')
       if ~isfield(data.gamma,'SWR') data.gamma.SWR = struct; end
@@ -541,7 +543,27 @@ if param.swrOption
       data.fR.SWR.power = [];
     end
     
-    [data.SWR.evStatus, data.SWR.evStart, data.SWR.evEnd, data.SWR.evIndex] = eventOverlap(data.SW.evStatus, data.SW.evStart, data.SW.evEnd, data.R.evStatus, data.R.evStart, data.R.evEnd, data.LFP.timing, 0);
+    if param.swrType == 1 % Overlap of SW and ripple
+      [data.SWR.evStatus, data.SWR.evStart, data.SWR.evEnd, data.SWR.evIndex] = eventOverlap(data.SW.evStatus, data.SW.evStart, data.SW.evEnd, data.R.evStatus, data.R.evStart, data.R.evEnd, data.LFP.timing, 0);
+      
+    elseif param.swrType == 2 % SW only
+      data.SWR.evStatus = data.SW.evStatus;
+      data.SWR.evStart  = data.SW.evStart;
+      data.SWR.evEnd    = data.SW.evEnd;
+      data.SWR.evIndex  = 1:length(data.SWR.evStart);
+      data.SWR.evIndex  = data.SWR.evIndex';
+      data.SWR.evIndex  = horzcat(data.SWR.evIndex, zeros(length(data.SWR.evStart), 1));
+      
+    elseif param.swrType == 3 % Ripple only
+      data.SWR.evStatus = data.R.evStatus;
+      data.SWR.evStart  = data.R.evStart;
+      data.SWR.evEnd    = data.R.evEnd;
+      data.SWR.evIndex  = 1:length(data.SWR.evStart);
+      data.SWR.evIndex  = data.SWR.evIndex';
+      data.SWR.evIndex  = horzcat(zeros(length(data.SWR.evStart), 1), data.SWR.evIndex);
+      
+    end
+    
     if ~isnan(data.SWR.evStart)
       
       % Initialize event locked data window cell arrays
