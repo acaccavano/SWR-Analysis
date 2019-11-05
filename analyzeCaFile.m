@@ -281,6 +281,47 @@ if param.swrCaOption
   
   data.SWR.Ca.nCellsC = sum(data.SWR.Ca.evMatrix, 2); % # Cells active for each SWR event
   
+  %% Correlation Matrices
+  data.SWR.Ca.evMatrixCorr = data.SWR.Ca.evMatrix;
+  % Only consider events with >0 active cells
+  ev2 = 1;
+  for ev1 = 1:length(data.SWR.Ca.nCellsC)
+    if data.SWR.Ca.nCellsC(ev1) == 0
+      data.SWR.Ca.evMatrixCorr(ev2,:) = [];
+    else
+      ev2 = ev2 + 1;
+    end
+  end
+    
+  % Calculate correlation matrix between SWR events using Jaccard-Similarity distance
+  data.SWR.Ca.corrMatrix = 1 - squareform(pdist(data.SWR.Ca.evMatrixCorr, 'jaccard'));
+  data.SWR.Ca.corrMatrix(isnan(data.SWR.Ca.corrMatrix)) = 0; % Replace SWRs with no active cells with zero correlation
+  data.SWR.Ca.corrMatrix = triu(data.SWR.Ca.corrMatrix, 1); % Replace diagonal and redundant half with zero
+  data.SWR.Ca.corrVector = data.SWR.Ca.corrMatrix(triu(true(size(data.SWR.Ca.corrMatrix)), 1));
+  [data.SWR.Ca.cdfF, data.SWR.Ca.cdfX] = ecdf(data.SWR.Ca.corrVector);
+  
+  % Calculate correlation matrix between cells using Jaccard-Similarity distance
+  data.Ca.SWR.corrMatrix = 1 - squareform(pdist(data.SWR.Ca.evMatrixCorr', 'jaccard'));
+  data.Ca.SWR.corrMatrix(isnan(data.Ca.SWR.corrMatrix)) = 0; % Replace inactive cells with zero correlation
+  data.Ca.SWR.corrMatrix = triu(data.Ca.SWR.corrMatrix, 1); % Replace diagonal and redundant half with zero
+  data.Ca.SWR.corrVector = data.Ca.SWR.corrMatrix(triu(true(size(data.Ca.SWR.corrMatrix)), 1));
+  [data.Ca.SWR.cdfF, data.Ca.SWR.cdfX] = ecdf(data.Ca.SWR.corrVector);
+  
+%   % Plot Event Matrix:
+%   figure
+%   imagesc('XData', 1:size(data.SWR.Ca.evMatrixCorr,1), 'YData', 1:size(data.SWR.Ca.evMatrixCorr,2), 'CData', data.SWR.Ca.evMatrixCorr');
+%   axis([1 size(data.SWR.Ca.evMatrixCorr,1) 1 size(data.SWR.Ca.evMatrixCorr,2)]);
+%   caxis([0 1]);
+%   colormap(flipud(hot));
+%   
+%   % Plot Correlation Matrix:
+%   figure
+%   imagesc('XData', 1:size(data.SWR.Ca.corrMatrix,1), 'YData', 1:size(data.SWR.Ca.corrMatrix,2), 'CData', data.SWR.Ca.corrMatrix);
+%   axis([1 size(data.SWR.Ca.corrMatrix,1) 1 size(data.SWR.Ca.corrMatrix,2)]);
+%   caxis([0 1]);
+%   colormap(flipud(hot));
+%   colorbar
+  
   % Re-order structure arrays
   data.Ca.SWR = orderfields(data.Ca.SWR);
   data.SWR.Ca = orderfields(data.SWR.Ca);
