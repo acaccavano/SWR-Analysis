@@ -1,4 +1,4 @@
-function [data, hand] = analyzeLFPFile(data, hand, param, dataFile, saveFile, expEvFile, expDataFile)
+function [data, hand] = analyzeLFPFile(data, hand, param, dataFile, saveFile, expEvFile, expDataFile, stimFile)
 %% [data, h] = analyzeLFPFile(data, hand, param, dataFile, saveFile, expEvFile, expDataFile)
 %
 %  Function to detect sharp wave ripple (SWR) events, gamma and theta analysis,
@@ -63,6 +63,7 @@ function [data, hand] = analyzeLFPFile(data, hand, param, dataFile, saveFile, ex
 %   hand       = handle structure for figure
 
 %% Handle input arguments - if not entered
+if (nargin < 8) stimFile    = []; end
 if (nargin < 7) expDataFile = []; end
 if (nargin < 6) expEvFile   = []; end
 if (nargin < 5) saveFile    = []; end
@@ -123,6 +124,7 @@ if ~isfield(param,'fRLim2')           param.fRLim2            = 500;  end
 if ~isfield(param,'spectOption')      param.spectOption       = 1;    end
 if ~isfield(param,'spectLim1')        param.spectLim1         = 1;    end
 if ~isfield(param,'spectLim2')        param.spectLim2         = 500;  end
+if ~isfield(param,'importStimOption') param.importStimOption  = 0;    end
 if ~isfield(param,'reAnalyzeOption')  param.reAnalyzeOption   = 0;    end
 
 % Initialize LFP structure if it doesn't already exist
@@ -179,6 +181,16 @@ if isempty(expDataFile) && param.expSWRDataOption
   [exportName, exportPath] = uiputfile('.txt','Select *.txt file to export episodic SWR data', defaultPath);
   expDataFile = [exportPath exportName];
   if ~all(expDataFile) warning('No SWR events to be exported - no file selected'); end
+end
+
+% Select stimulation event file, if option selected
+if param.importStimOption
+  if isempty(stimFile)
+    [stimName, stimPath] = uigetfile('.csv', 'Select stimulation event *.csv file from pClamp', parentPath);
+    stimFile = [stimPath stimName];
+    if ~all(stimFile) error('No stimulation file selected'); end
+  end
+  [~, stimFileName, ~] = parsePath(stimFile);
 end
 
 %% Import data
@@ -683,7 +695,81 @@ if param.spectOption
   end
 end
 
-% Re-order structure arrays
+%% Import and process stim file (if selected)
+if param.importStimOption
+  
+  % Import stim event file into matlab table
+  warning('off')
+  fprintf(['importing stim event file ' stimFileName '... ']);
+  stimTable = readtable(stimFile);
+  fprintf('done\n');
+  warning('on')
+  
+  data.stim = struct;
+  
+  % Re-initialize spike data structures
+  data.stim.evStatus = [];
+  data.stim.evStart  = [];
+  data.stim.evPeak   = [];
+  data.stim.evEnd    = [];
+  
+  fprintf(['processing stim events (file ' dataFileName ')... ']);
+  for i = 1:size(stimTable,2)
+    if ~isempty(strfind(stimTable.Properties.VariableNames{i},"stimStart"))
+      stimStartTime = stimTable{:,i};
+      for ev = 1:length(stimStartTime)
+        if ~isempty(find(data.LFP.timing >= stimStartTime(ev), 1))
+          data.stim.evStart(ev) = find(data.LFP.timing >= stimStartTime(ev), 1);
+        end
+      end
+      data.stim.evStart = data.stim.evStart';
+    end
+    
+    if ~isempty(strfind(stimTable.Properties.VariableNames{i},"stimEnd"))
+      stimEndTime = stimTable{:,i};
+      for ev = 1:length(stimEndTime)
+        if ~isempty(find(data.LFP.timing <= stimEndTime(ev), 1, 'last'))
+          data.stim.evEnd(ev) = find(data.LFP.timing <= stimEndTime(ev), 1, 'last');
+        end
+      end
+      data.stim.evEnd = data.stim.evEnd';
+    end
+    
+    if ~isempty(strfind(stimTable.Properties.VariableNames{i},"stimPeak"))
+      stimPeakTime = stimTable{:,i};
+      for ev = 1:length(stimPeakTime)
+        if ~isempty(find(data.LFP.timing >= stimPeakTime(ev), 1, 'last'))
+          data.stim.evPeak(ev) = find(data.LFP.timing >= stimPeakTime(ev), 1);
+        end
+      end
+      data.stim.evPeak = data.stim.evPeak';
+    end
+    
+    if ~isempty(strfind(stimTable.Properties.VariableNames{i},"lfpAmp"))
+      data.stim.lfpAmp = stimTable{:,i};
+    end
+    
+    if ~isempty(strfind(stimTable.Properties.VariableNames{i},"lfpBL"))
+      data.stim.lfpBL = stimTable{:,i};
+    end
+    
+    if ~isempty(strfind(stimTable.Properties.VariableNames{i},"lfpSlope"))
+      data.stim.lfpSlope = stimTable{:,i};
+    end
+    
+  end
+  fprintf('done\n');
+  
+  % compute stim status array
+  data.stim.evStatus = zeros(length(data.LFP.timing),1);
+  for ev = 1:length(data.stim.evStart)
+    for i = data.stim.evStart(ev) : data.stim.evEnd(ev)
+      data.stim.evStatus(i) = 1;
+    end
+  end
+end
+
+%% Re-order structure arrays
 data       = orderStruct(data);
 data.param = orderStruct(data.param);
 data.LFP   = orderStruct(data.LFP);
@@ -718,6 +804,10 @@ end
 if (param.cellOption)
   data.C = orderStruct(data.C);
   if isfield(data.C, 'SWR') data.C.SWR = orderStruct(data.C.SWR); end
+end
+
+if (param.importStimOption)
+  data.stim = orderStruct(data.stim);
 end
 
 %% Save file

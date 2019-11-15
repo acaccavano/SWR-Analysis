@@ -1,4 +1,4 @@
-function analyzeLFPBatch(param, dataFolder, saveFolder, expEvFolder, expDataFolder)
+function analyzeLFPBatch(param, dataFolder, saveFolder, expEvFolder, expDataFolder, stimFolder)
 %% analyzeLFPBatch(param, dataFolder, saveFolder, expEvFolder, expDataFolder)
 %
 %  Function to detect sharp wave ripple (SWR) events, gamma and theta analysis,
@@ -62,6 +62,7 @@ function analyzeLFPBatch(param, dataFolder, saveFolder, expEvFolder, expDataFold
 %   hand       = handle structure for figure
 
 %% Handle optional arguments
+if (nargin < 6) stimFolder    = []; end
 if (nargin < 5) expDataFolder = []; end
 if (nargin < 4) expEvFolder   = []; end
 if (nargin < 3) saveFolder    = []; end
@@ -117,6 +118,7 @@ if ~isfield(param,'fRLim2')           param.fRLim2            = 500;  end
 if ~isfield(param,'spectOption')      param.spectOption       = 1;    end
 if ~isfield(param,'spectLim1')        param.spectLim1         = 1;    end
 if ~isfield(param,'spectLim2')        param.spectLim2         = 500;  end
+if ~isfield(param,'importStimOption') param.importStimOption  = 0;    end
 if ~isfield(param,'reAnalyzeOption')  param.reAnalyzeOption   = 0;    end
 
 % Assign OS specific variables:
@@ -169,11 +171,17 @@ if isempty(expDataFolder) && param.expSWRDataOption
   if (expDataFolder == 0) warning('No files to be exported - SWR data folder not selected'); end
 end
 
+% Select folder of stimulation events, if option selected
+if isempty(stimFolder) && param.importStimOption
+  stimFolder = uigetdir(parentPath, 'Select folder of stimulation event *.csv files');
+  if (stimFolder == 0) error('No stimulation folder selected'); end
+end
+
 % ensure current dir is in path so we can call helper funcs
 curPath = pwd;
 path(path, curPath);
 
-% Extract file names
+% Extract data file names
 cd (dataFolder);
 if param.reAnalyzeOption
   dir_temp = dir('*.mat'); % Find only matlab files
@@ -189,17 +197,32 @@ elseif (param.fileType == 2)
   dir_sub = dir_temp(dir_flag);
   file = {dir_sub.name};
 end
-nFiles = length(file);
+nDataFiles = length(file);
+
+% Extract stim event files names (if option selected)
+if param.importStimOption
+  cd (stimFolder);
+  dir_temp   = dir('*.csv'); % Find only *.csv files
+  names      = {dir_temp.name}; % extract all the names in the struct returned by 'dir': ".", "..", file 1,2....
+  stimFiles   = names([dir_temp.isdir] == 0); % extract the name for all files, but no "." and ".."
+  nStimFiles  = length(spkFiles);
+  
+  % Check for same number of data and stim files:
+  if (nDataFiles ~= nStimFiles)
+    error('Unequal number of files in data and stim folders - analysis will be mismatched');
+  end
+end
 
 cd (curPath);
 
 % Determine individual file names:
-dataFile{nFiles}    = [];
-saveFile{nFiles}    = [];
-expEvFile{nFiles}   = [];
-expDataFile{nFiles} = [];
+dataFile{nDataFiles}    = [];
+saveFile{nDataFiles}    = [];
+expEvFile{nDataFiles}   = [];
+expDataFile{nDataFiles} = [];
+stimFile{nDataFiles}    = [];
 
-for i = 1:nFiles
+for i = 1:nDataFiles
   % Determine individual import files/folders
   dataFile{i}  = [dataFolder slash file{i}];
   [~, dataFileName, ~] = parsePath(dataFile{i});
@@ -224,15 +247,20 @@ for i = 1:nFiles
       expDataFile{i} = [expDataFolder slash dataFileName '_swrData.txt'];
     end
   end
+  
+  if param.importStimOption
+    stimFile{i} = [stimFolder slash stimFiles{i}];
+  end
+    
 end
 
 reAnalyzeOption = param.reAnalyzeOption;
-parfor i = 1:nFiles
+parfor i = 1:nDataFiles
   if reAnalyzeOption
     data = load(dataFile{i});
-    analyzeLFPFile(data, [], param, dataFile{i}, saveFile{i}, expEvFile{i}, expDataFile{i});
+    analyzeLFPFile(data, [], param, dataFile{i}, saveFile{i}, expEvFile{i}, expDataFile{i}, stimFile{i});
   else
-    analyzeLFPFile([], [], param, dataFile{i}, saveFile{i}, expEvFile{i}, expDataFile{i});
+    analyzeLFPFile([], [], param, dataFile{i}, saveFile{i}, expEvFile{i}, expDataFile{i}, stimFile{i});
   end
 end
 fprintf('complete\n');
