@@ -28,8 +28,6 @@ if ~isfield(param,'baseQuant')            param.baseQuant            = 0.8; end
 if ~isfield(param,'sdMult')               param.sdMult               = 4;   end
 if ~isfield(param,'skipDetectLim')        param.skipDetectLim        = 2;   end
 if ~isfield(param,'consThreshOption')     param.consThreshOption     = 0;   end
-if ~isfield(param,'calcCaWindowOption')   param.calcCaWindowOption   = 0;   end
-if ~isfield(param,'limPeakDetectOption')  param.limPeakDetectOption  = 0;   end
 if ~isfield(param,'swrCaOption')          param.swrCaOption          = 0;   end
 if ~isfield(param,'useSWRDurationOption') param.useSWRDurationOption = 1;   end
 if ~isfield(param,'useSWRWindowOption')   param.useSWRWindowOption   = 0;   end
@@ -37,6 +35,10 @@ if ~isfield(param,'swrWindow')            param.swrWindow            = 100; end
 if ~isfield(param,'expCaEvOption')        param.expCaEvOption        = 1;   end
 if ~isfield(param,'expSWREvOption')       param.expSWREvOption       = 0;   end
 if ~isfield(param,'spkCaOption')          param.spkCaOption          = 0;   end
+if ~isfield(param,'stimCaOption')         param.stimCaOption         = 0;   end
+if ~isfield(param,'stimCaLim1')           param.stimCaLim1           = 0;   end
+if ~isfield(param,'stimCaLim2')           param.stimCaLim2           = 2000; end
+if ~isfield(param,'limCaPeakDetectOption') param.limCaPeakDetectOption = 0; end
 if ~isfield(param,'reAnalyzeOption')      param.reAnalyzeOption      = 0;   end
 
 % Assign OS specific variables:
@@ -54,7 +56,7 @@ if isempty(dataFolder)
     dataFolder = uigetdir(pwd, 'Select folder containing analyzed dFoF *.mat files');
     if (dataFolder == 0) return; end
     [parentPath, ~, ~] = parsePath(dataFolder);
-  elseif (param.swrCaOption || param.spkCaOption)
+  elseif (param.swrCaOption || param.spkCaOption || param.stimCaOption)
     dataFolder = uigetdir(pwd, 'Select folder containing analyzed LFP and/or cell *.mat files');
     if (dataFolder == 0) return; end
     [parentPath, ~, ~] = parsePath(dataFolder);
@@ -148,7 +150,7 @@ expSWRFile{nFiles} = [];
 for i = 1:nFiles
   
   % Determine dataFile (if options require)
-  if param.reAnalyzeOption || param.swrCaOption || param.spkCaOption
+  if param.reAnalyzeOption || param.swrCaOption || param.spkCaOption || param.stimCaOption
     dataFile{i} = [dataFolder slash dataFiles{i}];
     [~, dataFileName, ~] = parsePath(dataFile{i});
   end
@@ -192,7 +194,7 @@ if ~param.reAnalyzeOption || (param.baseCorrectMethod > 0) || param.interpOption
   spkCaOption     = param.spkCaOption;
   
   parfor i = 1:nFiles
-    if reAnalyzeOption || swrCaOption || spkCaOption
+    if reAnalyzeOption || swrCaOption || spkCaOption || stimCaOption
       data = load(dataFile{i});
       processCaFile(data, [], param, saveFile{i}, CaFile{i}, timingFile);
     else
