@@ -34,8 +34,6 @@ if ~isfield(param,'sdMult')               param.sdMult               = 4;   end
 if ~isfield(param,'sdBaseFactor')         param.sdBaseFactor         = 1;   end
 if ~isfield(param,'skipDetectLim')        param.skipDetectLim        = 2;   end
 if ~isfield(param,'consThreshOption')     param.consThreshOption     = 0;   end
-if ~isfield(param,'calcCaWindowOption')   param.calcCaWindowOption   = 0;   end
-if ~isfield(param,'limPeakDetectOption')  param.limPeakDetectOption  = 0;   end
 if ~isfield(param,'swrCaOption')          param.swrCaOption          = 0;   end
 if ~isfield(param,'useSWRDurationOption') param.useSWRDurationOption = 1;   end
 if ~isfield(param,'useSWRWindowOption')   param.useSWRWindowOption   = 0;   end
@@ -43,6 +41,10 @@ if ~isfield(param,'swrWindow')            param.swrWindow            = 100; end
 if ~isfield(param,'expCaEvOption')        param.expCaEvOption        = 1;   end
 if ~isfield(param,'expSWREvOption')       param.expSWREvOption       = 0;   end
 if ~isfield(param,'spkCaOption')          param.spkCaOption          = 0;   end
+if ~isfield(param,'stimCaOption')         param.stimCaOption         = 0;   end
+if ~isfield(param,'stimCaLim1')           param.stimCaLim1           = 0;   end
+if ~isfield(param,'stimCaLim2')           param.stimCaLim2           = 2000; end
+if ~isfield(param,'limCaPeakDetectOption') param.limCaPeakDetectOption = 0; end
 if ~isfield(param,'reAnalyzeOption')      param.reAnalyzeOption      = 0;   end
 
 % Check if necessary data structures are present
@@ -100,7 +102,27 @@ if param.peakDetectCa
     error('Missing threholds, first run calcThresh.m');
   end
 
-  % Set detection range based on param.skipDetectLim
+%   % Set spontaneous peak detection mask
+%   detectMask = logical(ones(length(data.Ca.timing), 1));
+%   
+%   % Limit initial detection based on param.skipDetectLim
+%   hiWin = round(1000 * param.skipDetectLim / data.Ca.samplingInt);
+%   detectMask(1 : hiWin) = 0;
+%   
+%   % Limit detection range to periods outside of stim window (if option selected)
+%   if param.stimCaOption && param.limCaPeakDetectOption
+%     for ev = 1:length(data.stim.evStart)
+%       loWin = round(data.stim.evStart(ev) * data.LFP.samplingInt / data.Ca.samplingInt) + round(param.stimCaLim1 / data.Ca.samplingInt);
+%       hiWin = round(data.stim.evStart(ev) * data.LFP.samplingInt / data.Ca.samplingInt) + round(param.stimCaLim2/data.Ca.samplingInt);
+%       detectMask(loWin : hiWin) = 0;
+%     end
+%   end
+%   
+%   CaRange = 1:length(data.Ca.timing);
+%   CaRange = CaRange';
+%   CaRange = CaRange(detectMask);
+  
+  % Set alignment range of LFP based on param.skipDetectLim
   CaRange = find(data.Ca.timing >= 1000 * param.skipDetectLim);
   
   % Initialize cell arrays:
@@ -195,22 +217,22 @@ if param.swrCaOption
   fprintf(['aligning time arrays for SWR-Calcium coincidence analysis (file ' dataFileName ')... ']);
   for ch = 1:data.Ca.nChannels
     if param.useSWRDurationOption
-      
       [data.SWR.Ca.evStatusA, data.SWR.Ca.evStartA, data.SWR.Ca.evEndA, data.Ca.SWR.evStatusA(:,ch), data.Ca.SWR.evStartA{ch}, data.Ca.SWR.evEndA{ch}, data.SWR.Ca.timingA] = ...
-        timeAlign(data.SWR.evStatus(lfpRange), data.Ca.evStatus(:,ch), data.LFP.timing(lfpRange), data.Ca.timing(CaRange));
-      % Re-calculate peak - truncating if necessary:
-      data.SWR.Ca.evPeakA = data.SWR.evPeak(1:length(data.SWR.Ca.evStartA));
+        timeAlign(data.SWR.evStatus(lfpRange), data.Ca.evStatus(CaRange,ch), data.LFP.timing(lfpRange), data.Ca.timing(CaRange));
       
     elseif param.useSWRWindowOption
-      
       [data.SWR.Ca.evStatusA, data.SWR.Ca.evStartA, data.SWR.Ca.evEndA, data.Ca.SWR.evStatusA(:,ch), data.Ca.SWR.evStartA{ch}, data.Ca.SWR.evEndA{ch}, data.SWR.Ca.timingA] = ...
-        timeAlign(data.SWR.evStatusStand(lfpRange), data.Ca.evStatus(:,ch), data.LFP.timing(lfpRange), data.Ca.timing(CaRange));
-      % Re-calculate SWR peak from mid-point of start and end:
-      data.SWR.Ca.evPeakA = round(0.5*(data.SWR.Ca.evStartA + data.SWR.Ca.evEndA));
+        timeAlign(data.SWR.evStatusStand(lfpRange), data.Ca.evStatus(CaRange,ch), data.LFP.timing(lfpRange), data.Ca.timing(CaRange));
       
     end
+    
+    % Truncate Ca peaks if necessary
     data.Ca.SWR.evPeakA{ch} = data.Ca.evPeak{ch}(1:length(data.Ca.SWR.evStartA{ch}));
   end
+  
+  % Re-calculate SWR peaks from mid-point of start and end:
+  data.SWR.Ca.evPeakA = round(0.5*(data.SWR.Ca.evStartA + data.SWR.Ca.evEndA));
+    
   fprintf('done\n');
   
   %% Calculate overlap of events
@@ -326,6 +348,155 @@ if param.swrCaOption
 %   caxis([0 1]);
 %   colormap(flipud(hot));
 %   colorbar
+  
+  % Re-order structure arrays
+  data.Ca.SWR = orderfields(data.Ca.SWR);
+  data.SWR.Ca = orderfields(data.SWR.Ca);
+  data.SWR    = orderfields(data.SWR);
+  
+end
+
+%% Calculate stim response
+if param.stimCaOption
+  
+  % Create new data structures if not already present
+  if ~isfield(data.Ca,'stim') data.Ca.stim = struct; end
+  if ~isfield(data.stim,'Ca') data.stim.Ca = struct; end
+  
+  % Initialize cell arrays:
+  data.Ca.stim.evStatusA = [];
+  data.Ca.stim.evStartA  = [];
+  data.Ca.stim.evPeakA   = [];
+  data.Ca.stim.evEndA    = [];
+  
+  data.Ca.stim.evStartA{1, data.Ca.nChannels} = [];
+  data.Ca.stim.evPeakA{1, data.Ca.nChannels}  = [];
+  data.Ca.stim.evEndA{1, data.Ca.nChannels}   = [];
+  
+  data.stim.Ca.evStatusExt = [];
+  data.stim.Ca.evStartExt  = [];
+  data.stim.Ca.evEndExt    = [];
+  
+  % Set alignment range of LFP based on param.skipDetectLim
+  lfpRange = find(data.LFP.timing >= 1000 * param.skipDetectLim);
+  
+  % Calculate extended stim evStatus
+  data.stim.evStatusExt = zeros(length(data.LFP.timing), 1);
+  for ev = 1:length(data.stim.evStart)
+    loWin = data.stim.evStart(ev) + round(param.stimCaLim1 / data.LFP.samplingInt);
+    hiWin = data.stim.evStart(ev) + round(param.stimCaLim2 / data.LFP.samplingInt);
+    data.stim.evStatusExt(loWin : hiWin) = 1;
+  end
+  
+  %% Align files
+  fprintf(['aligning time arrays for stim-Calcium coincidence analysis (file ' dataFileName ')... ']);
+  for ch = 1:data.Ca.nChannels
+    [data.stim.Ca.evStatusExt, data.stim.Ca.evStartExt, data.stim.Ca.evEndExt, data.Ca.stim.evStatusA(:,ch), data.Ca.stim.evStartA{ch}, data.Ca.stim.evEndA{ch}, data.stim.Ca.timing] = ...
+      timeAlign(data.stim.evStatusExt(lfpRange), data.Ca.evStatus(CaRange,ch), data.LFP.timing(lfpRange), data.Ca.timing(CaRange));
+    
+    % Re-calculate Ca peaks - truncating if necessary:
+    data.Ca.stim.evPeakA{ch} = data.Ca.evPeak{ch}(1:length(data.Ca.stim.evStartA{ch}));
+  end
+  fprintf('done\n');
+  
+  %% Calculate overlap of events
+  
+  % Initialize cell arrays:
+  data.Ca.SWR.evStatusC = [];
+  data.Ca.SWR.evStartC  = [];
+  data.Ca.SWR.evEndC    = [];
+  data.Ca.SWR.evIndex   = [];
+  
+  data.Ca.SWR.evStartC{1, data.Ca.nChannels} = [];
+  data.Ca.SWR.evEndC{1, data.Ca.nChannels}   = [];
+  data.Ca.SWR.evIndex{1, data.Ca.nChannels}  = [];
+  
+  data.SWR.Ca.evStatusC = [];
+  data.SWR.Ca.evStartC  = [];
+  data.SWR.Ca.evEndC    = [];
+  data.SWR.Ca.evIndex   = [];
+  
+  data.SWR.Ca.evStartC{1, data.Ca.nChannels} = [];
+  data.SWR.Ca.evEndC{1, data.Ca.nChannels}   = [];
+  data.SWR.Ca.evIndex{1, data.Ca.nChannels}  = [];
+  
+  % Calculate overlap of SWR and Ca events for each cell
+  fprintf(['detecting Ca transients coincident with SWRs (file ' dataFileName ')... ']);
+  for ch = 1:data.Ca.nChannels
+    [data.Ca.SWR.evStatusC(:,ch), data.Ca.SWR.evStartC{ch}, data.Ca.SWR.evEndC{ch}, data.Ca.SWR.evIndex{ch}] = eventOverlap(data.SWR.Ca.evStatusA, data.SWR.Ca.evStartA, data.SWR.Ca.evEndA, ...
+      data.Ca.SWR.evStatusA(:,ch), data.Ca.SWR.evStartA{ch}, data.Ca.SWR.evEndA{ch}, data.SWR.Ca.timingA, 2);
+  end
+  fprintf('done\n');
+  
+  % Find SWRs that coincide with at least one Ca transient
+  fprintf(['detecting SWRs coincident with Ca transients (file ' dataFileName ')... ']);
+  for ch = 1:data.Ca.nChannels
+    [data.SWR.Ca.evStatusC(:,ch), data.SWR.Ca.evStartC{ch}, data.SWR.Ca.evEndC{ch}, data.SWR.Ca.evIndex{ch}] = eventOverlap(data.SWR.Ca.evStatusA, data.SWR.Ca.evStartA, data.SWR.Ca.evEndA, ...
+      data.Ca.SWR.evStatusA(:,ch), data.Ca.SWR.evStartA{ch}, data.Ca.SWR.evEndA{ch}, data.SWR.Ca.timingA, 1);
+  end
+  fprintf('done\n');
+  
+  % Calculate summed status of coincident SWRs over all cells (value signifies # active cells):
+  data.SWR.Ca.evStatusSumC = sum(data.SWR.Ca.evStatusC, 2); % Summed status of coincident SWRs over all cells
+  
+  % Parse summed status to get start and end times:
+  [data.SWR.Ca.evStartSumC, data.SWR.Ca.evEndSumC] = eventParse(data.SWR.Ca.evStatusSumC);
+  
+  % Compute total number of events:
+  data.SWR.Ca.nEventsA      = size(data.SWR.Ca.evStartA, 1);        % # SWRs
+  [data.SWR.Ca.nEventsC, ~] = cellfun(@size, data.SWR.Ca.evStartC); % for each cell, # SWRs with coincident Ca event
+  data.SWR.Ca.nEventsSumC   = size(data.SWR.Ca.evStartSumC, 1);     % # SWRs with any coincident cell event
+  [data.Ca.SWR.nEventsA, ~] = cellfun(@size, data.Ca.SWR.evStartA); % for each cell, # Ca events
+  data.Ca.SWR.nEventsSumA   = sum(data.Ca.SWR.nEventsA);            % Sum of all Ca events
+  [data.Ca.SWR.nEventsC, ~] = cellfun(@size, data.Ca.SWR.evStartC); % for each cell, # Ca events with coincident SWR
+  data.Ca.SWR.nEventsSumC   = sum(data.Ca.SWR.nEventsC);            % Sum of all Ca events with coincident SWR
+  data.Ca.SWR.fracEventsC   = data.Ca.SWR.nEventsC ./ data.Ca.SWR.nEventsA; % Fraction of coicident events
+  
+  % Calculate simplified event matrix:
+  data.SWR.Ca.evMatrix = zeros(data.SWR.Ca.nEventsA, data.Ca.nChannels);
+  
+  for ch = 1:data.Ca.nChannels
+    evStatusC = data.SWR.Ca.evStatusA .* data.Ca.SWR.evStatusA(:,ch);
+    
+    for ev = 1:data.SWR.Ca.nEventsA
+      if (sum(evStatusC(data.SWR.Ca.evStartA(ev) : data.SWR.Ca.evEndA(ev))) > 0)
+        data.SWR.Ca.evMatrix(ev, ch) = 1;
+      end
+    end
+  end
+  
+  data.SWR.Ca.nCellsC = sum(data.SWR.Ca.evMatrix, 2); % # Cells active for each SWR event
+  
+  %% Correlation Matrices
+  data.SWR.Ca.evMatrixCorr = data.SWR.Ca.evMatrix;
+  % Only consider events with >0 active cells
+  ev2 = 1;
+  for ev1 = 1:length(data.SWR.Ca.nCellsC)
+    if data.SWR.Ca.nCellsC(ev1) == 0
+      data.SWR.Ca.evMatrixCorr(ev2,:) = [];
+    else
+      ev2 = ev2 + 1;
+    end
+  end
+    
+  % Only compute correlations if sufficient number of cells, otherwise may crash
+  if data.Ca.nChannels >= 5
+    
+    % Calculate correlation matrix between SWR events using Jaccard-Similarity distance
+    data.SWR.Ca.corrMatrix = 1 - squareform(pdist(data.SWR.Ca.evMatrixCorr, 'jaccard'));
+    data.SWR.Ca.corrMatrix(isnan(data.SWR.Ca.corrMatrix)) = 0; % Replace SWRs with no active cells with zero correlation
+    data.SWR.Ca.corrMatrix = triu(data.SWR.Ca.corrMatrix, 1); % Replace diagonal and redundant half with zero
+    data.SWR.Ca.corrVector = data.SWR.Ca.corrMatrix(triu(true(size(data.SWR.Ca.corrMatrix)), 1));
+    [data.SWR.Ca.cdfF, data.SWR.Ca.cdfX] = ecdf(data.SWR.Ca.corrVector);
+    
+    % Calculate correlation matrix between cells using Jaccard-Similarity distance
+    data.Ca.SWR.corrMatrix = 1 - squareform(pdist(data.SWR.Ca.evMatrixCorr', 'jaccard'));
+    data.Ca.SWR.corrMatrix(isnan(data.Ca.SWR.corrMatrix)) = 0; % Replace inactive cells with zero correlation
+    data.Ca.SWR.corrMatrix = triu(data.Ca.SWR.corrMatrix, 1); % Replace diagonal and redundant half with zero
+    data.Ca.SWR.corrVector = data.Ca.SWR.corrMatrix(triu(true(size(data.Ca.SWR.corrMatrix)), 1));
+    [data.Ca.SWR.cdfF, data.Ca.SWR.cdfX] = ecdf(data.Ca.SWR.corrVector);
+  
+  end
   
   % Re-order structure arrays
   data.Ca.SWR = orderfields(data.Ca.SWR);
