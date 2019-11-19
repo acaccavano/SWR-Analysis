@@ -21,9 +21,14 @@ varNames = {'Cell', 'nEvents', 'frequency_Hz', 'aveIEI_s', 'aveAmplitude_dFoF', 
 cellInd  = 1:length(data.Ca.nEvents);
 outTable = table(cellInd', data.Ca.nEvents', data.Ca.frequency', data.Ca.IEIAve', data.Ca.ampAve', data.Ca.durAve'/1000, 'VariableNames', varNames);
 
-% IF SWR-Ca correlation has been performed:
+% If SWR-Ca correlation has been performed:
 if isfield(data.Ca, 'SWR')
   outTable = [outTable table(data.Ca.SWR.nEventsA', data.Ca.SWR.nEventsC', data.Ca.SWR.fracEventsC', 'VariableNames', {'nEvents_Align', 'nEvents_Coinc', 'fracEvents_Coinc'})];
+end
+
+% If Stim-Ca correlation has been performed:
+if isfield(data.Ca, 'stim')
+  outTable = [outTable table(data.Ca.stim.nEventsA', data.Ca.stim.nEventsC', data.Ca.stim.fracEventsC', 'VariableNames', {'nEvents_Align', 'nEvents_Coinc', 'fracEvents_Coinc'})];
 end
 
 % Replace NaN values with blanks
