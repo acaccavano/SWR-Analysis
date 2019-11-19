@@ -28,10 +28,8 @@ if ~isfield(param,'peakDetectCa')         param.peakDetectCa         = 1;   end
 if ~isfield(param,'baseDetectMethod')     param.baseDetectMethod     = 2;   end
 if ~isfield(param,'baseQuant')            param.baseQuant            = 0.8; end
 if ~isfield(param,'sdMult')               param.sdMult               = 4;   end
-if ~isfield(param,'skipDetectLim')        param.skipDetectLim        = 2;   end
+if ~isfield(param,'skipDetectLim')        param.skipDetectLim        = 2;   end % s
 if ~isfield(param,'consThreshOption')     param.consThreshOption     = 0;   end
-if ~isfield(param,'calcCaWindowOption')   param.calcCaWindowOption   = 0;   end
-if ~isfield(param,'limPeakDetectOption')  param.limPeakDetectOption  = 0;   end
 if ~isfield(param,'swrCaOption')          param.swrCaOption          = 0;   end
 if ~isfield(param,'useSWRDurationOption') param.useSWRDurationOption = 1;   end
 if ~isfield(param,'useSWRWindowOption')   param.useSWRWindowOption   = 0;   end
@@ -39,6 +37,10 @@ if ~isfield(param,'swrWindow')            param.swrWindow            = 100; end
 if ~isfield(param,'expCaEvOption')        param.expCaEvOption        = 1;   end
 if ~isfield(param,'expSWREvOption')       param.expSWREvOption       = 0;   end
 if ~isfield(param,'spkCaOption')          param.spkCaOption          = 0;   end
+if ~isfield(param,'stimCaOption')         param.stimCaOption         = 0;   end
+if ~isfield(param,'stimCaLim1')           param.stimCaLim1           = 0;   end % ms
+if ~isfield(param,'stimCaLim2')           param.stimCaLim2           = 1000; end % ms
+if ~isfield(param,'expStimEvOption')      param.expStimEvOption      = 0;   end
 if ~isfield(param,'reAnalyzeOption')      param.reAnalyzeOption      = 0;   end
 
 % Re-initialize path variables:
@@ -46,7 +48,7 @@ parentPath   = [];
 dataFileName = [];
 
 % Import previously analyzed matlab file if options require it:
-if (param.swrCaOption && ~isfield(data, 'SWR')) || (param.spkCaOption && ~isfield(data, 'C'))
+if (param.swrCaOption && ~isfield(data, 'SWR')) || (param.spkCaOption && ~isfield(data, 'C')) || (param.stimCaOption && ~isfield(data, 'stim'))
   [fileName, filePath] = uigetfile('.mat', 'Select *.mat file of analyzed LFP and/or cell channel(s)');
   dataFile = [filePath fileName];
   if ~all(dataFile)
@@ -60,6 +62,10 @@ end
 % Check if necessary data structures are present
 if ~isfield(data,'Ca') data.Ca = struct; end
 
+if param.swrCaOption || param.spkCaOption || param.stimCaOption
+  if ~isfield(data,'LFP') error('Must analyze LFP before proceeding'); end
+end
+
 if param.swrCaOption
   if ~isfield(data,'SWR') error('Must analyze LFP channel for SWR events before proceeding'); end
 end
@@ -68,6 +74,10 @@ if param.spkCaOption
   if ~isfield(data,'C') error('Must analyze cell channel before proceeding'); end
 end
 
+if param.stimCaOption
+  if ~isfield(data,'stim') error('Must analyze LFP and import stim events before proceeding'); end
+end
+    
 % If not supplied, prompt for dFoF Ca file to analyze
 if isempty(CaFile) && ~param.reAnalyzeOption
   

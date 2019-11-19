@@ -1,13 +1,14 @@
-function analyzeCaBatch(param, dataFolder, saveFolder, CaFolder, timingFile, expCaFolder, expSWRFolder)
+function analyzeCaBatch(param, dataFolder, saveFolder, CaFolder, timingFile, expCaFolder, expSWRFolder, expStimFolder)
 
 %% Handle input arguments
-if (nargin < 7) expSWRFolder = []; end
-if (nargin < 6) expCaFolder  = []; end
-if (nargin < 5) timingFile   = []; end
-if (nargin < 4) CaFolder     = []; end
-if (nargin < 3) saveFolder   = []; end
-if (nargin < 2) dataFolder   = []; end
-if (nargin < 1) param        = struct; end
+if (nargin < 8) expStimFolder = []; end
+if (nargin < 7) expSWRFolder  = []; end
+if (nargin < 6) expCaFolder   = []; end
+if (nargin < 5) timingFile    = []; end
+if (nargin < 4) CaFolder      = []; end
+if (nargin < 3) saveFolder    = []; end
+if (nargin < 2) dataFolder    = []; end
+if (nargin < 1) param         = struct; end
 
 % Handle case in which empty variable is supplied:
 if isempty(param) param      = struct; end
@@ -26,7 +27,7 @@ if ~isfield(param,'peakDetectCa')         param.peakDetectCa         = 1;   end
 if ~isfield(param,'baseDetectMethod')     param.baseDetectMethod     = 2;   end
 if ~isfield(param,'baseQuant')            param.baseQuant            = 0.8; end
 if ~isfield(param,'sdMult')               param.sdMult               = 4;   end
-if ~isfield(param,'skipDetectLim')        param.skipDetectLim        = 2;   end
+if ~isfield(param,'skipDetectLim')        param.skipDetectLim        = 2;   end % s
 if ~isfield(param,'consThreshOption')     param.consThreshOption     = 0;   end
 if ~isfield(param,'swrCaOption')          param.swrCaOption          = 0;   end
 if ~isfield(param,'useSWRDurationOption') param.useSWRDurationOption = 1;   end
@@ -36,9 +37,9 @@ if ~isfield(param,'expCaEvOption')        param.expCaEvOption        = 1;   end
 if ~isfield(param,'expSWREvOption')       param.expSWREvOption       = 0;   end
 if ~isfield(param,'spkCaOption')          param.spkCaOption          = 0;   end
 if ~isfield(param,'stimCaOption')         param.stimCaOption         = 0;   end
-if ~isfield(param,'stimCaLim1')           param.stimCaLim1           = 0;   end
-if ~isfield(param,'stimCaLim2')           param.stimCaLim2           = 2000; end
-if ~isfield(param,'limCaPeakDetectOption') param.limCaPeakDetectOption = 0; end
+if ~isfield(param,'stimCaLim1')           param.stimCaLim1           = 0;   end  % ms
+if ~isfield(param,'stimCaLim2')           param.stimCaLim2           = 1000; end % ms
+if ~isfield(param,'expStimEvOption')      param.expStimEvOption      = 0;   end
 if ~isfield(param,'reAnalyzeOption')      param.reAnalyzeOption      = 0;   end
 
 % Assign OS specific variables:
@@ -102,6 +103,13 @@ end
 if isempty(expSWRFolder) && param.expSWREvOption
   expSWRFolder = uigetdir(parentPath, 'Select folder to export updated SWR event *.csv files');
   if (expSWRFolder == 0) warning('No updated SWR event files to be exported - folder not selected'); end
+  [parentPath, ~, ~] = parsePath(expSWRFolder);
+end
+
+% Select export folder of stim events (if selected)
+if isempty(expStimFolder) && param.expStimEvOption
+  expStimFolder = uigetdir(parentPath, 'Select folder to export stimulation event *.csv files');
+  if (expStimFolder == 0) warning('No stimulation event files to be exported - folder not selected'); end
 end
 
 % ensure current dir is in path so we can call helper funcs
@@ -109,7 +117,7 @@ curPath = pwd;
 path(path, curPath);
 
 % Extract matlab data file names (if options require)
-if param.swrCaOption || param.spkCaOption || param.reAnalyzeOption
+if param.swrCaOption || param.spkCaOption || param.stimCaOption || param.reAnalyzeOption
   cd (dataFolder);
   dir_temp   = dir('*.mat'); % Find only *.mat files
   names      = {dir_temp.name}; % extract all the names in the struct returned by 'dir': ".", "..", file 1,2....
@@ -129,7 +137,7 @@ end
 cd (curPath);
 
 % Error handling - file number mismatch:
-if ~param.reAnalyzeOption && (param.swrCaOption || param.spkCaOption)
+if ~param.reAnalyzeOption && (param.swrCaOption || param.spkCaOption || param.stimCaOption)
   if (nDataFiles ~= nCaFiles)
     error('Unequal number of files in data and Ca folders - analysis will be mismatched');
   end
@@ -141,11 +149,12 @@ else
 end
 
 % Determine individual file names:
-dataFile{nFiles}   = [];
-CaFile{nFiles}     = [];
-saveFile{nFiles}   = [];
-expCaFile{nFiles}  = [];
-expSWRFile{nFiles} = [];
+dataFile{nFiles}    = [];
+CaFile{nFiles}      = [];
+saveFile{nFiles}    = [];
+expCaFile{nFiles}   = [];
+expSWRFile{nFiles}  = [];
+expStimFile{nFiles} = [];
 
 for i = 1:nFiles
   
@@ -158,7 +167,7 @@ for i = 1:nFiles
   % Determine CaFile (if options require)
   if ~param.reAnalyzeOption
     CaFile{i} = [CaFolder slash CaFiles{i}];
-    if ~param.swrCaOption && ~param.spkCaOption [~, dataFileName, ~] = parsePath(CaFile{i}); end
+    if ~param.swrCaOption && ~param.spkCaOption && ~param.stimCaOption [~, dataFileName, ~] = parsePath(CaFile{i}); end
   end
   
   % Determine individual output *.mat file names
@@ -182,6 +191,13 @@ for i = 1:nFiles
     end
   end
   
+  % Determine individual exported stim event *.csv file names (if selected)
+  if ~isempty(expStimFolder) && param.expStimEvOption
+    if (expStimFolder ~= 0)
+      expStimFile{i} = [expStimFolder slash dataFileName '_stimEvents.csv'];
+    end
+  end
+  
 end
 
 %% Pre-process Ca data:
@@ -192,6 +208,7 @@ if ~param.reAnalyzeOption || (param.baseCorrectMethod > 0) || param.interpOption
   reAnalyzeOption = param.reAnalyzeOption;
   swrCaOption     = param.swrCaOption;
   spkCaOption     = param.spkCaOption;
+  stimCaOption    = param.stimCaOption;
   
   parfor i = 1:nFiles
     if reAnalyzeOption || swrCaOption || spkCaOption || stimCaOption
@@ -217,14 +234,17 @@ if param.baseDetectMethod > 0
   
   % If consistent threshold must open each file first then calculate
   if param.consThreshOption
-    timing{nFiles}  = [];
-    tSeries{nFiles} = [];
+    tSeries{nFiles}   = [];
+    
     for i = 1:nFiles
       data = load(saveFile{i});
-      timing{i}   = data.Ca.timing;
-      tSeries{i}  = data.Ca.tSeries;
+      if stimCaOption
+        tSeries{i} = trimCaFile(data.Ca.tSeries, data.Ca.samplingInt, data.LFP.samplingInt, data.stim.evStart, param);
+      else
+        tSeries{i} = trimCaFile(data.Ca.tSeries, data.Ca.samplingInt, [], [], param);
+      end
     end
-    [baseMn, baseSd, baseTh, peakTh] = calcCaThresh(tSeries, timing, param);
+    [baseMn, baseSd, baseTh, peakTh] = calcCaThresh(tSeries, param);
     baseMean(:)   = {baseMn};
     baseSD(:)     = {baseSd};
     baseThresh(:) = {baseTh};
@@ -232,9 +252,15 @@ if param.baseDetectMethod > 0
     
   % Otherwise calculate each threshold individually
   else
+    stimCaOption = param.stimCaOption;
     parfor i = 1:nFiles
       data = load(saveFile{i});
-      [baseMean{i}, baseSD{i}, baseThresh{i}, peakThresh{i}] = calcCaThresh(data.Ca.tSeries, data.Ca.timing, param);
+      if stimCaOption
+        tSeries = trimCaFile(data.Ca.tSeries, data.Ca.samplingInt, data.LFP.samplingInt, data.stim.evStart, param);
+      else
+        tSeries = trimCaFile(data.Ca.tSeries, data.Ca.samplingInt, [], [], param);
+      end
+      [baseMean{i}, baseSD{i}, baseThresh{i}, peakThresh{i}] = calcCaThresh(tSeries, param);
     end
   end
 end
@@ -246,7 +272,7 @@ parfor i = 1:nFiles
   data.Ca.baseSD     = baseSD{i};
   data.Ca.baseThresh = baseThresh{i};
   data.Ca.peakThresh = peakThresh{i};
-  analyzeCaFile(data, [], param, saveFile{i}, expCaFile{i}, expSWRFile{i});
+  analyzeCaFile(data, [], param, saveFile{i}, expCaFile{i}, expSWRFile{i}, expStimFile{i});
 end
 fprintf('complete\n');
 end
