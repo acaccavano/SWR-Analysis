@@ -13,7 +13,7 @@ if isempty(samplingIntLFP) samplingIntLFP = 0.05; end
 if isempty(samplingIntCa)  samplingIntCa  = 0.5; end
 
 % Set default parameters if not specified
-if ~isfield(param,'skipDetectLim') param.skipDetectLim = 4;    end %  s
+if ~isfield(param,'skipDetectLim') param.skipDetectLim = 1;    end %  s
 if ~isfield(param,'stimCaOption')  param.stimCaOption  = 1;    end
 if ~isfield(param,'stimCaLim1')    param.stimCaLim1    = 0;    end % ms
 if ~isfield(param,'stimCaLim2')    param.stimCaLim2    = 1000; end % ms

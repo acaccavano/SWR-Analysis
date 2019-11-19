@@ -409,16 +409,16 @@ if param.swrSpkOption
     data.C.spike.swrMatrix  = zeros(data.C.spike.nEventsA, 1);
     data.SWR.spike.evMatrix = zeros(data.SWR.spike.nEventsA, 1);
     
-    coincStatus = data.C.spike.evStatusA .* data.SWR.spike.evStatusA;
+    evStatusC = data.C.spike.evStatusA .* data.SWR.spike.evStatusA;
     
     for spk = 1:data.C.spike.nEventsA
-      if (sum(coincStatus(data.C.spike.evStartA(spk) : data.C.spike.evEndA(spk))) > 0)
+      if (sum(evStatusC(data.C.spike.evStartA(spk) : data.C.spike.evEndA(spk))) > 0)
         data.C.spike.swrMatrix(spk) = 1;
       end
     end
     
     for swr = 1:data.SWR.spike.nEventsA
-      if (sum(coincStatus(data.SWR.spike.evStartA(swr) : data.SWR.spike.evEndA(swr))) > 0)
+      if (sum(evStatusC(data.SWR.spike.evStartA(swr) : data.SWR.spike.evEndA(swr))) > 0)
         data.SWR.spike.evMatrix(swr) = 1;
       end
     end
@@ -449,16 +449,16 @@ if param.swrSpkOption
       data.C.burst.swrMatrix  = zeros(data.C.burst.nEventsA, 1);
       data.SWR.burst.evMatrix = zeros(data.SWR.burst.nEventsA, 1);
       
-      coincStatus = data.C.burst.evStatusA .* data.SWR.burst.evStatusA;
+      evStatusC = data.C.burst.evStatusA .* data.SWR.burst.evStatusA;
       
       for bst = 1:data.C.burst.nEventsA
-        if (sum(coincStatus(data.C.burst.evStartA(bst) : data.C.burst.evEndA(bst))) > 0)
+        if (sum(evStatusC(data.C.burst.evStartA(bst) : data.C.burst.evEndA(bst))) > 0)
           data.C.burst.swrMatrix(bst) = 1;
         end
       end
       
       for swr = 1:data.SWR.burst.nEventsA
-        if (sum(coincStatus(data.SWR.burst.evStartA(swr) : data.SWR.burst.evEndA(swr))) > 0)
+        if (sum(evStatusC(data.SWR.burst.evStartA(swr) : data.SWR.burst.evEndA(swr))) > 0)
           data.SWR.burst.evMatrix(swr) = 1;
         end
       end
