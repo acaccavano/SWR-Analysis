@@ -305,17 +305,78 @@ if param.swrCaOption
   data.Ca.SWR.nEventsSumC   = sum(data.Ca.SWR.nEventsC);            % Sum of all Ca events with coincident SWR
   data.Ca.SWR.fracEventsC   = data.Ca.SWR.nEventsC ./ data.Ca.SWR.nEventsA; % Fraction of coicident events
   
-  % Calculate simplified event matrix:
+  % Initialize event matrices:
   data.SWR.Ca.evMatrix = zeros(data.SWR.Ca.nEventsA, data.Ca.nChannels);
+  data.Ca.SWR.swr   = struct;
+  data.Ca.SWR.spont = struct;
+  data.Ca.SWR.swr.evMatrix{data.Ca.nChannels}   = [];
+  data.Ca.SWR.spont.evMatrix{data.Ca.nChannels} = [];
+
+  % Initialize SWR and spont event structures
+  data.Ca.SWR.swr.amp{data.Ca.nChannels} = [];
+  data.Ca.SWR.swr.duration{data.Ca.nChannels} = [];
+  data.Ca.SWR.swr.ampAve    = zeros(1, data.Ca.nChannels);
+  data.Ca.SWR.swr.durAve    = zeros(1, data.Ca.nChannels);
+  data.Ca.SWR.swr.frequency = zeros(1, data.Ca.nChannels);
+  data.Ca.SWR.swr.nEvents   = zeros(1, data.Ca.nChannels);
+
+  data.Ca.SWR.spont.amp{data.Ca.nChannels} = [];
+  data.Ca.SWR.spont.duration{data.Ca.nChannels} = [];
+  data.Ca.SWR.spont.ampAve    = zeros(1, data.Ca.nChannels);
+  data.Ca.SWR.spont.durAve    = zeros(1, data.Ca.nChannels);
+  data.Ca.SWR.spont.frequency = zeros(1, data.Ca.nChannels);
+  data.Ca.SWR.spont.nEvents   = zeros(1, data.Ca.nChannels);
   
+  % Calculate total time of SWR and spont periods [s]
+  if param.useSWRDurationOption
+    swrTime = data.SWR.Ca.nEventsA * mean(data.SWR.duration) / 1000;
+  else
+    swrTime = data.SWR.Ca.nEventsA * param.swrWindow / 1000;
+  end
+  spontTime = ((data.SWR.Ca.timingA(end) - data.SWR.Ca.timingA(1)) / 1000) - swrTime;
+
+  % Calculate events matrices and SWR/Spont variables
   for ch = 1:data.Ca.nChannels
+    
+    % Initialize cell arrays
+    data.Ca.SWR.swr.evMatrix{ch}   = zeros(data.Ca.SWR.nEventsA(ch), 1);
+    data.Ca.SWR.spont.evMatrix{ch} = zeros(data.Ca.SWR.nEventsA(ch), 1);
+    
+    % Intersection status array:
     evStatusC = data.SWR.Ca.evStatusA .* data.Ca.SWR.evStatusA(:,ch);
     
-    for ev = 1:data.SWR.Ca.nEventsA
-      if (sum(evStatusC(data.SWR.Ca.evStartA(ev) : data.SWR.Ca.evEndA(ev))) > 0)
-        data.SWR.Ca.evMatrix(ev, ch) = 1;
+    % Event matrix, indicating for each SWR whether cells are active:
+    for swr = 1:data.SWR.Ca.nEventsA
+      if (sum(evStatusC(data.SWR.Ca.evStartA(swr) : data.SWR.Ca.evEndA(swr))) > 0)
+        data.SWR.Ca.evMatrix(swr, ch) = 1;
       end
     end
+
+    % Event matrices, indicating for each Ca transient whether it was during SWR or Spont periods:  
+    for ev = 1:data.Ca.SWR.nEventsA(ch)
+      if (sum(evStatusC(data.Ca.SWR.evStartA{ch}(ev) : data.Ca.SWR.evEndA{ch}(ev))) > 0)
+        data.Ca.SWR.swr.evMatrix{ch}(ev)   = 1;
+      else
+        data.Ca.SWR.spont.evMatrix{ch}(ev) = 1;
+      end
+    end
+    
+    % Calculate Ca transient characteristics for SWR events
+    data.Ca.SWR.swr.nEvents(ch)   = sum(data.Ca.SWR.swr.evMatrix{ch});
+    data.Ca.SWR.swr.amp{ch}       = nonzeros(data.Ca.amp{ch}(1:data.Ca.SWR.nEventsA(ch)) .* data.Ca.SWR.swr.evMatrix{ch}')';
+    data.Ca.SWR.swr.duration{ch}  = nonzeros(data.Ca.duration{ch}(1:data.Ca.SWR.nEventsA(ch)) .* data.Ca.SWR.swr.evMatrix{ch}')';
+    data.Ca.SWR.swr.ampAve(ch)    = mean(data.Ca.SWR.swr.amp{ch});
+    data.Ca.SWR.swr.durAve(ch)    = mean(data.Ca.SWR.swr.duration{ch});
+    data.Ca.SWR.swr.frequency(ch) = data.Ca.SWR.swr.nEvents(ch) / swrTime;
+    
+    % Calculate Ca transient characteristics for spont events
+    data.Ca.SWR.spont.nEvents(ch)   = sum(data.Ca.SWR.spont.evMatrix{ch});
+    data.Ca.SWR.spont.amp{ch}       = nonzeros(data.Ca.amp{ch}(1:data.Ca.SWR.nEventsA(ch)) .* data.Ca.SWR.spont.evMatrix{ch}')';
+    data.Ca.SWR.spont.duration{ch}  = nonzeros(data.Ca.duration{ch}(1:data.Ca.SWR.nEventsA(ch)) .* data.Ca.SWR.spont.evMatrix{ch}')';
+    data.Ca.SWR.spont.ampAve(ch)    = mean(data.Ca.SWR.spont.amp{ch});
+    data.Ca.SWR.spont.durAve(ch)    = mean(data.Ca.SWR.spont.duration{ch});
+    data.Ca.SWR.spont.frequency(ch) = data.Ca.SWR.spont.nEvents(ch) / spontTime;
+     
   end
   
   data.SWR.Ca.nCellsC = sum(data.SWR.Ca.evMatrix, 2); % # Cells active for each SWR event
@@ -480,19 +541,76 @@ if param.stimCaOption
   data.Ca.stim.nEventsSumC   = sum(data.Ca.stim.nEventsC);            % Sum of all Ca events with coincident stim
   data.Ca.stim.fracEventsC   = data.Ca.stim.nEventsC ./ data.Ca.stim.nEventsA; % Fraction of coicident events
   
-  % Calculate simplified event matrix:
+  % Initialize event matrices:
   data.stim.Ca.evMatrix = zeros(data.stim.Ca.nEventsA, data.Ca.nChannels);
+  data.Ca.stim.stim  = struct;
+  data.Ca.stim.spont = struct;
+  data.Ca.stim.stim.evMatrix{data.Ca.nChannels}  = [];
+  data.Ca.stim.spont.evMatrix{data.Ca.nChannels} = [];
+
+  % Initialize stim and spont event structures
+  data.Ca.stim.stim.amp{data.Ca.nChannels} = [];
+  data.Ca.stim.stim.duration{data.Ca.nChannels} = [];
+  data.Ca.stim.stim.ampAve    = zeros(1, data.Ca.nChannels);
+  data.Ca.stim.stim.durAve    = zeros(1, data.Ca.nChannels);
+  data.Ca.stim.stim.frequency = zeros(1, data.Ca.nChannels);
+  data.Ca.stim.stim.nEvents   = zeros(1, data.Ca.nChannels);
+
+  data.Ca.stim.spont.amp{data.Ca.nChannels} = [];
+  data.Ca.stim.spont.duration{data.Ca.nChannels} = [];
+  data.Ca.stim.spont.ampAve    = zeros(1, data.Ca.nChannels);
+  data.Ca.stim.spont.durAve    = zeros(1, data.Ca.nChannels);
+  data.Ca.stim.spont.frequency = zeros(1, data.Ca.nChannels);
+  data.Ca.stim.spont.nEvents   = zeros(1, data.Ca.nChannels);
   
+  % Calculate total time of stim and spont periods [s]
+  stimTime  = data.stim.Ca.nEventsA * (param.stimCaLim2 - param.stimCaLim1) / 1000;
+  spontTime = ((data.stim.Ca.timingA(end) - data.stim.Ca.timingA(1)) / 1000) - stimTime;
+
+  % Calculate events matrices and stim/Spont variables
   for ch = 1:data.Ca.nChannels
+    
+    % Initialize cell arrays
+    data.Ca.stim.stim.evMatrix{ch}  = zeros(data.Ca.stim.nEventsA(ch), 1);
+    data.Ca.stim.spont.evMatrix{ch} = zeros(data.Ca.stim.nEventsA(ch), 1);
+    
+    % Intersection status array:
     evStatusC = data.stim.Ca.evStatusA .* data.Ca.stim.evStatusA(:,ch);
     
+    % Event matrix, indicating for each stim whether cells are active:
     for ev = 1:data.stim.Ca.nEventsA
       if (sum(evStatusC(data.stim.Ca.evStartA(ev) : data.stim.Ca.evEndA(ev))) > 0)
         data.stim.Ca.evMatrix(ev, ch) = 1;
       end
     end
+
+    % Event matrices, indicating for each Ca transient whether it was during SWR or Spont periods:  
+    for ev = 1:data.Ca.stim.nEventsA(ch)
+      if (sum(evStatusC(data.Ca.stim.evStartA{ch}(ev) : data.Ca.stim.evEndA{ch}(ev))) > 0)
+        data.Ca.stim.stim.evMatrix{ch}(ev)  = 1;
+      else
+        data.Ca.stim.spont.evMatrix{ch}(ev) = 1;
+      end
+    end
+    
+    % Calculate Ca transient characteristics for SWR events
+    data.Ca.stim.stim.nEvents(ch)   = sum(data.Ca.stim.stim.evMatrix{ch});
+    data.Ca.stim.stim.amp{ch}       = nonzeros(data.Ca.amp{ch}(1:data.Ca.stim.nEventsA(ch)) .* data.Ca.stim.stim.evMatrix{ch}')';
+    data.Ca.stim.stim.duration{ch}  = nonzeros(data.Ca.duration{ch}(1:data.Ca.stim.nEventsA(ch)) .* data.Ca.stim.stim.evMatrix{ch}')';
+    data.Ca.stim.stim.ampAve(ch)    = mean(data.Ca.stim.stim.amp{ch});
+    data.Ca.stim.stim.durAve(ch)    = mean(data.Ca.stim.stim.duration{ch});
+    data.Ca.stim.stim.frequency(ch) = data.Ca.stim.stim.nEvents(ch) / stimTime;
+    
+    % Calculate Ca transient characteristics for spont events
+    data.Ca.stim.spont.nEvents(ch)   = sum(data.Ca.stim.spont.evMatrix{ch});
+    data.Ca.stim.spont.amp{ch}       = nonzeros(data.Ca.amp{ch}(1:data.Ca.stim.nEventsA(ch)) .* data.Ca.stim.spont.evMatrix{ch}')';
+    data.Ca.stim.spont.duration{ch}  = nonzeros(data.Ca.duration{ch}(1:data.Ca.stim.nEventsA(ch)) .* data.Ca.stim.spont.evMatrix{ch}')';
+    data.Ca.stim.spont.ampAve(ch)    = mean(data.Ca.stim.spont.amp{ch});
+    data.Ca.stim.spont.durAve(ch)    = mean(data.Ca.stim.spont.duration{ch});
+    data.Ca.stim.spont.frequency(ch) = data.Ca.stim.spont.nEvents(ch) / spontTime;
+     
   end
-  
+
   data.stim.Ca.nCellsC = sum(data.stim.Ca.evMatrix, 2); % # Cells active for each stim event
   
   %% Correlation Matrices
