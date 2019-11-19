@@ -5,10 +5,11 @@ function [evStatusA1, evStartA1, evEndA1, evStatusA2, evStartA2, evEndA2, timeAr
   samplingInt2 = timeArray2(2) - timeArray2(1);
   samplingInt = max(samplingInt1, samplingInt2);
   minTime   = max(timeArray1(1), timeArray2(1));
-  maxTime   = min(timeArray1(length(timeArray1)), timeArray2(length(timeArray2)));
-  nSamples  = floor((maxTime - minTime) / samplingInt) + 1;
+  maxTime   = min(timeArray1(end), timeArray2(end));
+  nSamples  = floor((maxTime - minTime) / samplingInt); % + 1
   timeArray = (minTime:samplingInt:maxTime)';
-    
+  timeArray = timeArray(1:end-1);
+  
    % Downsample to match timing
   if (samplingInt == samplingInt1)
     downsampleFactor = samplingInt1 / samplingInt2;
