@@ -17,29 +17,34 @@ if isempty(exportFile)
   if ~all(exportFile) error('No stimulation events to be exported - no file selected'); end
 end
 
-varNames  = {'stimStart', 'stimEnd', 'stimPeak', 'lfpAmp', 'lfpBL', 'lfpSlope'};
-cellInd   = 1:data.Ca.nChannels;
+colNames{data.stim.Ca.nEventsA} = [];
 
-peakNames{data.Ca.nChannels} = [];
-areaNames{data.Ca.nChannels} = [];
-fireNames{data.Ca.nChannels} = [];
+for i = 1:data.stim.Ca.nEventsA
+  colNames{i} = strcat('stim', num2str(i));
+end
+
+rowNames = {'stimStart'; 'stimEnd'; 'stimPeak'; 'lfpAmp'; 'lfpBL'; 'lfpSlope'; 'nCellsActive'};
+
+peakNames{data.Ca.nChannels, 1} = [];
+areaNames{data.Ca.nChannels, 1} = [];
+boolNames{data.Ca.nChannels, 1} = [];
 
 for i = 1:data.Ca.nChannels
-  peakNames{i} = strcat('dFoF_Peak', num2str(cellInd(i)));
-  areaNames{i} = strcat('dFoF_Area', num2str(cellInd(i)));
-  fireNames{i} = strcat('Fire', num2str(cellInd(i)));
+  peakNames{i} = strcat('Cell', num2str(i), '_Peak');
+  areaNames{i} = strcat('Cell', num2str(i), '_Area');
+  boolNames{i} = strcat('Cell', num2str(i));
 end
   
-varNames = [varNames peakNames areaNames fireNames];
-varArray = horzcat(data.stim.evStart, data.stim.evEnd, data.stim.evPeak, data.stim.lfpAmp, data.stim.lfpBL, data.stim.lfpSlope, data.Ca.stim.evPeakStim, data.Ca.stim.evAreaStim, data.stim.Ca.evMatrix);
-outTable = array2table(varArray, 'VariableNames', varNames);
+rowNames = [rowNames; peakNames; areaNames; boolNames];
+varArray = vertcat(data.stim.evStart', data.stim.evEnd', data.stim.evPeak', data.stim.lfpAmp', data.stim.lfpBL', data.stim.lfpSlope', data.stim.Ca.nCellsC', data.Ca.stim.evPeakStim', data.Ca.stim.evAreaStim', data.stim.Ca.evMatrix');
+outTable = array2table(varArray, 'VariableNames', colNames, 'RowNames', rowNames);
 
 % Replace NaN values with blanks
 tmp = table2cell(outTable);
 tmp(isnan(outTable.Variables)) = {[]};
-outTable = array2table(tmp,'VariableNames',outTable.Properties.VariableNames);
+outTable = array2table(tmp, 'VariableNames', outTable.Properties.VariableNames, 'RowNames', outTable.Properties.RowNames);
 
-writetable(outTable, exportFile, 'Delimiter', ',');
+writetable(outTable, exportFile, 'Delimiter', ',', 'WriteVariableNames', 1, 'WriteRowNames', 1);
 
 end
 

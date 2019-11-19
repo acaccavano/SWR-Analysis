@@ -24,11 +24,15 @@ outTable = table(cellInd', data.Ca.nEvents', data.Ca.frequency', data.Ca.IEIAve'
 % If SWR-Ca correlation has been performed:
 if isfield(data.Ca, 'SWR')
   outTable = [outTable table(data.Ca.SWR.nEventsA', data.Ca.SWR.nEventsC', data.Ca.SWR.fracEventsC', 'VariableNames', {'nEvents_Align', 'nEvents_Coinc', 'fracEvents_Coinc'})];
+  if isfield(data.Ca.SWR, 'swr')   outTable = [outTable table(data.Ca.SWR.swr.nEvents', data.Ca.SWR.swr.frequency', data.Ca.SWR.swr.ampAve', data.Ca.SWR.swr.durAve'/1000, 'VariableNames', {'nEventsSWR', 'freqSWR_Hz', 'aveAmpSWR_dFoF', 'aveDurSWR_s'})]; end
+  if isfield(data.Ca.SWR, 'spont') outTable = [outTable table(data.Ca.SWR.spont.nEvents', data.Ca.SWR.swr.frequency', data.Ca.SWR.swr.ampAve', data.Ca.SWR.swr.durAve'/1000, 'VariableNames', {'nEventsSpont', 'freqSpont_Hz', 'aveAmpSpont_dFoF', 'aveDurSpont_s'})]; end
 end
 
 % If Stim-Ca correlation has been performed:
 if isfield(data.Ca, 'stim')
   outTable = [outTable table(data.Ca.stim.nEventsA', data.Ca.stim.nEventsC', data.Ca.stim.fracEventsC', 'VariableNames', {'nEvents_Align', 'nEvents_Coinc', 'fracEvents_Coinc'})];
+  if isfield(data.Ca.stim, 'stim')  outTable = [outTable table(data.Ca.stim.stim.nEvents', data.Ca.stim.stim.frequency', data.Ca.stim.stim.ampAve', data.Ca.stim.stim.durAve'/1000, 'VariableNames', {'nEventsStim', 'freqStim_Hz', 'aveAmpStim_dFoF', 'aveDurStim_s'})]; end
+  if isfield(data.Ca.stim, 'spont') outTable = [outTable table(data.Ca.stim.spont.nEvents', data.Ca.stim.spont.frequency', data.Ca.stim.spont.ampAve', data.Ca.stim.spont.durAve'/1000, 'VariableNames', {'nEventsSpont', 'freqSpont_Hz', 'aveAmpSpont_dFoF', 'aveDurSpont_s'})]; end
 end
 
 % Replace NaN values with blanks
@@ -39,4 +43,3 @@ outTable = array2table(tmp,'VariableNames',outTable.Properties.VariableNames);
 writetable(outTable, exportFile, 'Delimiter', ',');
 
 end
-
