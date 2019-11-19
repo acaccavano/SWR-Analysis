@@ -9,6 +9,7 @@ if ~isfield(param,'spkCaOption')   param.spkCaOption   = 0; end
 if ~isfield(param,'colOption')     param.colOption     = 1; end % If enabled plots keeps all traces same colors, reserves below defined colors for different datasets
 if ~isfield(param,'threshOption')  param.threshOption  = 1; end
 if ~isfield(param,'peakOption')    param.peakOption    = 1; end
+if ~isfield(param,'stimCaOption')  param.swrCaOption   = 0; end
 
 % Plot dimension parameters
 convFact     = 1000;
@@ -54,6 +55,13 @@ for i = 1:nData
       timingCaRs{i}      = downsampleMean(timingCaEv{i}, dsPlot);
       rasterCa{i}(:,ch)  = downsampleMax(data(i).Ca.SWR.evStatusA(:,ch), dsPlot);
       rasterCaC{i}(:,ch) = downsampleMax(data(i).Ca.SWR.evStatusC(:,ch), dsPlot);
+      
+    elseif param.stimCaOption
+      timingCaEv{i}      = data(i).stim.Ca.timingA/1000;
+      timingCaRs{i}      = downsampleMean(timingCaEv{i}, dsPlot);
+      rasterCa{i}(:,ch)  = downsampleMax(data(i).Ca.stim.evStatusA(:,ch), dsPlot);
+      rasterCaC{i}(:,ch) = downsampleMax(data(i).Ca.stim.evStatusC(:,ch), dsPlot);
+      
     else
       timingCaEv{i}      = data(i).Ca.timing(CaRange{i})/1000;
       timingCaRs{i}      = downsampleMean(timingCaEv{i}, dsPlot);
@@ -82,20 +90,30 @@ end
 % end
 
 %% Initialize SWR traces/raster data (if selected)
-if param.swrCaOption
+if param.swrCaOption || param.stimCaOption
   hand.axLFPTr = gobjects(nData, 1);
-  hand.axSWRRs = gobjects(nData, 1);
+  hand.axLFPRs = gobjects(nData, 1);
   axLFPTrSz    = 0.22;
-  axSWRRsSz    = 0.02;
+  axLFPRsSz    = 0.02;
   colInd       = colInd + 1;
-  axCaTrSz     = axCaTrSz - (axLFPTrSz + axSWRRsSz + 2*spacerSz);
-
+  axCaTrSz     = axCaTrSz - (axLFPTrSz + axLFPRsSz + 2*spacerSz);
+  
   for i = 1:nData
     timingLFP{i}   = downsampleMean(data(i).LFP.timing/1000, dsPlot);
     tSeriesLFP{i}  = downsampleMean(convFact * data(i).LFP.tSeries, dsPlot);
-    timingLFPRs{i} = downsampleMean(data(i).SWR.Ca.timingA/1000, dsPlot);
-    rasterSWR{i}   = downsampleMax(data(i).SWR.Ca.evStatusA, dsPlot);
-    rasterSWRC{i}  = downsampleMax(data(i).SWR.Ca.evStatusSumC, dsPlot);
+    
+    if param.swrCaOption
+      timingLFPRs{i} = downsampleMean(data(i).SWR.Ca.timingA/1000, dsPlot);
+      rasterLFP{i}   = downsampleMax(data(i).SWR.Ca.evStatusA, dsPlot);
+      rasterLFPC{i}  = downsampleMax(data(i).SWR.Ca.evStatusSumC, dsPlot);
+      
+    elseif param.stimCaOption
+      timingLFPRs{i} = downsampleMean(data(i).stim.Ca.timingA/1000, dsPlot);
+      rasterLFP{i}   = downsampleMax(data(i).stim.Ca.evStatusA, dsPlot);
+      rasterLFPC{i}  = downsampleMax(data(i).stim.Ca.evStatusSumC, dsPlot);
+      
+    end
+    
   end
 end
 
@@ -148,18 +166,18 @@ yPos = yPos + axCaTrSz + spacerSz;
 %   yPos = yPos + axCaTrSz + spacerSz;
 % end
 
-% If selected, initialize in forward x-order SWR trace and raster
-if param.swrCaOption
+% If selected, initialize in forward x-order LFP trace and raster
+if param.swrCaOption || param.stimCaOption
   colInd = colInd - 1;
   xPos = marginSz;
   for i = 1:nData
-    hand.axSWRRs(i) = subplot('Position',[xPos yPos axWidth axSWRRsSz]);
-    axis(hand.axSWRRs(i), 'off');
-    hold(hand.axSWRRs(i), 'on');
-    hand.axSWRRs(i).ColorOrderIndex = colInd;
+    hand.axLFPRs(i) = subplot('Position',[xPos yPos axWidth axLFPRsSz]);
+    axis(hand.axLFPRs(i), 'off');
+    hold(hand.axLFPRs(i), 'on');
+    hand.axLFPRs(i).ColorOrderIndex = colInd;
     xPos = xPos + axWidth + spacerSz;
   end
-  yPos = yPos + axSWRRsSz + spacerSz;
+  yPos = yPos + axLFPRsSz + spacerSz;
   
   xPos = marginSz;
   for i = 1:nData
@@ -238,7 +256,7 @@ for i = 1:nData
     plot(hand.axCaRs(i), evPoints, evChannel, 's', 'MarkerSize', markerSz, 'MarkerEdgeColor', rasterCol, 'MarkerFaceColor', rasterCol);
     
     % Assign Calcium events coicident with SWRs to an additional raster:
-    if param.swrCaOption
+    if param.swrCaOption || param.stimCaOption
       
       if param.colOption
         rasterCol = CaCCol{i};
@@ -267,32 +285,32 @@ end
 
 % Set uniform axis ranges:
 for i = 1:nData
-  axis(hand.axCaTr(i), [timingCa{i}(1) timingCa{i}(length(timingCa{i})) minY maxY]);
-  axis(hand.axCaRs(i), [timingCaRs{i}(1) timingCaRs{i}(length(timingCaRs{i})) 0 nChannelsMax]);
+  axis(hand.axCaTr(i), [0 timingCa{i}(length(timingCa{i})) minY maxY]); % timingCa{i}(1)
+  axis(hand.axCaRs(i), [0 timingCaRs{i}(length(timingCaRs{i})) 0 nChannelsMax]); % timingCaRs{i}(1)
   hand.lblCaTr(i) = text(hand.axCaTr(i), hand.axCaTr(i).XLim(1), hand.axCaTr(i).YLim(2) - tFact * (hand.axCaTr(i).YLim(2) - hand.axCaTr(i).YLim(1)), data(i).saveName, 'FontSize', fontSz, 'Interpreter', 'none');
   hand.scale.(['scale' int2str(i)]) = createScaleBar(hand.axCaTr(i), [], 1, 1, fontSz, 's', '\DeltaF/F');
 end
 
 %% Plot LFP trace and SWR raster (if selected)
-if param.swrCaOption
+if param.swrCaOption || param.stimCaOption
   for i = 1:nData
     
     % Assign SWR events to raster:
     if param.colOption
       rasterCol = swrCol;
     else
-      rasterCol = hand.axSWRRs(i).ColorOrder(hand.axSWRRs(i).ColorOrderIndex,:);
+      rasterCol = hand.axLFPRs(i).ColorOrder(hand.axLFPRs(i).ColorOrderIndex,:);
     end
 
-    if (sum(rasterSWR{i}) == 0)
+    if (sum(rasterLFP{i}) == 0)
       evPoints  = timingLFPRs{i};
       evChannel = NaN * ones(1,20);
     else
-      evPoints  = timingLFPRs{i}(find(rasterSWR{i} .* timingLFPRs{i}));
+      evPoints  = timingLFPRs{i}(find(rasterLFP{i} .* timingLFPRs{i}));
       evChannel = (1:20);
     end
     evChannel = evChannel(ones(1,length(evPoints)),:);
-    plot(hand.axSWRRs(i), evPoints, evChannel, '.', 'MarkerSize', markerSz, 'Color', rasterCol);
+    plot(hand.axLFPRs(i), evPoints, evChannel, '.', 'MarkerSize', markerSz, 'Color', rasterCol);
     
     % Assign SWR events coincident with at least one Ca transient to an additional raster:
     if param.colOption
@@ -301,17 +319,17 @@ if param.swrCaOption
       rasterCol = [0 0 0];
     end
 
-    if (sum(rasterSWRC{i}) == 0)
+    if (sum(rasterLFPC{i}) == 0)
       evPoints  = timingLFPRs{i};
       evChannel = NaN * ones(1,20);
     else
-      evPoints  = timingLFPRs{i}(find(rasterSWRC{i} .* timingLFPRs{i}));
+      evPoints  = timingLFPRs{i}(find(rasterLFPC{i} .* timingLFPRs{i}));
       evChannel = (1:20);
     end
     evChannel = evChannel(ones(1,length(evPoints)),:);
-    plot(hand.axSWRRs(i), evPoints, evChannel, '.', 'MarkerSize', markerSz, 'Color', rasterCol);
+    plot(hand.axLFPRs(i), evPoints, evChannel, '.', 'MarkerSize', markerSz, 'Color', rasterCol);
     
-    axis(hand.axSWRRs(i), [timingLFPRs{i}(1) timingLFPRs{i}(length(timingLFPRs{i})) -inf inf]);
+    axis(hand.axLFPRs(i), [0 timingLFPRs{i}(length(timingLFPRs{i})) -inf inf]); % timingLFPRs{i}(1)
   end
   
   % Plot LFP trace:
@@ -329,7 +347,7 @@ if param.swrCaOption
   
   % Set uniform axis ranges:
   for i = 1:nData
-    axis(hand.axLFPTr(i), [timingLFP{i}(1) timingLFP{i}(length(timingLFP{i})) minY maxY]);
+    axis(hand.axLFPTr(i), [0 timingLFP{i}(length(timingLFP{i})) minY maxY]); % timingLFP{i}(1)
   end
   
 end
@@ -341,15 +359,15 @@ set(pan(hand.CaFig), 'ActionPostCallback', {@redrawPZCallback, hand, fontSz, tFa
 set(zoom(hand.CaFig), 'ActionPostCallback', {@redrawPZCallback, hand, fontSz, tFact});
 
 for i = 1:nData
-  if param.swrCaOption
-    linkaxes([hand.axCaTr(i), hand.axCaRs(i), hand.axLFPTr(i), hand.axSWRRs(i)], 'x');
+  if param.swrCaOption || param.stimCaOption
+    linkaxes([hand.axCaTr(i), hand.axCaRs(i), hand.axLFPTr(i), hand.axLFPRs(i)], 'x');
   else
     linkaxes([hand.axCaTr(i), hand.axCaRs(i)], 'x');
   end
 end
 
 % Usually comment below out, only for making figures
-linkaxes([hand.axCaTr, hand.axCaRs, hand.axLFPTr, hand.axSWRRs], 'x');
+% linkaxes([hand.axCaTr, hand.axCaRs, hand.axLFPTr, hand.axLFPRs], 'x');
 % linkaxes([hand.axCaTr(1), hand.axCaTr(2)], 'y');
 % linkaxes([hand.axCaRs(1), hand.axCaRs(2)], 'y');
 

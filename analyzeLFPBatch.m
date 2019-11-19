@@ -205,7 +205,7 @@ if param.importStimOption
   dir_temp   = dir('*.csv'); % Find only *.csv files
   names      = {dir_temp.name}; % extract all the names in the struct returned by 'dir': ".", "..", file 1,2....
   stimFiles   = names([dir_temp.isdir] == 0); % extract the name for all files, but no "." and ".."
-  nStimFiles  = length(spkFiles);
+  nStimFiles  = length(stimFiles);
   
   % Check for same number of data and stim files:
   if (nDataFiles ~= nStimFiles)
