@@ -55,17 +55,29 @@ for i = 1:nData
       timingCaRs{i}      = downsampleMean(timingCaEv{i}, dsPlot);
       rasterCa{i}(:,ch)  = downsampleMax(data(i).Ca.SWR.evStatusA(:,ch), dsPlot);
       rasterCaC{i}(:,ch) = downsampleMax(data(i).Ca.SWR.evStatusC(:,ch), dsPlot);
+      if param.peakOption
+        peakCaVal{i}{ch}  = tSeriesEv{i}(data(i).Ca.SWR.evPeakA{ch}, ch);
+        peakCaTime{i}{ch} = timingCaEv{i}(data(i).Ca.SWR.evPeakA{ch});
+      end
       
     elseif param.stimCaOption
       timingCaEv{i}      = data(i).stim.Ca.timingA/1000;
       timingCaRs{i}      = downsampleMean(timingCaEv{i}, dsPlot);
       rasterCa{i}(:,ch)  = downsampleMax(data(i).Ca.stim.evStatusA(:,ch), dsPlot);
       rasterCaC{i}(:,ch) = downsampleMax(data(i).Ca.stim.evStatusC(:,ch), dsPlot);
+      if param.peakOption
+        peakCaVal{i}{ch}  = tSeriesEv{i}(data(i).Ca.stim.evPeakA{ch}, ch);
+        peakCaTime{i}{ch} = timingCaEv{i}(data(i).Ca.stim.evPeakA{ch});
+      end
       
     else
       timingCaEv{i}      = data(i).Ca.timing(CaRange{i})/1000;
       timingCaRs{i}      = downsampleMean(timingCaEv{i}, dsPlot);
       rasterCa{i}(:,ch)  = downsampleMax(data(i).Ca.evStatus(:,ch), dsPlot);
+      if param.peakOption
+        peakCaVal{i}{ch}  = tSeriesEv{i}(data(i).Ca.evPeak{ch}, ch);
+        peakCaTime{i}{ch} = timingCaEv{i}(data(i).Ca.evPeak{ch});
+      end
     end
   end
   % Find maximum number to plot on consistent axes
@@ -242,11 +254,11 @@ for i = 1:nData
       
       % Plot peaks:
       if param.peakOption
-        offsetPeaks = tSeriesEv{i}(data(i).Ca.evPeak{ch}, ch) + offsetArray(1,ch) + 0.2;
+        offsetPeaks = peakCaVal{i}{ch} + offsetArray(1,ch) + 0.2;
         if param.colOption
-          plot(hand.axCaTr(i), timingCaEv{i}(data(i).Ca.evPeak{ch}), offsetPeaks, 'v', 'MarkerSize', markerSz - 1, 'Color', cellCol);
+          plot(hand.axCaTr(i), peakCaTime{i}{ch}, offsetPeaks, 'v', 'MarkerSize', markerSz - 1, 'Color', cellCol);
         else
-          plot(hand.axCaTr(i), timingCaEv{i}(data(i).Ca.evPeak{ch}), offsetPeaks, 'v', 'MarkerSize', markerSz - 1);
+          plot(hand.axCaTr(i), peakCaTime{i}{ch}, offsetPeaks, 'v', 'MarkerSize', markerSz - 1);
         end
       end
       
