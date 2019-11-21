@@ -13,8 +13,8 @@ function analyzeLFPBatch(param, dataFolder, saveFolder, expEvFolder, expDataFold
 %   hand       = handle structure to specify where figure should be drawn
 %   param      = structure containing all parameters including:
 %     param.fileNum          = 1 = Single Recording, 2 = Multiple/Batch analysis (disables plotting)
-%     param.fileType         = 1 = pClamp (.abf), 2 = Wu data (folder of data files)
-%     param.Fs               = sampling rate (JYs recordings are usually 3000, not needed for pClamp files)
+%     param.fileType         = 1 = pClamp (.abf), 2 = ASCII data (folder of data files)
+%     param.Fs               = sampling rate (ASCII recordings are usually 3000, not needed for pClamp files)
 %     param.dsFactor         = downsample factor (default = 1, no downsampling)
 %     param.lfpChannel       = channel to use for LFP input (default = 1, but depends on recording)
 %     param.cellOption       = boolean flag to determine if second cell channel to be imported
