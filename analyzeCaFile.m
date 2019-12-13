@@ -124,26 +124,6 @@ if param.peakDetectCa
   if ~isfield(data.Ca, 'baseMean') || ~isfield(data.Ca, 'baseThresh') || ~isfield(data.Ca, 'peakThresh') 
     error('Missing threholds, first run calcThresh.m');
   end
-
-%   % Set spontaneous peak detection mask
-%   detectMask = logical(ones(length(data.Ca.timing), 1));
-%   
-%   % Limit initial detection based on param.skipDetectLim
-%   hiWin = round(1000 * param.skipDetectLim / data.Ca.samplingInt);
-%   detectMask(1 : hiWin) = 0;
-%   
-%   % Limit detection range to periods outside of stim window (if option selected)
-%   if param.stimCaOption && param.limCaPeakDetectOption
-%     for ev = 1:length(data.stim.evStart)
-%       loWin = round(data.stim.evStart(ev) * data.LFP.samplingInt / data.Ca.samplingInt) + round(param.stimCaLim1 / data.Ca.samplingInt);
-%       hiWin = round(data.stim.evStart(ev) * data.LFP.samplingInt / data.Ca.samplingInt) + round(param.stimCaLim2/data.Ca.samplingInt);
-%       detectMask(loWin : hiWin) = 0;
-%     end
-%   end
-%   
-%   CaRange = 1:length(data.Ca.timing);
-%   CaRange = CaRange';
-%   CaRange = CaRange(detectMask);
     
   % Initialize cell arrays:
   data.Ca.evStatus  = [];
@@ -471,6 +451,8 @@ if param.stimCaOption
     
     % Re-calculate Ca peaks - truncating if necessary:
     data.Ca.stim.evPeakA{ch} = data.Ca.evPeak{ch}(1:length(data.Ca.stim.evStartA{ch}));
+    if data.Ca.stim.evPeakA{ch}(end) > length(data.stim.Ca.timingA) data.Ca.stim.evPeakA{ch}(end) = length(data.stim.Ca.timingA); end
+    
   end
   fprintf('done\n');
   
