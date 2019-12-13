@@ -68,13 +68,24 @@ S.cdfSWRF{nFiles}  = [];
 S.cdfCellX{nFiles} = [];
 S.cdfCellF{nFiles} = [];
 
+j = 1;
 for i = 1:nFiles
   data = load(dataFile{i});
-  S.cdfSWRX{i} = data.SWR.Ca.cdfX;
-  S.cdfSWRF{i} = data.SWR.Ca.cdfF;
-  S.cdfCellX{i} = data.Ca.SWR.cdfX;
-  S.cdfCellF{i} = data.Ca.SWR.cdfF;
+  
+  if data.Ca.nChannels >= 5
+    S.cdfSWRX{j} = data.SWR.Ca.cdfX;
+    S.cdfSWRF{j} = data.SWR.Ca.cdfF;
+    S.cdfCellX{j} = data.Ca.SWR.cdfX;
+    S.cdfCellF{j} = data.Ca.SWR.cdfF;
+    j = j + 1;
+  else
+    S.cdfSWRX(j)  = [];
+    S.cdfSWRF(j)  = [];
+    S.cdfCellX(j) = [];
+    S.cdfCellF(j) = [];
+  end
 end
+nFiles = length(S.cdfSWRX);
 
 % Initialize standardized CDF arrays
 S.bins = linspace(0, 1, param.nBins)';
@@ -84,7 +95,7 @@ S.cdfCell = zeros(param.nBins, nFiles);
 for i = 1:nFiles
   
   % Interpolate SWR-SWR correlation CFD
-  % Trim duplicate X-values (will crash interpolation)
+  % Trim duplicate X-values (would cause interpolation to crash)
   [cdfX, indX] = unique(S.cdfSWRX{i}, 'last');
   cdfF = S.cdfSWRF{i}(indX);
   

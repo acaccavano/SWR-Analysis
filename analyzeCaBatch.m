@@ -224,13 +224,13 @@ if ~param.reAnalyzeOption || (param.baseCorrectMethod > 0) || param.interpOption
 end
 
 %% Calculate thresholds:
+baseMean{nFiles}   = [];
+baseSD{nFiles}     = [];
+baseThresh{nFiles} = [];
+peakThresh{nFiles} = [];
+
 % Only calculate if enabled (otherwise thresholds must have been previously calculated)
 if param.baseDetectMethod > 0
-  
-  baseMean{nFiles}   = [];
-  baseSD{nFiles}     = [];
-  baseThresh{nFiles} = [];
-  peakThresh{nFiles} = [];
   
   % If consistent threshold must open each file first then calculate
   if param.consThreshOption
@@ -266,8 +266,15 @@ if param.baseDetectMethod > 0
 end
 
 %% Analyze Ca files:
+reAnalyzeOption = param.reAnalyzeOption;
+baseCorrectMethod = param.baseCorrectMethod;
+interpOption = param.interpOption;
 parfor i = 1:nFiles
-  data = load(saveFile{i});
+  if ~reAnalyzeOption || (baseCorrectMethod > 0) || interpOption
+    data = load(saveFile{i});
+  else
+    data = load(dataFile{i});
+  end
   data.Ca.baseMean   = baseMean{i};
   data.Ca.baseSD     = baseSD{i};
   data.Ca.baseThresh = baseThresh{i};
