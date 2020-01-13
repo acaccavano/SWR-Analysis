@@ -68,6 +68,9 @@ S.cdfSWRF{nFiles}  = [];
 S.cdfCellX{nFiles} = [];
 S.cdfCellF{nFiles} = [];
 
+S.corrVectorSWR   = [];
+S.corrVectorCell  = [];
+
 j = 1;
 for i = 1:nFiles
   data = load(dataFile{i});
@@ -77,6 +80,8 @@ for i = 1:nFiles
     S.cdfSWRF{j} = data.SWR.Ca.cdfF;
     S.cdfCellX{j} = data.Ca.SWR.cdfX;
     S.cdfCellF{j} = data.Ca.SWR.cdfF;
+    S.corrVectorSWR = vertcat(S.corrVectorSWR, data.SWR.Ca.corrVector);
+    S.corrVectorCell = vertcat(S.corrVectorCell, data.Ca.SWR.corrVector);
     j = j + 1;
   else
     S.cdfSWRX(j)  = [];
@@ -87,54 +92,29 @@ for i = 1:nFiles
 end
 nFiles = length(S.cdfSWRX);
 
+[cdfSWRCombF, cdfSWRCombX]   = ecdf(S.corrVectorSWR);
+[cdfCellCombF, cdfCellCombX] = ecdf(S.corrVectorCell);
+
 % Initialize standardized CDF arrays
 S.bins = linspace(0, 1, param.nBins)';
+S.cdfSWRComb  = zeros(param.nBins, 1);
+S.cdfCellComb = zeros(param.nBins, 1);
 S.cdfSWR  = zeros(param.nBins, nFiles);
 S.cdfCell = zeros(param.nBins, nFiles);
 
+% Standardize combined CDFs:
+S.cdfSWRComb  = standardizeCDF(cdfSWRCombX, cdfSWRCombF, S.bins);
+S.cdfCellComb = standardizeCDF(cdfCellCombX, cdfCellCombF, S.bins);
+
+% Standardize individual file CDFs:
 for i = 1:nFiles
-  
-  % Interpolate SWR-SWR correlation CFD
-  % Trim duplicate X-values (would cause interpolation to crash)
-  [cdfX, indX] = unique(S.cdfSWRX{i}, 'last');
-  cdfF = S.cdfSWRF{i}(indX);
-  
-  % Cap CDF with X,Y = (0,0) and (1,1) if not present
-  if cdfX(1) ~= 0
-    cdfX = vertcat(0, cdfX);
-    cdfF = vertcat(0, cdfF);
-  end
-  
-  if cdfX(end) ~= 1
-    cdfX = vertcat(cdfX, 1);
-    cdfF = vertcat(cdfF, 1);
-  end
-  
-  S.cdfSWR(:, i) = interp1(cdfX, cdfF, S.bins, 'previous');
-  
-  % Interpolate Cell-Cell correlation CFD
-  % Trim duplicate X-values (will crash interpolation)
-  [cdfX, indX] = unique(S.cdfCellX{i}, 'last');
-  cdfF = S.cdfCellF{i}(indX);
-  
-  % Cap CDF with X,Y = (0,0) and (1,1) if not present
-  if cdfX(1) ~= 0
-    cdfX = vertcat(0, cdfX);
-    cdfF = vertcat(0, cdfF);
-  end
-  
-  if cdfX(end) ~= 1
-    cdfX = vertcat(cdfX, 1);
-    cdfF = vertcat(cdfF, 1);
-  end
-  
-  S.cdfCell(:, i) = interp1(cdfX, cdfF, S.bins, 'previous');
-  
+  S.cdfSWR(:, i)  = standardizeCDF(S.cdfSWRX{i}, S.cdfSWRF{i}, S.bins);
+  S.cdfCell(:, i) = standardizeCDF(S.cdfCellX{i}, S.cdfCellF{i}, S.bins);
 end
 
+% Average individual file CDFs:
 S.cdfSWRAve = mean(S.cdfSWR, 2);
 S.cdfSWRSEM = std(S.cdfSWR, 0, 2) / sqrt(size(S.cdfSWR, 2));
-
 S.cdfCellAve = mean(S.cdfCell, 2);
 S.cdfCellSEM = std(S.cdfCell, 0, 2) / sqrt(size(S.cdfCell, 2));
 
@@ -147,4 +127,27 @@ end
 
 fprintf('complete\n');
 
+end
+
+
+function cdfOut = standardizeCDF(cdfXIn, cdfFIn, bins)
+% function to interpolate CFD to standardized nBins
+
+  % Trim duplicate X-values (would cause interpolation to crash)
+  [cdfX, indX] = unique(cdfXIn, 'last');
+  cdfF = cdfFIn(indX);
+  
+  % Cap CDF with X,Y = (0,0) and (1,1) if not present
+  if cdfX(1) ~= 0
+    cdfX = vertcat(0, cdfX);
+    cdfF = vertcat(0, cdfF);
+  end
+  
+  if cdfX(end) ~= 1
+    cdfX = vertcat(cdfX, 1);
+    cdfF = vertcat(cdfF, 1);
+  end
+  
+  cdfOut = interp1(cdfX, cdfF, bins, 'previous');
+  
 end

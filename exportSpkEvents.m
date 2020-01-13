@@ -20,12 +20,12 @@ end
 varNames = {'evStart', 'evPeak', 'evEnd', 'swrCoinc'};
 outTable = table(data.C.spike.evStartA, data.C.spike.evPeakA, data.C.spike.evEndA, data.C.spike.swrMatrix, 'VariableNames', varNames);
 
-if isfield(data.C.spike, 'gammaPhase')
-  outTable = [outTable table(data.C.spike.gammaPhase, data.C.spike.gammaPhaseX, data.C.spike.gammaPhaseY, 'VariableNames', {'gammaPhase', 'gammaPhaseX', 'gammaPhaseY'})];
+if isfield(data.C.spike, 'gamma')
+  outTable = [outTable table(data.C.spike.gamma.phase, data.C.spike.gamma.phaseX, data.C.spike.gamma.phaseY, 'VariableNames', {'gamma.phase', 'gamma.phaseX', 'gamma.phaseY'})];
 end
 
-if isfield(data.C.spike, 'ripplePhase')
-  outTable = [outTable table(data.C.spike.ripplePhase, data.C.spike.ripplePhaseX, data.C.spike.ripplePhaseY, 'VariableNames', {'ripplePhase', 'ripplePhaseX', 'ripplePhaseY'})];
+if isfield(data.C.spike, 'R')
+  outTable = [outTable table(data.C.spike.R.phase, data.C.spike.R.phaseX, data.C.spike.R.phaseY, 'VariableNames', {'R.phase', 'R.phaseX', 'R.phaseY'})];
 end
 
 % Replace NaN values with blanks
