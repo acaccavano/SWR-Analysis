@@ -26,6 +26,7 @@ if ~isfield(param,'useSWRWindowOption')   param.useSWRWindowOption   = 0;   end
 if ~isfield(param,'swrWindow')            param.swrWindow            = 100; end
 if ~isfield(param,'parseSpkOption')       param.parseSpkOption       = 1;   end
 if ~isfield(param,'calcEvMatrixOption')   param.calcEvMatrixOption   = 1;   end
+if ~isfield(param,'calcPhaseStats')       param.calcPhaseStats       = 1;   end % Warning: requires circ_stat toolbox
 if ~isfield(param,'expSpkEvOption')       param.expSpkEvOption       = 1;   end
 if ~isfield(param,'expBstEvOption')       param.expBstEvOption       = 1;   end
 if ~isfield(param,'expSWREvOption')       param.expSWREvOption       = 1;   end
@@ -470,25 +471,27 @@ if param.swrSpkOption
     fprintf(['detecting oscillation phase of spikes (file ' dataFileName ')... ']);
     
     % Initialize phase variables
-    data.C.SWR.spike.ripplePhase = [];
-    data.C.SWR.spike.ripplePhase{length(data.C.SWR.spike.evStartA)} = [];
-    data.C.SWR.spike.ripplePhase = data.C.SWR.spike.ripplePhase';
+    data.C.SWR.spike.R = struct;
+    data.C.SWR.spike.R.phase = [];
+    data.C.SWR.spike.R.phase{length(data.C.SWR.spike.evStartA)} = [];
+    data.C.SWR.spike.R.phase = data.C.SWR.spike.R.phase';
     
-    data.C.spike.ripplePhase  = NaN*ones(length(data.C.spike.evStartA), 1);
-    data.C.spike.ripplePhaseX = NaN*ones(length(data.C.spike.evPeak), 1);
-    data.C.spike.ripplePhaseY = NaN*ones(length(data.C.spike.evPeak), 1);
+    data.C.spike.R.phase  = NaN*ones(length(data.C.spike.evStartA), 1);
+    data.C.spike.R.phaseX = NaN*ones(length(data.C.spike.evPeak), 1);
+    data.C.spike.R.phaseY = NaN*ones(length(data.C.spike.evPeak), 1);
     
     % Calculate gamma phase if available (have to iterate through structure to not throw error)
     if isfield(data, 'gamma')
       if isfield(data.gamma, 'SWR')
         if isfield(data.gamma.SWR, 'phase')
-          data.C.SWR.spike.gammaPhase = [];
-          data.C.SWR.spike.gammaPhase{length(data.C.SWR.spike.evStartA)} = [];
-          data.C.SWR.spike.gammaPhase = data.C.SWR.spike.gammaPhase';
+          data.C.SWR.spike.gamma = struct;
+          data.C.SWR.spike.gamma.phase = [];
+          data.C.SWR.spike.gamma.phase{length(data.C.SWR.spike.evStartA)} = [];
+          data.C.SWR.spike.gamma.phase = data.C.SWR.spike.gamma.phase';
           
-          data.C.spike.gammaPhase  = NaN*ones(length(data.C.spike.evStartA), 1);
-          data.C.spike.gammaPhaseX = NaN*ones(length(data.C.spike.evStartA), 1);
-          data.C.spike.gammaPhaseY = NaN*ones(length(data.C.spike.evStartA), 1);
+          data.C.spike.gamma.phase  = NaN*ones(length(data.C.spike.evStartA), 1);
+          data.C.spike.gamma.phaseX = NaN*ones(length(data.C.spike.evStartA), 1);
+          data.C.spike.gamma.phaseY = NaN*ones(length(data.C.spike.evStartA), 1);
         end
       end
     end
@@ -497,7 +500,7 @@ if param.swrSpkOption
     
     % Thresholds for phase using previously saved param.sdMult from analyzeLFP
     minAmpR = std(data.R.tSeries) * data.LFP.param.sdMult;
-    if isfield(data.C.SWR.spike, 'gammaPhase') minAmpG = std(data.gamma.tSeries) * data.LFP.param.sdMult; end
+    if isfield(data.C.SWR.spike, 'gamma') minAmpG = std(data.gamma.tSeries) * data.LFP.param.sdMult; end
     
     for spk1 = 1:data.C.spike.nEventsA
       if (data.C.spike.swrMatrix(spk1) == 1) % Coincident spike
@@ -525,15 +528,15 @@ if param.swrSpkOption
             end
             
             if ampR > minAmpR
-              data.C.SWR.spike.ripplePhase{swr}(spk2) = data.R.SWR.phase.evPhase{swr}(data.C.SWR.spike.evPeakA{swr}(spk2));
-              data.C.spike.ripplePhase(spk1)  = data.C.SWR.spike.ripplePhase{swr}(spk2);
-              data.C.spike.ripplePhaseX(spk1) = cos(data.C.spike.ripplePhase(spk1));
-              data.C.spike.ripplePhaseY(spk1) = sin(data.C.spike.ripplePhase(spk1));
+              data.C.SWR.spike.R.phase{swr}(spk2) = data.R.SWR.phase.evPhase{swr}(data.C.SWR.spike.evPeakA{swr}(spk2));
+              data.C.spike.R.phase(spk1)  = data.C.SWR.spike.R.phase{swr}(spk2);
+              data.C.spike.R.phaseX(spk1) = cos(data.C.spike.R.phase(spk1));
+              data.C.spike.R.phaseY(spk1) = sin(data.C.spike.R.phase(spk1));
             end
           end
           
           % Calculate gamma phase if available
-          if isfield(data.C.SWR.spike, 'gammaPhase')
+          if isfield(data.C.SWR.spike, 'gamma')
             
             % Only select spikes for which trough-to-peak amplitude is greater than minAmpG
             precMin  = max(data.gamma.SWR.phase.minLoc{swr}(data.gamma.SWR.phase.minLoc{swr} < peakTime));
@@ -549,16 +552,41 @@ if param.swrSpkOption
               end
               
               if ampG > minAmpG
-                data.C.SWR.spike.gammaPhase{swr}(spk2) = data.gamma.SWR.phase.evPhase{swr}(data.C.SWR.spike.evPeakA{swr}(spk2));
-                data.C.spike.gammaPhase(spk1) = data.C.SWR.spike.gammaPhase{swr}(spk2);
-                data.C.spike.gammaPhaseX(spk1) = cos(data.C.spike.gammaPhase(spk1));
-                data.C.spike.gammaPhaseY(spk1) = sin(data.C.spike.gammaPhase(spk1));
+                data.C.SWR.spike.gamma.phase{swr}(spk2) = data.gamma.SWR.phase.evPhase{swr}(data.C.SWR.spike.evPeakA{swr}(spk2));
+                data.C.spike.gamma.phase(spk1) = data.C.SWR.spike.gamma.phase{swr}(spk2);
+                data.C.spike.gamma.phaseX(spk1) = cos(data.C.spike.gamma.phase(spk1));
+                data.C.spike.gamma.phaseY(spk1) = sin(data.C.spike.gamma.phase(spk1));
               end
             end
           end
         end
       end
     end
+    
+    if param.calcPhaseStats
+      rPhase = data.C.spike.R.phase(~isnan(data.C.spike.R.phase));
+      if length(rPhase) > 0
+        data.C.spike.R.phaseAve = circ_mean(rPhase);
+        if (data.C.spike.R.phaseAve < 0) data.C.spike.R.phaseAve = data.C.spike.R.phaseAve + 2*pi; end
+        data.C.spike.R.phaseR   = circ_r(rPhase);
+        if length(rPhase) > 1
+          [data.C.spike.R.phaseP, data.C.spike.R.phaseZ] = circ_rtest(rPhase);
+        end
+      end
+      
+      if isfield(data.C.SWR.spike, 'gamma')
+        gPhase = data.C.spike.gamma.phase(~isnan(data.C.spike.gamma.phase));
+        if length(gPhase) > 0
+          data.C.spike.gamma.phaseAve = circ_mean(gPhase);
+          if (data.C.spike.gamma.phaseAve < 0) data.C.spike.gamma.phaseAve = data.C.spike.gamma.phaseAve + 2*pi; end
+          data.C.spike.gamma.phaseR   = circ_r(gPhase);
+          if length(gPhase) > 1
+            [data.C.spike.gamma.phaseP, data.C.spike.gamma.phaseZ] = circ_rtest(gPhase);
+          end
+        end
+      end
+    end
+    
     fprintf('done\n');
   end
 end
