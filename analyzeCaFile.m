@@ -395,14 +395,15 @@ if param.swrCaOption
 %   % Plot Event Matrix:
 %   figure
 %   imagesc('XData', 1:size(data.SWR.Ca.evMatrixCorr,1), 'YData', 1:size(data.SWR.Ca.evMatrixCorr,2), 'CData', data.SWR.Ca.evMatrixCorr');
-%   axis([1 size(data.SWR.Ca.evMatrixCorr,1) 1 size(data.SWR.Ca.evMatrixCorr,2)]);
+%   axis([0.5 size(data.SWR.Ca.evMatrixCorr,1) + 0.5 0.5 size(data.SWR.Ca.evMatrixCorr,2) + 0.5]);
 %   caxis([0 1]);
-%   colormap(flipud(hot));
+%   evColMap = [255 255 255; 48 70 160]/255;
+%   colormap(evColMap);
 %   
 %   % Plot Correlation Matrix:
 %   figure
-%   imagesc('XData', 1:size(data.SWR.Ca.corrMatrix,1), 'YData', 1:size(data.SWR.Ca.corrMatrix,2), 'CData', data.SWR.Ca.corrMatrix);
-%   axis([1 size(data.SWR.Ca.corrMatrix,1) 1 size(data.SWR.Ca.corrMatrix,2)]);
+%   imagesc('XData', 1:size(data.SWR.Ca.corrMatrix,1), 'YData', 1:size(data.SWR.Ca.corrMatrix,2), 'CData', data.SWR.Ca.corrMatrix');
+%   axis([0.5 size(data.SWR.Ca.corrMatrix,1) + 0.5 0.5 size(data.SWR.Ca.corrMatrix,2) + 0.5]);
 %   caxis([0 1]);
 %   colormap(flipud(hot));
 %   colorbar
@@ -451,8 +452,9 @@ if param.stimCaOption
     
     % Re-calculate Ca peaks - truncating if necessary:
     data.Ca.stim.evPeakA{ch} = data.Ca.evPeak{ch}(1:length(data.Ca.stim.evStartA{ch}));
-    if data.Ca.stim.evPeakA{ch}(end) > length(data.stim.Ca.timingA) data.Ca.stim.evPeakA{ch}(end) = length(data.stim.Ca.timingA); end
-    
+    if ~isempty(data.Ca.stim.evPeakA{ch})
+      if data.Ca.stim.evPeakA{ch}(end) > length(data.stim.Ca.timingA) data.Ca.stim.evPeakA{ch}(end) = length(data.stim.Ca.timingA); end
+    end
   end
   fprintf('done\n');
   
@@ -612,19 +614,43 @@ if param.stimCaOption
     
     % Calculate correlation matrix between stim events using Jaccard-Similarity distance
     data.stim.Ca.corrMatrix = 1 - squareform(pdist(data.stim.Ca.evMatrixCorr, 'jaccard'));
-    data.stim.Ca.corrMatrix(isnan(data.stim.Ca.corrMatrix)) = 0; % Replace stims with no active cells with zero correlation
-    data.stim.Ca.corrMatrix = triu(data.stim.Ca.corrMatrix, 1); % Replace diagonal and redundant half with zero
-    data.stim.Ca.corrVector = data.stim.Ca.corrMatrix(triu(true(size(data.stim.Ca.corrMatrix)), 1));
-    [data.stim.Ca.cdfF, data.stim.Ca.cdfX] = ecdf(data.stim.Ca.corrVector);
+%     data.stim.Ca.corrMatrix(isnan(data.stim.Ca.corrMatrix)) = 0; % Replace stims with no active cells with zero correlation
+%     data.stim.Ca.corrMatrix = triu(data.stim.Ca.corrMatrix, 1); % Replace diagonal and redundant half with zero
+%     data.stim.Ca.corrVector = data.stim.Ca.corrMatrix(triu(true(size(data.stim.Ca.corrMatrix)), 1));
+%     [data.stim.Ca.cdfF, data.stim.Ca.cdfX] = ecdf(data.stim.Ca.corrVector);
     
     % Calculate correlation matrix between cells using Jaccard-Similarity distance
     data.Ca.stim.corrMatrix = 1 - squareform(pdist(data.stim.Ca.evMatrixCorr', 'jaccard'));
-    data.Ca.stim.corrMatrix(isnan(data.Ca.stim.corrMatrix)) = 0; % Replace inactive cells with zero correlation
-    data.Ca.stim.corrMatrix = triu(data.Ca.stim.corrMatrix, 1); % Replace diagonal and redundant half with zero
-    data.Ca.stim.corrVector = data.Ca.stim.corrMatrix(triu(true(size(data.Ca.stim.corrMatrix)), 1));
-    [data.Ca.stim.cdfF, data.Ca.stim.cdfX] = ecdf(data.Ca.stim.corrVector);
+%     data.Ca.stim.corrMatrix(isnan(data.Ca.stim.corrMatrix)) = 0; % Replace inactive cells with zero correlation
+%     data.Ca.stim.corrMatrix = triu(data.Ca.stim.corrMatrix, 1); % Replace diagonal and redundant half with zero
+%     data.Ca.stim.corrVector = data.Ca.stim.corrMatrix(triu(true(size(data.Ca.stim.corrMatrix)), 1));
+%     [data.Ca.stim.cdfF, data.Ca.stim.cdfX] = ecdf(data.Ca.stim.corrVector);
     
   end
+  
+  % Plot Event Matrix:
+  figure
+  imagesc('XData', 1:size(data.stim.Ca.evMatrixCorr,1), 'YData', 1:size(data.stim.Ca.evMatrixCorr,2), 'CData', data.stim.Ca.evMatrixCorr');
+  axis([0.5 size(data.stim.Ca.evMatrixCorr,1) + 0.5 0.5 size(data.stim.Ca.evMatrixCorr,2) + 0.5]);
+  caxis([0 1]);
+  evColMap = [255 255 255; 48 70 160]/255;
+  colormap(evColMap);
+  
+  % Plot Stim-Stim Correlation Matrix:
+  figure
+  imagesc('XData', 1:size(data.stim.Ca.corrMatrix,1), 'YData', 1:size(data.stim.Ca.corrMatrix,2), 'CData', data.stim.Ca.corrMatrix');
+  axis([0.5 size(data.stim.Ca.corrMatrix,1) + 0.5 0.5 size(data.stim.Ca.corrMatrix,2) + 0.5]);
+  caxis([0 1]);
+  colormap(flipud(hot));
+  colorbar
+  
+  % Plot Cell-Cell Correlation Matrix:
+  figure
+  imagesc('XData', 1:size(data.Ca.stim.corrMatrix,1), 'YData', 1:size(data.Ca.stim.corrMatrix,2), 'CData', data.Ca.stim.corrMatrix');
+  axis([0.5 size(data.Ca.stim.corrMatrix,1) + 0.5 0.5 size(data.Ca.stim.corrMatrix,2) + 0.5]);
+  caxis([0 1]);
+  colormap(flipud(hot));
+  colorbar
   
   % Re-order structure arrays
   data.Ca.stim = orderfields(data.Ca.stim);
