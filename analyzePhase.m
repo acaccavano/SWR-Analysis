@@ -11,16 +11,16 @@ if ~isfield(param,'lwl') param.lwl = 4; end
 if ~isfield(param,'fontSz') param.fontSz = 14;  end
 
 % PC
-% cMark_CT = [  0  90   0]/255;
-% cLine_CT = [  0  90   0]/255;
+cMark_CT = [  0  90   0]/255;
+cLine_CT = [  0  90   0]/255;
 
 % % PVBC
 % cMark_CT = [128   0   0]/255;
 % cLine_CT = [128   0   0]/255;
 
 % PVBSC
-cMark_CT = [ 65   2  87]/255;
-cLine_CT = [ 65   2  87]/255;
+% cMark_CT = [ 65   2  87]/255;
+% cLine_CT = [ 65   2  87]/255;
 
 % PVAAC
 % cMark_CT = [192  96   0]/255;
