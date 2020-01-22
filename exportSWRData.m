@@ -1,4 +1,7 @@
 function exportSWRData(data, param, expDataFile)
+%% exportSWRData(data, param, expDataFile)
+%
+%  Function to export txt file of episodic SWR events to be imported by pClamp
 
 % Handle inputs
 if (nargin < 3) expDataFile = []; end

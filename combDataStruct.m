@@ -1,4 +1,9 @@
 function data = combDataStruct(data1, data2, data3)
+%% data = combDataStruct(data1, data2, data3)
+%
+%  Function to combine up to three data structures, check for missing
+%  fields, and add them as needed to avoid errors
+
 if (nargin < 3) data3 = []; end
 if (nargin < 2) data2 = []; end
 if (nargin < 1) data1 = []; end

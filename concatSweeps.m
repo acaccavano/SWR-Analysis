@@ -1,4 +1,7 @@
 function dataOut = concatSweeps(inFile, outFile, param)
+%% dataOut = concatSweeps(inFile, outFile, param)
+%
+%  Function to concatenate episodic ephys data into continuous format
 
 %% Handle input arguments - if not entered
 if (nargin < 3) param   = struct; end

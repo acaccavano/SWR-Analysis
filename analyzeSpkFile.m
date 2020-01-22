@@ -1,4 +1,38 @@
 function [data, hand] = analyzeSpkFile(data, hand, param, saveFile, spkFile, bstFile, expSpkFile, expBstFile, expSWRFile)
+%% [data, hand] = analyzeSpkFile(data, hand, param, saveFile, spkFile, bstFile, expSpkFile, expBstFile, expSWRFile)
+%
+%  Function to detect coincidence of spikes/bursts and SWR events, construct 
+%  peri-SWR spike histograms and spike-phase analysis
+%
+%  Inputs: (all optional - will be prompted for or use defaults)
+%   data       = data structure containing analyzed LFP files
+%   hand       = handle structure to specify where figure should be drawn
+%   param      = structure containing all parameters including:
+%     param.fileNum              = 1 = Single Recording, 2 = Multiple/Batch analysis (disables plotting)
+%     param.importSpkOption      = boolean flag to import spike file (needed unless reanalyzing) (default = 1)
+%     param.swrSpkOption         = boolean flag to calculate coincidence of SWRs and spikes (default = 1)
+%     param.swrBstOption         = boolean flag to calculate coincidence of SWRs and bursts (default = 1)
+%     param.useSWRDurationOption = boolean flag to use detected SWR detection for coincidence detection (default = 1)
+%     param.useSWRWindowOption   = boolean flag to use standard swrWindow for coincidence detection (default = 0)
+%     param.swrWindow            = +/- window around SWR peak events (default = 100 ms)
+%     param.parseSpkOption       = currently mandatory boolean flag to parse spikes into standard window (default = 1)
+%     param.calcEvMatrixOption   = currently mandatory boolean flag to calc standard event SWR-Spk event matrix (default = 1)
+%     param.calcPhaseStats       = Calculates statistics, WARNING: requires circ_stat toolbox (default = 1)
+%     param.expSpkEvOption       = boolean flag to determine whether to export csv table of Spk events (default = 1)
+%     param.expBstEvOption       = boolean flag to determine whether to export csv table of Bst events (default = 1)
+%     param.expSWREvOption       = boolean flag to determine whether to export csv table of SWR events (default = 1)
+%     param.reAnalyzeOption      = option to re-analyze file (default = 0)
+%     param.nBins                = For spike histogram, not currently selectable from UI (default = 100)
+%   saveFile    = full path to matlab file to save (if not set, will prompt)
+%   spkFile     = full path to pClamp spike event file to import (if not set, will prompt)
+%   bstFile     = full path to pClamp burst event file to import (if not set, will prompt)
+%   expSpkFile  = full path to spike event csv file to export (if not set, will prompt)
+%   expBstFile  = full path to burst event csv file to export (if not set, will prompt)
+%   expSWRFile  = full path to SWR event csv file to export (if not set, will prompt)
+%
+%  Outputs:
+%   data       = structure containing all data to be saved
+%   hand       = handle structure for figure
 
 %% Handle input arguments - if not entered
 if (nargin < 9) expSWRFile = []; end
@@ -26,12 +60,12 @@ if ~isfield(param,'useSWRWindowOption')   param.useSWRWindowOption   = 0;   end
 if ~isfield(param,'swrWindow')            param.swrWindow            = 100; end
 if ~isfield(param,'parseSpkOption')       param.parseSpkOption       = 1;   end
 if ~isfield(param,'calcEvMatrixOption')   param.calcEvMatrixOption   = 1;   end
-if ~isfield(param,'calcPhaseStats')       param.calcPhaseStats       = 1;   end % Warning: requires circ_stat toolbox
+if ~isfield(param,'calcPhaseStats')       param.calcPhaseStats       = 1;   end
 if ~isfield(param,'expSpkEvOption')       param.expSpkEvOption       = 1;   end
 if ~isfield(param,'expBstEvOption')       param.expBstEvOption       = 1;   end
 if ~isfield(param,'expSWREvOption')       param.expSWREvOption       = 1;   end
 if ~isfield(param,'reAnalyzeOption')      param.reAnalyzeOption      = 0;   end
-if ~isfield(param,'nBins')                param.nBins                = 100; end % For spike histogram, not currently selectable from UI
+if ~isfield(param,'nBins')                param.nBins                = 100; end
 
 if ~isfield(data, 'LFP')
   [fileName, filePath] = uigetfile('.mat', 'Select *.mat file of analyzed LFP + imported cell channel');

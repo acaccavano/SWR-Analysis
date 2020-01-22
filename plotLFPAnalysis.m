@@ -1,7 +1,7 @@
 function hand = plotLFPAnalysis(data, hand, param, dsPlot)
-%% Initialize plotting data based on options entered in param structure
-% Will downsample if selected, otherwise just a pass-through and name change
-% If data2 and/or data3 entered will plot side-by-side on same scale
+%% hand = plotLFPAnalysis(data, hand, param, dsPlot)
+% 
+%  Function to plot output of analyzeLFPFile
 
 % Initialization 
 convFact = 1000; % Convert from mV to uV

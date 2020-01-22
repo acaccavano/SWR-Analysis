@@ -1,16 +1,8 @@
 function analyzeLFPBatch(param, dataFolder, saveFolder, expEvFolder, expDataFolder, stimFolder)
-%% analyzeLFPBatch(param, dataFolder, saveFolder, expEvFolder, expDataFolder)
+%% analyzeLFPBatch(param, dataFolder, saveFolder, expEvFolder, expDataFolder, stimFolder)
 %
-%  Function to detect sharp wave ripple (SWR) events, gamma and theta analysis,
-%  and spectrogram analysis of batch of LFP recordings. SWRs are detected by
-%  performing both a low frequency (sharp wave) and high frequency (ripple) band-pass
-%  filter of an LFP recording. The root-mean-square (RMS) of these filtered
-%  channels are taken, and events are counted if they exceed a given
-%  standard deviation of the RMS channels. SWR events are counted if both
-%  a sharp wave and ripple occur simultaneously.
+%  Function to run analyzeLFPFile on batch of files
 %
-%   data       = structure - specify if appending previously analyzed files
-%   hand       = handle structure to specify where figure should be drawn
 %   param      = structure containing all parameters including:
 %     param.fileNum          = 1 = Single Recording, 2 = Multiple/Batch analysis (disables plotting)
 %     param.fileType         = 1 = pClamp (.abf), 2 = ASCII data (folder of data files)
@@ -19,6 +11,8 @@ function analyzeLFPBatch(param, dataFolder, saveFolder, expEvFolder, expDataFold
 %     param.lfpChannel       = channel to use for LFP input (default = 1, but depends on recording)
 %     param.cellOption       = boolean flag to determine if second cell channel to be imported
 %     param.cellChannel      = channel to use for optional cell input (default = 2, but depends on recording)
+%     param.notchOption      = option to perform comb filter to remove electrical line noise (default = 0)
+%     param.notchFreq        = frequency to remove (+harmonics) (default = 60Hz)
 %     param.lfpOption        = boolean flag to filter LFP signal
 %     param.lfpLim1          = lower LFP band-pass lim (default = 1Hz)
 %     param.lfpLim2          = upper LFP band-pass lim (default = 1000Hz)
@@ -34,8 +28,9 @@ function analyzeLFPBatch(param, dataFolder, saveFolder, expEvFolder, expDataFold
 %     param.peakDetectOption = boolean flag to detect SW and ripple reaks in RMS signals
 %     param.sdMult           = standard deviation threshold to detect peaks (default = 4)
 %     param.baseQuant        = quantile with which to determine baseline signal (default = 0.95)
+%     param.swrType          = Option to determine what qualifies as SWR (1: SW & R (default), 2: SW only, 3: R only)
 %     param.swrWindow        = +/- window around SWR peak events for swrData file [ms]
-%     param.expSWREvOption   = boolean flag to determine whether to export txt table of SWR events
+%     param.expSWREvOption   = boolean flag to determine whether to export csv table of SWR events
 %     param.expSWRDataOption = boolean flag to determine whether to export txt file of episodic SWR events for pClamp analysis
 %     param.thetaOption      = boolean flag to filter and analyze theta signal
 %     param.thetaLim1        = lower theta band-pass lim (default = 4Hz)
@@ -49,17 +44,19 @@ function analyzeLFPBatch(param, dataFolder, saveFolder, expEvFolder, expDataFold
 %     param.hgammaOption     = boolean flag to filter and analyze high gamma signal
 %     param.hgammaLim1       = lower high gamma band-pass lim (default = 65Hz)
 %     param.hgammaLim2       = upper high gamma band-pass lim (default = 85Hz)
+%     param.fROption         = boolean flag to filter and analyze fast ripple signal
+%     param.fRLim1           = lower fast rippple band-pass lim (default = 250Hz)
+%     param.fRLim2           = lower fast rippple band-pass lim (default = 500Hz)
 %     param.spectOption      = boolean flag to perform spectrogram analysis
 %     param.spectLim1        = lower lim of spectrogram (default = 1Hz)
-%     param.spectLim2        = upper lim of spectrogram (default = 250Hz)
+%     param.spectLim2        = upper lim of spectrogram (default = 500Hz)
+%     param.importStimOption = option to import stim file from pClamp (default = 0)
+%     param.reAnalyzeOption  = option to re-analyze file - will prompt for *.mat instead of raw data file
 %   dataFolder    = full path to folder containing raw data to be analysed (if not set, will prompt)
 %   saveFolder    = full path to folder of matlab files to save (if not set, will prompt)
-%   expEvFolder   = full path to folder of exported txt event table (if not set and expSWREvOption = 1, will prompt
-%   expDataFolder = full path to folder of exported txt data file (if not set and expSWRDataOption = 1, will prompt
-%
-%  Outputs:
-%   data       = structure containing all data to be saved
-%   hand       = handle structure for figure
+%   expEvFolder   = full path to folder of exported csv event table (if not set and expSWREvOption = 1, will prompt)
+%   expDataFolder = full path to folder of exported txt data file (if not set and expSWRDataOption = 1, will prompt)
+%   stimFolder    = full path to folder of pClamp stim events (if not set and importStimOption = 1, will prompt)
 
 %% Handle optional arguments
 if (nargin < 6) stimFolder    = []; end

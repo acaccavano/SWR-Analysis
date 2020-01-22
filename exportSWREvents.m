@@ -1,4 +1,8 @@
 function exportSWREvents(data, saveFile, exportFile)
+%% exportSWREvents(data, saveFile, exportFile)
+%
+%  Function to export csv file of all SWR event stats that are available,
+%  including from subsequent analyses (spike/burst, calcium, PSC)
 
 % Handle input arguments - if not entered
 if (nargin < 3) exportFile = []; end

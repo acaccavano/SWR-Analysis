@@ -1,4 +1,7 @@
 function S = combCaCorr(param, dataFolder, saveFile)
+%% S = combCaCorr(param, dataFolder, saveFile)
+%
+%  Function to combine folder of *.mat files with SWR-SWR and Cell-Cell correlations produced from analyzeCaFile
 
 % Handle optional arguments
 if (nargin < 3) saveFile   = []; end

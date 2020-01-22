@@ -1,4 +1,7 @@
 function dataOut = gaussianFilt(dataIn, Fc1, Fc2, samplingInt, Order, Alpha)
+%% dataOut = gaussianFilt(dataIn, Fc1, Fc2, samplingInt, Order, Alpha)
+% 
+% Gaussian FIR filter with constant and corrected phase delay
 
 if (nargin < 6) Alpha = 2.5; end
 if (nargin < 5) Order = 1; end

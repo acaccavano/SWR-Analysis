@@ -1,4 +1,9 @@
 function S = calcEvFFT(S, param, lim1, lim2)
+%% S = calcEvFFT(S, param, lim1, lim2)
+%
+%  Function to create new structure and calculate fast-fourier transform
+%  (FFT) for an array of events on event-by-event basis and for the average
+%  of all events.
 
 if ~isfield(S,'FFT') S.FFT = struct; end
 

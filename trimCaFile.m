@@ -1,4 +1,9 @@
 function tSeriesOut = trimCaFile(tSeriesIn, samplingIntCa, samplingIntLFP, stimStart, param)
+%% tSeriesOut = trimCaFile(tSeriesIn, samplingIntCa, samplingIntLFP, stimStart, param)
+%
+%  Function to trim out parts of calcium file that are not to be used for
+%  baseline detection, including 1st few seconds (if option selected), or
+%  any periods of stimulation.
 
 %% Handle input arguments
 if (nargin < 5) param          = struct; end

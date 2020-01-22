@@ -1,4 +1,9 @@
 function S = calcEvPhase(S, SWR, minFreq, maxFreq)
+%% S = calcEvPhase(S, SWR, minFreq, maxFreq)
+%
+%  Function to calculate the phase for specific a frequency range of SWR events using a
+%  piece-wise linear fit to maxima and minima of filtered signal, with some
+%  error handling to ensure abberently high or low results are discarded. 
 
 if ~isfield(S,'phase') S.phase = struct; end
 

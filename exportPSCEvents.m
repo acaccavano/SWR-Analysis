@@ -1,4 +1,7 @@
 function exportPSCEvents(data, saveFile, exportFile)
+%% exportPSCEvents(data, saveFile, exportFile)
+%
+%  Function to export csv file of all PSC event stats that are available
 
 % Handle input arguments - if not entered
 if (nargin < 3) exportFile = []; end

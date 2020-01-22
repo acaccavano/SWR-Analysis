@@ -1,4 +1,7 @@
 function hand = plotSpkAnalysis(data, hand, param, dsPlot)
+%% hand = plotSpkAnalysis(data, hand, param, dsPlot)
+% 
+%  Function to plot output of analyzeSpkFile
 
 nData = length(data);
 

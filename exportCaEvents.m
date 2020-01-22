@@ -1,4 +1,7 @@
 function exportCaEvents(data, saveFile, exportFile)
+%% exportCaEvents(data, saveFile, exportFile)
+%
+%  Function to export csv file of all calcium event stats, averaged per cell, that are available
 
 % Handle input arguments - if not entered
 if (nargin < 3) exportFile = []; end

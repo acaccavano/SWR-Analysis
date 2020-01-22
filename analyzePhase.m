@@ -1,13 +1,17 @@
 function [S, hand] = analyzePhase(T, param)
+%% [S, hand] = analyzePhase(T, param)
+%
+%  Function to combine table of individual cell circular stats and perform
+%  stats on two groups (CT and AD), and plot with different markers for males and females
 
 if (nargin < 2) param = struct; end
 
 hand  = struct;
 
-if ~isfield(param,'sz') param.sz = 60;  end
-if ~isfield(param,'al') param.al = 0.6; end
-if ~isfield(param,'lwm') param.lwm = 2; end
-if ~isfield(param,'lwl') param.lwl = 4; end
+if ~isfield(param,'sz')     param.sz     = 60;  end
+if ~isfield(param,'al')     param.al     = 0.6; end
+if ~isfield(param,'lwm')    param.lwm    = 2;   end
+if ~isfield(param,'lwl')    param.lwl    = 4;   end
 if ~isfield(param,'fontSz') param.fontSz = 14;  end
 
 % PC
@@ -151,22 +155,6 @@ hand.rAx.GridAlpha  = 1;
 
 end
 
-% Commented out: don't use manual calc, instead use below
-% function [avePh, avePhLL, avePhUL, aveVar, aveLen] = calcPhaseStats(ph, len)
-% 
-% phX = cos(ph);
-% phY = sin(ph);
-% 
-% avePh = atan2(sum(phY.*len)/length(phX), sum(phX.*len)/length(phX));
-% if (avePh < 0) avePh = avePh + 2*pi; end
-% aveLen = sqrt(sum(phX.*len)*sum(phX.*len) + sum(phY.*len)*sum(phY.*len))/length(phX);
-% aveVar = 1 - aveLen;
-% 
-% [~, sd] = circ_std(ph);
-% 
-% avePhLL = avePh - sd;
-% avePhUL = avePh + sd;
-% end
 
 function [avePh, avePhLL, avePhUL, aveVar, aveLen] = calcPhaseStats(ph, len)
 

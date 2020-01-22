@@ -1,4 +1,7 @@
 function exportStimEvents(data, saveFile, exportFile)
+%% exportStimEvents(data, saveFile, exportFile)
+%
+%  Function to export csv file of all stim event stats
 
 % Handle input arguments - if not entered
 if (nargin < 3) exportFile = []; end

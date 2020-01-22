@@ -1,4 +1,32 @@
 function analyzeSpkBatch(param, dataFolder, saveFolder, spkFolder, bstFolder, expSpkFolder, expBstFolder, expSWRFolder)
+%% analyzeSpkBatch(param, dataFolder, saveFolder, spkFolder, bstFolder, expSpkFolder, expBstFolder, expSWRFolder)
+%
+%  Function to run batch analyzeSpkFile on batch of files
+%
+%  Inputs: (all optional - will be prompted for or use defaults)
+%   param      = structure containing all parameters including:
+%     param.fileNum              = 1 = Single Recording, 2 = Multiple/Batch analysis (disables plotting)
+%     param.importSpkOption      = boolean flag to import spike file (needed unless reanalyzing) (default = 1)
+%     param.swrSpkOption         = boolean flag to calculate coincidence of SWRs and spikes (default = 1)
+%     param.swrBstOption         = boolean flag to calculate coincidence of SWRs and bursts (default = 1)
+%     param.useSWRDurationOption = boolean flag to use detected SWR detection for coincidence detection (default = 1)
+%     param.useSWRWindowOption   = boolean flag to use standard swrWindow for coincidence detection (default = 0)
+%     param.swrWindow            = +/- window around SWR peak events (default = 100 ms)
+%     param.parseSpkOption       = currently mandatory boolean flag to parse spikes into standard window (default = 1)
+%     param.calcEvMatrixOption   = currently mandatory boolean flag to calc standard event SWR-Spk event matrix (default = 1)
+%     param.calcPhaseStats       = Calculates statistics, WARNING: requires circ_stat toolbox (default = 1)
+%     param.expSpkEvOption       = boolean flag to determine whether to export csv table of Spk events (default = 1)
+%     param.expBstEvOption       = boolean flag to determine whether to export csv table of Bst events (default = 1)
+%     param.expSWREvOption       = boolean flag to determine whether to export csv table of SWR events (default = 1)
+%     param.reAnalyzeOption      = option to re-analyze file (default = 0)
+%     param.nBins                = For spike histogram, not currently selectable from UI (default = 100)
+%   dataFolder    = full path to matlab folder to import (if not set, will prompt)
+%   saveFolder    = full path to matlab folder to save (can be same, if not set, will prompt)
+%   spkFolder     = full path to pClamp spike event folder to import (if not set, will prompt)
+%   bstFolder     = full path to pClamp burst event folder to import (if not set, will prompt)
+%   expSpkFolder  = full path to spike event csv folder to export (if not set, will prompt)
+%   expBstFolder  = full path to burst event csv folder to export (if not set, will prompt)
+%   expSWRFolder  = full path to SWR event csv folder to export (if not set, will prompt)
 
 %% Handle input arguments
 if (nargin < 8) expSWRFolder = []; end
@@ -14,19 +42,21 @@ if (nargin < 1) param        = struct; end
 if isempty(param) param      = struct; end
 
 % Set default parameters if not specified
-if ~isfield(param,'fileNum')              param.fileNum = 2; end
-if ~isfield(param,'importSpkOption')      param.importSpkOption = 1; end
-if ~isfield(param,'swrSpkOption')         param.swrSpkOption = 1; end
-if ~isfield(param,'swrBstOption')         param.swrBstOption = 1; end
-if ~isfield(param,'useSWRDurationOption') param.useSWRDurationOption = 1; end
-if ~isfield(param,'useSWRWindowOption')   param.useSWRWindowOption = 0; end
-if ~isfield(param,'swrWindow')            param.swrWindow = 100; end
-if ~isfield(param,'parseSpkOption')       param.parseSpkOption = 1; end
-if ~isfield(param,'calcEvMatrixOption')   param.calcEvMatrixOption = 1; end
-if ~isfield(param,'expSpkEvOption')       param.expSpkEvOption = 1; end
-if ~isfield(param,'expBstEvOption')       param.expBstEvOption = 1; end
-if ~isfield(param,'expSWREvOption')       param.expSWREvOption = 1; end
-if ~isfield(param,'reAnalyzeOption')      param.reAnalyzeOption = 0; end
+if ~isfield(param,'fileNum')              param.fileNum              = 2;   end
+if ~isfield(param,'importSpkOption')      param.importSpkOption      = 1;   end
+if ~isfield(param,'swrSpkOption')         param.swrSpkOption         = 1;   end
+if ~isfield(param,'swrBstOption')         param.swrBstOption         = 1;   end
+if ~isfield(param,'useSWRDurationOption') param.useSWRDurationOption = 1;   end
+if ~isfield(param,'useSWRWindowOption')   param.useSWRWindowOption   = 0;   end
+if ~isfield(param,'swrWindow')            param.swrWindow            = 100; end
+if ~isfield(param,'parseSpkOption')       param.parseSpkOption       = 1;   end
+if ~isfield(param,'calcEvMatrixOption')   param.calcEvMatrixOption   = 1;   end
+if ~isfield(param,'calcPhaseStats')       param.calcPhaseStats       = 1;   end
+if ~isfield(param,'expSpkEvOption')       param.expSpkEvOption       = 1;   end
+if ~isfield(param,'expBstEvOption')       param.expBstEvOption       = 1;   end
+if ~isfield(param,'expSWREvOption')       param.expSWREvOption       = 1;   end
+if ~isfield(param,'reAnalyzeOption')      param.reAnalyzeOption      = 0;   end
+if ~isfield(param,'nBins')                param.nBins                = 100; end
 
 % Assign OS specific variables:
 if ispc

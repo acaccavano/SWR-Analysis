@@ -1,4 +1,22 @@
 function tSeries = correctBaseline(timing, tSeries, param)
+%% tSeries = correctBaseline(timing, tSeries, param)
+%
+%  Function to subtract slowly drifting baseline for individual dFoF time
+%  series for one cell
+%
+%  Inputs: (param optional)
+%   timing     = array of timing
+%   tSeries    = dFoF time series for single cell
+%   param      = structure containing all parameters including:
+%     param.baseCorrectMethod    = Method for baseline correction (0: none, 1: gassuian filter, 2: smoothed average (default))
+%     param.CaFiltLim1           = Lower limit for gaussian filter (default = 0.03Hz)
+%     param.CaFiltLim2           = Upper limit for gaussian filter (default = 4Hz)
+%     param.CaFiltOrder          = Gaussian filter order (default = 80)
+%     param.CaFiltAlpha          = Gaussian filter alpha (default = 2.5)
+%     param.smoothFactor         = Proportion of file duration for moving linear average (default = 0.25)
+%
+%  Output:
+%   tSeries    = dFoF time series for single cell with corrected baseline
 
 if (nargin < 3) param = struct; end
 

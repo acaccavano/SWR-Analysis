@@ -1,4 +1,7 @@
 function hand = plotCaAnalysis(data, hand, param, dsPlot)
+%% hand = plotCaAnalysis(data, hand, param, dsPlot)
+% 
+%  Function to plot output of analyzeCaFile
 
 nData = length(data);
 

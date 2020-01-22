@@ -1,4 +1,9 @@
 function [S, BL] = calcSpect(S, BL, fRange, Fs, timeWindow, saveEvSpect)
+%% [S, BL] = calcSpect(S, BL, fRange, Fs, timeWindow, saveEvSpect)
+% 
+%  Function to calculate Z-scored time-frequency spectrogram for series of
+%  events or entire duration of file. Can normalize Z-score to baseline period
+%  for comparisons
 
 % Handle input arguments - if not entered
 if (nargin < 6) saveEvSpect = 0;     end % If true and > 1 tSeries will save all event spectra (Caution - large files)

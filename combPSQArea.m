@@ -1,4 +1,7 @@
 function S = combPSQArea(epscFolder, ipscFolder, epscIndex, ipscIndex, saveFile)
+%% S = combPSQArea(epscFolder, ipscFolder, epscIndex, ipscIndex, saveFile)
+%
+%  Function to combine folder of EPSC and IPSC *.mat files to calculate average EPSQ and IPSQ curves
 
 % Handle optional arguments
 if (nargin < 5) saveFile   = []; end

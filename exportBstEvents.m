@@ -1,4 +1,7 @@
 function exportBstEvents(data, saveFile, exportFile)
+%% exportBstEvents(data, saveFile, exportFile)
+%
+%  Function to export csv file of all burst event stats
 
 % Handle input arguments - if not entered
 if (nargin < 3) exportFile = []; end

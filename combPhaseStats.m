@@ -1,4 +1,7 @@
 function T = combPhaseStats(dataFolder, exportFile)
+%% T = combPhaseStats(dataFolder, exportFile)
+%
+%  Function to combine phase stats from folder of *.mat files and output csv table
 
 % Handle optional arguments
 if (nargin < 2) exportFile = []; end

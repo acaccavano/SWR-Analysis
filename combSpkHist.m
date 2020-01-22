@@ -1,4 +1,7 @@
 function S = combSpkHist(param, dataFolder, saveFile)
+%% S = combSpkHist(param, dataFolder, saveFile)
+%
+%  Function to combine folder of spike *.mat files to calculate average peri-SWR spike histogram
 
 % Handle optional arguments
 if (nargin < 3) saveFile   = []; end

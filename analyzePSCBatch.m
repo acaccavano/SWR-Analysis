@@ -1,4 +1,38 @@
 function analyzePSCBatch(param, dataFolder, saveFolder, pscFolder, expPSCFolder, expSWRFolder)
+%% analyzePSCBatch(param, dataFolder, saveFolder, pscFolder, expPSCFolder, expSWRFolder)
+%
+%  Function to run batch analyzePSCFile on batch of files
+%
+%  Inputs: (all optional - will be prompted for or use defaults)
+%   param      = structure containing all parameters including:
+%     param.fileNum              = 1 = Single Recording, 2 = Multiple/Batch analysis (disables plotting)
+%     param.pscEventPolarity     = boolean flag to indicate polarity of PSCs (0: neg/EPSCs, 1: pos/IPSCs) (default = 0)
+%     param.swrPSQOption         = boolean flag to calculate area of cell channel during SWRs (default = 1)
+%     param.importPSCOption      = boolean flag to import PSC event file from pClamp (needed unless reanalyzing) (default = 1)
+%     param.swrPSCOption         = boolean flag to calculate coincidence of SWRs and PSCs (default = 1)
+%     param.useSWRDurationOption = boolean flag to use detected SWR detection for coincidence detection (default = 0)
+%     param.useSWRWindowOption   = boolean flag to use standard swrWindow for coincidence detection (default = 1)
+%     param.swrWindow            = +/- window around SWR peak events (default = 100 ms)
+%     param.parsePSCOption       = currently mandatory boolean flag to parse PSCs into standard window (default = 1)
+%     param.calcEvMatrixOption   = currently mandatory boolean flag to calc standard event SWR-PSC event matrix (default = 1)
+%     param.expPSCEvOption       = boolean flag to determine whether to export csv table of PSC events (default = 1)
+%     param.expSWREvOption       = boolean flag to determine whether to export csv table of SWR events (default = 1)
+%     param.gammaOption          = boolean flag to filter cell channel in gamma range (default = 1)
+%     param.gammaLim1            = lower limit for gamma filter (default = 20Hz)
+%     param.gammaLim2            = upper limit for gamma filter (default = 50Hz)
+%     param.rOption              = boolean flag to filter cell channel in ripple range (default = 1)
+%     param.rLim1                = lower limit for ripple filter (default = 120Hz)
+%     param.rLim2                = upper limit for ripple filter (default = 220Hz)
+%     param.spectOption          = boolean flag to calculate spectrogram for cell channel (default = 1)
+%     param.spectLim1            = lower limit for spectrogram (default = 1Hz)
+%     param.spectLim2            = upper limit for spectrogram (default = 500Hz)
+%     param.reAnalyzeOption      = option to re-analyze file (default = 0)
+%     param.nBins                = For PSC peak histogram, not currently selectable from UI (default = 100)
+%   dataFolder    = full path to matlab folder to import (if not set, will prompt)
+%   saveFolder    = full path to matlab folder to save (can be same, if not set, will prompt)
+%   pscFolder     = full path to pClamp psc event folder to import (if not set, will prompt)
+%   expPSCFolder  = full path to PSC event csv folder to export (if not set, will prompt)
+%   expSWRFolder  = full path to SWR event csv folder to export (if not set, will prompt)
 
 %% Handle input arguments
 if (nargin < 6) expSWRFolder = []; end
@@ -13,6 +47,8 @@ if isempty(param) param      = struct; end
 
 % Set default parameters if not specified
 if ~isfield(param,'fileNum')              param.fileNum              = 2;   end
+if ~isfield(param,'pscEventPolarity')     param.pscEventPolarity     = 0;   end
+if ~isfield(param,'swrPSQOption')         param.swrPSQOption         = 1;   end
 if ~isfield(param,'importPSCOption')      param.importPSCOption      = 1;   end
 if ~isfield(param,'swrPSCOption')         param.swrPSCOption         = 1;   end
 if ~isfield(param,'useSWRDurationOption') param.useSWRDurationOption = 0;   end
@@ -30,8 +66,9 @@ if ~isfield(param,'rLim1')                param.rLim1                = 120; end
 if ~isfield(param,'rLim2')                param.rLim2                = 220; end
 if ~isfield(param,'spectOption')          param.spectOption          = 1;   end
 if ~isfield(param,'spectLim1')            param.spectLim1            = 1;   end
-if ~isfield(param,'spectLim2')            param.spectLim2            = 600; end
+if ~isfield(param,'spectLim2')            param.spectLim2            = 500; end
 if ~isfield(param,'reAnalyzeOption')      param.reAnalyzeOption      = 0;   end
+if ~isfield(param,'nBins')                param.nBins                = 100; end
 
 % Assign OS specific variables:
 if ispc

@@ -1,4 +1,7 @@
 function hand = plotPSCAnalysis(data, hand, param, dsPlot)
+%% hand = plotPSCAnalysis(data, hand, param, dsPlot)
+% 
+%  Function to plot output of analyzePSCFile
 
 nData = length(data);
 

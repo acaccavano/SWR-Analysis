@@ -1,7 +1,43 @@
 function [data, hand] = analyzePSCFile(data, hand, param, saveFile, pscFile, expPSCFile, expSWRFile)
 %% [data, hand] = analyzePSCFile(data, hand, param, saveFile, pscFile, expPSCFile, expSWRFile)
-
-%  function to correlate detected PSCs (both IPSCs and EPSCs) with previosuly analyzed SWR events
+%
+%  Function to correlate detected PSCs (both IPSCs and EPSCs) with previously analyzed SWR events
+%
+%  Inputs: (all optional - will be prompted for or use defaults)
+%   data       = data structure containing analyzed LFP files
+%   hand       = handle structure to specify where figure should be drawn
+%   param      = structure containing all parameters including:
+%     param.fileNum              = 1 = Single Recording, 2 = Multiple/Batch analysis (disables plotting)
+%     param.pscEventPolarity     = boolean flag to indicate polarity of PSCs (0: neg/EPSCs, 1: pos/IPSCs) (default = 0)
+%     param.swrPSQOption         = boolean flag to calculate area of cell channel during SWRs (default = 1)
+%     param.importPSCOption      = boolean flag to import PSC event file from pClamp (needed unless reanalyzing) (default = 1)
+%     param.swrPSCOption         = boolean flag to calculate coincidence of SWRs and PSCs (default = 1)
+%     param.useSWRDurationOption = boolean flag to use detected SWR detection for coincidence detection (default = 0)
+%     param.useSWRWindowOption   = boolean flag to use standard swrWindow for coincidence detection (default = 1)
+%     param.swrWindow            = +/- window around SWR peak events (default = 100 ms)
+%     param.parsePSCOption       = currently mandatory boolean flag to parse PSCs into standard window (default = 1)
+%     param.calcEvMatrixOption   = currently mandatory boolean flag to calc standard event SWR-PSC event matrix (default = 1)
+%     param.expPSCEvOption       = boolean flag to determine whether to export csv table of PSC events (default = 1)
+%     param.expSWREvOption       = boolean flag to determine whether to export csv table of SWR events (default = 1)
+%     param.gammaOption          = boolean flag to filter cell channel in gamma range (default = 1)
+%     param.gammaLim1            = lower limit for gamma filter (default = 20Hz)
+%     param.gammaLim2            = upper limit for gamma filter (default = 50Hz)
+%     param.rOption              = boolean flag to filter cell channel in ripple range (default = 1)
+%     param.rLim1                = lower limit for ripple filter (default = 120Hz)
+%     param.rLim2                = upper limit for ripple filter (default = 220Hz)
+%     param.spectOption          = boolean flag to calculate spectrogram for cell channel (default = 1)
+%     param.spectLim1            = lower limit for spectrogram (default = 1Hz)
+%     param.spectLim2            = upper limit for spectrogram (default = 500Hz)
+%     param.reAnalyzeOption      = option to re-analyze file (default = 0)
+%     param.nBins                = For PSC peak histogram, not currently selectable from UI (default = 100)
+%   saveFile    = full path to matlab file to save (if not set, will prompt)
+%   pscFile     = full path to pClamp psc event file to import (if not set, will prompt)
+%   expPSCFile  = full path to PSC event csv file to export (if not set, will prompt)
+%   expSWRFile  = full path to SWR event csv file to export (if not set, will prompt)
+%
+%  Outputs:
+%   data       = structure containing all data to be saved
+%   hand       = handle structure for figure
 
 %% Handle input arguments - if not entered
 if (nargin < 7) expSWRFile = []; end
@@ -38,9 +74,9 @@ if ~isfield(param,'rLim1')                param.rLim1                = 120; end
 if ~isfield(param,'rLim2')                param.rLim2                = 220; end
 if ~isfield(param,'spectOption')          param.spectOption          = 1;   end
 if ~isfield(param,'spectLim1')            param.spectLim1            = 1;   end
-if ~isfield(param,'spectLim2')            param.spectLim2            = 600; end
+if ~isfield(param,'spectLim2')            param.spectLim2            = 500; end
 if ~isfield(param,'reAnalyzeOption')      param.reAnalyzeOption      = 0;   end
-if ~isfield(param,'nBins')                param.nBins                = 100; end % For PSC peak histogram, not currently selectable from UI
+if ~isfield(param,'nBins')                param.nBins                = 100; end
 
 if ~isfield(data, 'LFP')
   [fileName, filePath] = uigetfile('.mat', 'Select *.mat file of analyzed LFP + imported cell channel');
