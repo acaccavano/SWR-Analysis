@@ -1,4 +1,51 @@
 function analyzeCaBatch(param, dataFolder, saveFolder, CaFolder, timingFile, expCaFolder, expSWRFolder, expStimFolder)
+%% analyzeCaBatch(param, dataFolder, saveFolder, CaFolder, timingFile, expCaFolder, expSWRFolder, expStimFolder)
+%
+%  Function to run processCaFile, calcCaThresh, and analyzeCaFile on batch of files
+%
+%  Inputs: (all optional - will be prompted for or use defaults)
+%   param      = structure containing all parameters including:
+%     param.fileNum              = 1 = Single Recording, 2 = Multiple/Batch analysis (disables plotting)
+%     param.interpOption         = boolean flag to interpolate file (needed if comparing to LFP) (default = 1)
+%     param.samplingInt          = interpolated sampling interval (default = 0.5ms)
+%     param.baseCorrectMethod    = Method for baseline correction (0: none, 1: gassuian filter, 2: smoothed average (default))
+%     param.CaFiltLim1           = Lower limit for gaussian filter (default = 0.03Hz)
+%     param.CaFiltLim2           = Upper limit for gaussian filter (default = 4Hz)
+%     param.CaFiltOrder          = Gaussian filter order (default = 80)
+%     param.CaFiltAlpha          = Gaussian filter alpha (default = 2.5)
+%     param.smoothFactor         = Proportion of file duration for moving linear average (default = 0.25)
+%     param.peakDetectCa         = boolean option to detect calcium events (default = 1)
+%     param.baseDetectMethod     = Method for baseline stats detection (0: none, 1: lower quantile, 2: iterative gaussian fitting (default))
+%     param.baseQuant            = Lower quantile for baseline cutoff (default = 0.8)
+%     param.pkDiffMin            = min distance between double gaussian peaks to consider them equivalent = abs(B1-B2) (default = 0.1)
+%     param.pkSimLim             = Peak amplitude similarity metric = (A1^2 + A2^2)/(A1*A2) (default = 2)
+%     param.kurtosisMin          = Min kurtosis limit to fit with 2 gaussians (otherwise skip 1st fit) (default = 0)
+%     param.kurtosisMax          = Max kurtosis limit until exclude high points (otherwise fit can fail) (default = 5)
+%     param.excludeQuant         = quantile above which to exclude if max kurtosis limit reached (default = 0.98)
+%     param.plotFitHisto         = boolean option to plot histograms and fits for each cell
+%     param.sdMult               = SD of baseline for threshold detection (default = 4)
+%     param.sdBaseFactor         = Factor of sdMult to consider for event start/end times (default = 0.75 eg 3SD)
+%     param.skipDetectLim        = Skip detection for first duration of recording for uncorrected photobleaching (default = 1s)
+%     param.consThreshOption     = option to calculate same threshold for multiple files (default = 0)
+%     param.swrCaOption          = option to perform coincidence detection for SWRs and Ca transients (default = 1)
+%     param.useSWRDurationOption = option to use detected SWR detection for coincidence detection (default = 1)
+%     param.useSWRWindowOption   = option to use standard swrWindow for coincidence detection (default = 0)
+%     param.swrWindow            = +/- window around SWR peak events (default = 100 ms)
+%     param.expCaEvOption        = option to export csv table of Calcium events (default = 1)
+%     param.expSWREvOption       = option to export csv table of SWR events (default = 1)
+%     param.spkCaOption          = option to perform coincidence detection for SWRs and Ca transients (default = 0, placeholder: code not written yet)
+%     param.stimCaOption         = option to perform coincidence detection for Stim and Ca transients (default = 0)
+%     param.stimCaLim1           = time after stim start to start stim window (default = 0ms)
+%     param.stimCaLim2           = time after stim start to end stim window (default = 1000ms)
+%     param.expStimEvOption      = option to export csv table of stim events (default = 0)
+%     param.reAnalyzeOption      = option to re-analyze file (default = 0)
+%   dataFolder    = full path to matlab folder to import (if not set, will prompt)
+%   saveFolder    = full path to matlab folder to save (can be same, if not set, will prompt)
+%   CaFolder      = full path to dFoF csv folder exported from ImageJ (if not set, will prompt)
+%   timingFile    = full path to timing csv file previously setup (if not set, will prompt)
+%   expCaFolder   = full path to calcium event csv folder to export (if not set, will prompt)
+%   expSWRFolder  = full path to SWR event csv folder to export (if not set, will prompt)
+%   expStimFolder = full path to stim event csv folder to export (if not set, will prompt)
 
 %% Handle input arguments
 if (nargin < 8) expStimFolder = []; end
@@ -14,33 +61,40 @@ if (nargin < 1) param         = struct; end
 if isempty(param) param      = struct; end
 
 % Set default parameters if not specified
-if ~isfield(param,'fileNum')              param.fileNum              = 2;   end
-if ~isfield(param,'interpOption')         param.interpOption         = 1;   end
-if ~isfield(param,'samplingInt')          param.samplingInt          = 0.5; end
+if ~isfield(param,'fileNum')              param.fileNum              = 2;    end
+if ~isfield(param,'interpOption')         param.interpOption         = 1;    end
+if ~isfield(param,'samplingInt')          param.samplingInt          = 0.5;  end
 if ~isfield(param,'baseCorrectMethod')    param.baseCorrectMethod    = 2;    end
 if ~isfield(param,'CaFiltLim1')           param.CaFiltLim1           = 0.03; end
 if ~isfield(param,'CaFiltLim2')           param.CaFiltLim2           = 4;    end
 if ~isfield(param,'CaFiltOrder')          param.CaFiltOrder          = 80;   end
 if ~isfield(param,'CaFiltAlpha')          param.CaFiltAlpha          = 2.5;  end
 if ~isfield(param,'smoothFactor')         param.smoothFactor         = 0.25; end
-if ~isfield(param,'peakDetectCa')         param.peakDetectCa         = 1;   end
-if ~isfield(param,'baseDetectMethod')     param.baseDetectMethod     = 2;   end
-if ~isfield(param,'baseQuant')            param.baseQuant            = 0.8; end
-if ~isfield(param,'sdMult')               param.sdMult               = 4;   end
-if ~isfield(param,'skipDetectLim')        param.skipDetectLim        = 2;   end % s
-if ~isfield(param,'consThreshOption')     param.consThreshOption     = 0;   end
-if ~isfield(param,'swrCaOption')          param.swrCaOption          = 0;   end
-if ~isfield(param,'useSWRDurationOption') param.useSWRDurationOption = 1;   end
-if ~isfield(param,'useSWRWindowOption')   param.useSWRWindowOption   = 0;   end
-if ~isfield(param,'swrWindow')            param.swrWindow            = 100; end
-if ~isfield(param,'expCaEvOption')        param.expCaEvOption        = 1;   end
-if ~isfield(param,'expSWREvOption')       param.expSWREvOption       = 0;   end
-if ~isfield(param,'spkCaOption')          param.spkCaOption          = 0;   end
-if ~isfield(param,'stimCaOption')         param.stimCaOption         = 0;   end
-if ~isfield(param,'stimCaLim1')           param.stimCaLim1           = 0;   end  % ms
-if ~isfield(param,'stimCaLim2')           param.stimCaLim2           = 1000; end % ms
-if ~isfield(param,'expStimEvOption')      param.expStimEvOption      = 0;   end
-if ~isfield(param,'reAnalyzeOption')      param.reAnalyzeOption      = 0;   end
+if ~isfield(param,'peakDetectCa')         param.peakDetectCa         = 1;    end
+if ~isfield(param,'baseDetectMethod')     param.baseDetectMethod     = 2;    end
+if ~isfield(param,'baseQuant')            param.baseQuant            = 0.8;  end
+if ~isfield(param,'pkDiffMin')            param.pkDiffMin            = 0.1;  end 
+if ~isfield(param,'pkSimLim')             param.pkSimLim             = 2;    end
+if ~isfield(param,'kurtosisMin')          param.kurtosisMin          = 0;    end
+if ~isfield(param,'kurtosisMax')          param.kurtosisMax          = 5;    end
+if ~isfield(param,'excludeQuant')         param.excludeQuant         = 0.98; end
+if ~isfield(param,'plotFitHisto')         param.plotFitHisto         = 0;    end
+if ~isfield(param,'sdMult')               param.sdMult               = 4;    end
+if ~isfield(param,'sdBaseFactor')         param.sdBaseFactor         = 0.75; end
+if ~isfield(param,'skipDetectLim')        param.skipDetectLim        = 1;    end
+if ~isfield(param,'consThreshOption')     param.consThreshOption     = 0;    end
+if ~isfield(param,'swrCaOption')          param.swrCaOption          = 1;    end
+if ~isfield(param,'useSWRDurationOption') param.useSWRDurationOption = 1;    end
+if ~isfield(param,'useSWRWindowOption')   param.useSWRWindowOption   = 0;    end
+if ~isfield(param,'swrWindow')            param.swrWindow            = 100;  end
+if ~isfield(param,'expCaEvOption')        param.expCaEvOption        = 1;    end
+if ~isfield(param,'expSWREvOption')       param.expSWREvOption       = 0;    end
+if ~isfield(param,'spkCaOption')          param.spkCaOption          = 0;    end
+if ~isfield(param,'stimCaOption')         param.stimCaOption         = 0;    end
+if ~isfield(param,'stimCaLim1')           param.stimCaLim1           = 0;    end
+if ~isfield(param,'stimCaLim2')           param.stimCaLim2           = 1000; end
+if ~isfield(param,'expStimEvOption')      param.expStimEvOption      = 0;    end
+if ~isfield(param,'reAnalyzeOption')      param.reAnalyzeOption      = 0;    end
 
 % Assign OS specific variables:
 if ispc

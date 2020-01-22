@@ -1,15 +1,33 @@
-function [baseMean, baseSD] = calcCaBaseline(tSeries, param) % [baseMean, baseSD]
+function [baseMean, baseSD] = calcCaBaseline(tSeries, param)
+%% [baseMean, baseSD] = calcCaBaseline(tSeries, param)
+%
+%  Function to determine baseline of individual cell tSeries
+%
+%  Inputs: (all optional - will be prompted for or use defaults)
+%   tSeries    = dFoF time series for single cell
+%   param      = structure containing all parameters including:
+%     param.baseDetectMethod = Method for baseline stats detection (0: none, 1: lower quantile, 2: iterative gaussian fitting (default))
+%     param.baseQuant        = Lower quantile for baseline cutoff (default = 0.8)
+%     param.pkDiffMin        = min distance between double gaussian peaks to consider them equivalent = abs(B1-B2) (default = 0.1)
+%     param.pkSimLim         = Peak amplitude similarity metric = (A1^2 + A2^2)/(A1*A2) (default = 2)
+%     param.kurtosisMin      = Min kurtosis limit to fit with 2 gaussians (otherwise skip 1st fit) (default = 0)
+%     param.kurtosisMax      = Max kurtosis limit until exclude high points (otherwise fit can fail) (default = 5)
+%     param.excludeQuant     = quantile above which to exclude if max kurtosis limit reached (default = 0.98)
+%     param.plotFitHisto     = boolean option to plot histograms and fits for each cell
+%
+%  Outputs:
+%   baseMean     = baseline mean
+%   baseSD       = baseline SD
 
 if (nargin < 2) param = struct; end
 if ~isfield(param,'baseDetectMethod') param.baseDetectMethod = 2;    end
 if ~isfield(param,'baseQuant')        param.baseQuant        = 0.8;  end
-if ~isfield(param,'minBaseline')      param.minBaseline      = 0.1;  end
-if ~isfield(param,'pkDiffMin')        param.pkDiffMin        = 0.1;  end % How close peaks can be before considered eqivalent = abs(B1-B2)
-if ~isfield(param,'pkSimLim')         param.pkSimLim         = 2;    end % Peak similarity metric = (A1^2 + A2^2)/(A1*A2)
-if ~isfield(param,'kurtosisMin')      param.kurtosisMin      = 0;    end % Min kurtosis limit to fit with 2 gaussians (otherwise skip 1st fit)
-if ~isfield(param,'kurtosisMax')      param.kurtosisMax      = 5;    end % Max kurtosis limit until exclude high points (otherwise fit can fail)
-if ~isfield(param,'excludeQuant')     param.excludeQuant     = 0.98; end % quantile to limit 1st fit to if kurtosis limit exceeded
-if ~isfield(param,'plotFitHisto')     param.plotFitHisto     = 1;    end
+if ~isfield(param,'pkDiffMin')        param.pkDiffMin        = 0.1;  end
+if ~isfield(param,'pkSimLim')         param.pkSimLim         = 2;    end
+if ~isfield(param,'kurtosisMin')      param.kurtosisMin      = 0;    end
+if ~isfield(param,'kurtosisMax')      param.kurtosisMax      = 5;    end
+if ~isfield(param,'excludeQuant')     param.excludeQuant     = 0.98; end
+if ~isfield(param,'plotFitHisto')     param.plotFitHisto     = 0;    end
 
 if (param.baseDetectMethod == 1)
   tSeries(tSeries > quantile(tSeries, param.baseQuant)) = [];
@@ -59,7 +77,7 @@ elseif (param.baseDetectMethod == 2)
       % Use average of fits to define BL range:
       hiLimX = mean([f.b1 f.b2]) + mean([f.c1 f.c2])/sqrt(2);
       
-      % Special case when peaks are similar amplitude (often when noise similar of < signal):
+      % Special case when peaks are similar amplitude (often when noise similar or < signal):
     elseif pkSimMetric < param.pkSimLim
       % Use more negative peak to define BL range:
       if (f.b1 < f.b2)
