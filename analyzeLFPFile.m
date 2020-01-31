@@ -32,7 +32,8 @@ function [data, hand] = analyzeLFPFile(data, hand, param, dataFile, saveFile, ex
 %     param.rLim1            = lower ripple band-pass lim (default = 120)
 %     param.rLim2            = upper ripple band-pass lim (default = 220)
 %     param.rmsOption        = boolean flag to calculate RMS of SW and ripple
-%     param.rmsPeriod        = root-mean square window [ms] (in Eschenko 2006, rmsPeriod = 5ms)
+%     param.rmsMinEvDiff     = min difference between detected RMS peaks [ms] (in Eschenko 2008 = 25ms)
+%     param.rmsPeriod        = root-mean square window [ms] (in Eschenko 2008 = 5ms)
 %     param.peakDetectOption = boolean flag to detect SW and ripple reaks in RMS signals
 %     param.sdMult           = standard deviation threshold to detect peaks (default = 4)
 %     param.baseQuant        = quantile with which to determine baseline signal (default = 0.95)
@@ -106,6 +107,7 @@ if ~isfield(param,'rOption')          param.rOption           = 1;    end
 if ~isfield(param,'rLim1')            param.rLim1             = 120;  end
 if ~isfield(param,'rLim2')            param.rLim2             = 220;  end
 if ~isfield(param,'rmsOption')        param.rmsOption         = 1;    end
+if ~isfield(param,'rmsMinEvDiff')     param.rmsMinEvDiff      = 25;   end
 if ~isfield(param,'rmsPeriod')        param.rmsPeriod         = 5;    end
 if ~isfield(param,'peakDetectOption') param.peakDetectOption  = 1;    end
 if ~isfield(param,'sdMult')           param.sdMult            = 4;    end
@@ -223,7 +225,8 @@ if ~isfield(data.LFP, 'dataFile')
     
     % Extract file names
     cd (dataFile);
-    dir_temp = dir('2*');
+%     dir_temp = dir('2*');
+    dir_temp = dir;
     names = {dir_temp.name}; % extract all the names in the struct returned by 'dir': ".", "..", file 1,2....
     files = names([dir_temp.isdir] == 0); % extract the name for all files, but no "." and ".."
     
@@ -479,7 +482,7 @@ if param.swrOption
     mn = mean(baseline);
     data.SW.peakThresh = mn + sd * param.sdMult;
     data.SW.baseThresh = mn + 0.5 * sd * param.sdMult;
-    [data.SW.evStatus, data.SW.evStart, data.SW.evPeak, data.SW.evEnd] = peakFindUnique(data.SW.RMS, data.LFP.timing, data.SW.peakThresh, data.SW.baseThresh, 1);
+    [data.SW.evStatus, data.SW.evStart, data.SW.evPeak, data.SW.evEnd] = peakFindUnique(data.SW.RMS, data.LFP.timing, data.SW.peakThresh, data.SW.baseThresh, 1, param.rmsMinEvDiff);
     
     if ~isnan(data.SW.evStart)
       for i = 1:length(data.SW.evStart)
@@ -510,7 +513,7 @@ if param.swrOption
     mn = mean(baseline);
     data.R.peakThresh = mn + sd * param.sdMult;
     data.R.baseThresh = mn + 0.5 * sd * param.sdMult;
-    [data.R.evStatus, data.R.evStart, data.R.evPeak, data.R.evEnd] = peakFindUnique(data.R.RMS, data.LFP.timing, data.R.peakThresh, data.R.baseThresh, 1);
+    [data.R.evStatus, data.R.evStart, data.R.evPeak, data.R.evEnd] = peakFindUnique(data.R.RMS, data.LFP.timing, data.R.peakThresh, data.R.baseThresh, 1, param.rmsMinEvDiff);
     
     if ~isnan(data.R.evStart)
       for i = 1:length(data.R.evStart)
@@ -841,7 +844,7 @@ if all(expDataFile) && param.expSWRDataOption && param.swrOption
   fprintf('done\n');
 end
 
-if (param.fileType == 2)
+if (param.fileType == 2) && ~param.reAnalyzeOption
   cd (curPath);
 end
 

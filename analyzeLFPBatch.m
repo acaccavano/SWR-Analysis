@@ -24,7 +24,8 @@ function analyzeLFPBatch(param, dataFolder, saveFolder, expEvFolder, expDataFold
 %     param.rLim1            = lower ripple band-pass lim (default = 120)
 %     param.rLim2            = upper ripple band-pass lim (default = 220)
 %     param.rmsOption        = boolean flag to calculate RMS of SW and ripple
-%     param.rmsPeriod        = root-mean square window [ms] (in Eschenko 2006, rmsPeriod = 5ms)
+%     param.rmsMinEvDiff     = min difference between detected RMS peaks [ms] (in Eschenko 2008 = 25ms)
+%     param.rmsPeriod        = root-mean square window [ms] (in Eschenko 2008 = 5ms)
 %     param.peakDetectOption = boolean flag to detect SW and ripple reaks in RMS signals
 %     param.sdMult           = standard deviation threshold to detect peaks (default = 4)
 %     param.baseQuant        = quantile with which to determine baseline signal (default = 0.95)
@@ -89,6 +90,7 @@ if ~isfield(param,'rOption')          param.rOption           = 1;    end
 if ~isfield(param,'rLim1')            param.rLim1             = 120;  end
 if ~isfield(param,'rLim2')            param.rLim2             = 220;  end
 if ~isfield(param,'rmsOption')        param.rmsOption         = 1;    end
+if ~isfield(param,'rmsMinEvDiff')     param.rmsMinEvDiff      = 25;   end
 if ~isfield(param,'rmsPeriod')        param.rmsPeriod         = 5;    end
 if ~isfield(param,'peakDetectOption') param.peakDetectOption  = 1;    end
 if ~isfield(param,'sdMult')           param.sdMult            = 4;    end
