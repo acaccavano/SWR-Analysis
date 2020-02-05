@@ -466,65 +466,69 @@ if param.swrOption
     fprintf(['detecting events %4.0f standard deviations above baseline (%4.2f quantile) (file ' dataFileName ')... '], param.sdMult, param.baseQuant);
     
     %% Find sharp wave peak based on standard deviation of RMS of SW signal
-    % Re-initialize data structures
-    data.SW.evStatus = [];
-    data.SW.evStart  = [];
-    data.SW.evPeak   = [];
-    data.SW.evEnd    = [];
-    data.SW.IEI      = [];
-    data.SW.power    = [];
-    data.SW.duration = [];
-    
-    % Calculate baseline by taking bottom baseQuant quantile of signal to minimize false negatives for active fields
-    baseline = data.SW.RMS;
-    baseline(baseline > quantile(baseline, param.baseQuant)) = [];
-    sd = std(baseline);
-    mn = mean(baseline);
-    data.SW.peakThresh = mn + sd * param.sdMult;
-    data.SW.baseThresh = mn + 0.5 * sd * param.sdMult;
-    [data.SW.evStatus, data.SW.evStart, data.SW.evPeak, data.SW.evEnd] = peakFindUnique(data.SW.RMS, data.LFP.timing, data.SW.peakThresh, data.SW.baseThresh, 1, param.rmsMinEvDiff);
-    
-    if ~isnan(data.SW.evStart)
-      for i = 1:length(data.SW.evStart)
-        data.SW.power(i)    = bandpower(data.SW.tSeries(data.SW.evStart(i) : data.SW.evEnd(i)));
-        data.SW.duration(i) = (data.LFP.timing(data.SW.evEnd(i)) - data.LFP.timing(data.SW.evStart(i)));
-        if (i > 1) data.SW.IEI = horzcat(data.SW.IEI, (data.LFP.timing(data.SW.evPeak(i)) - data.LFP.timing(data.SW.evPeak(i-1))) / 1000); end
+    if isfield(data,'SW') && param.swrType == 1 || param.swrType == 2
+      % Re-initialize data structures
+      data.SW.evStatus = [];
+      data.SW.evStart  = [];
+      data.SW.evPeak   = [];
+      data.SW.evEnd    = [];
+      data.SW.IEI      = [];
+      data.SW.power    = [];
+      data.SW.duration = [];
+      
+      % Calculate baseline by taking bottom baseQuant quantile of signal to minimize false negatives for active fields
+      baseline = data.SW.RMS;
+      baseline(baseline > quantile(baseline, param.baseQuant)) = [];
+      sd = std(baseline);
+      mn = mean(baseline);
+      data.SW.peakThresh = mn + sd * param.sdMult;
+      data.SW.baseThresh = mn + 0.5 * sd * param.sdMult;
+      [data.SW.evStatus, data.SW.evStart, data.SW.evPeak, data.SW.evEnd] = peakFindUnique(data.SW.RMS, data.LFP.timing, data.SW.peakThresh, data.SW.baseThresh, 1, param.rmsMinEvDiff);
+      
+      if ~isnan(data.SW.evStart)
+        for i = 1:length(data.SW.evStart)
+          data.SW.power(i)    = bandpower(data.SW.tSeries(data.SW.evStart(i) : data.SW.evEnd(i)));
+          data.SW.duration(i) = (data.LFP.timing(data.SW.evEnd(i)) - data.LFP.timing(data.SW.evStart(i)));
+          if (i > 1) data.SW.IEI = horzcat(data.SW.IEI, (data.LFP.timing(data.SW.evPeak(i)) - data.LFP.timing(data.SW.evPeak(i-1))) / 1000); end
+        end
+        data.SW.frequency = length(data.SW.evStart) / ((data.LFP.timing(length(data.LFP.timing)) - data.LFP.timing(1)) / 1000);
+        data.SW.power     = data.SW.power';
+        data.SW.duration  = data.SW.duration';
+        data.SW.IEI       = data.SW.IEI';
       end
-      data.SW.frequency = length(data.SW.evStart) / ((data.LFP.timing(length(data.LFP.timing)) - data.LFP.timing(1)) / 1000);
-      data.SW.power     = data.SW.power';
-      data.SW.duration  = data.SW.duration';
-      data.SW.IEI       = data.SW.IEI';
     end
     
     %% Find ripple peak based on standard deviation of RMS of ripple signal
-    % Re-initialize data structures
-    data.R.evStatus = [];
-    data.R.evStart  = [];
-    data.R.evPeak   = [];
-    data.R.evEnd    = [];
-    data.R.IEI      = [];
-    data.R.power    = [];
-    data.R.duration = [];
-    
-    % Calculate baseline by taking bottom baseQuant quantile of signal to minimize false negatives for active fields
-    baseline = data.R.RMS;
-    baseline(baseline > quantile(baseline, param.baseQuant)) = [];
-    sd = std(baseline);
-    mn = mean(baseline);
-    data.R.peakThresh = mn + sd * param.sdMult;
-    data.R.baseThresh = mn + 0.5 * sd * param.sdMult;
-    [data.R.evStatus, data.R.evStart, data.R.evPeak, data.R.evEnd] = peakFindUnique(data.R.RMS, data.LFP.timing, data.R.peakThresh, data.R.baseThresh, 1, param.rmsMinEvDiff);
-    
-    if ~isnan(data.R.evStart)
-      for i = 1:length(data.R.evStart)
-        data.R.power(i)    = bandpower(data.R.tSeries(data.R.evStart(i) : data.R.evEnd(i)));
-        data.R.duration(i) = (data.LFP.timing(data.R.evEnd(i)) - data.LFP.timing(data.R.evStart(i)));
-        if (i > 1) data.R.IEI = horzcat(data.R.IEI, (data.LFP.timing(data.R.evPeak(i)) - data.LFP.timing(data.R.evPeak(i-1))) / 1000); end
+    if isfield(data,'R') && param.swrType == 1 || param.swrType == 3
+      % Re-initialize data structures
+      data.R.evStatus = [];
+      data.R.evStart  = [];
+      data.R.evPeak   = [];
+      data.R.evEnd    = [];
+      data.R.IEI      = [];
+      data.R.power    = [];
+      data.R.duration = [];
+      
+      % Calculate baseline by taking bottom baseQuant quantile of signal to minimize false negatives for active fields
+      baseline = data.R.RMS;
+      baseline(baseline > quantile(baseline, param.baseQuant)) = [];
+      sd = std(baseline);
+      mn = mean(baseline);
+      data.R.peakThresh = mn + sd * param.sdMult;
+      data.R.baseThresh = mn + 0.5 * sd * param.sdMult;
+      [data.R.evStatus, data.R.evStart, data.R.evPeak, data.R.evEnd] = peakFindUnique(data.R.RMS, data.LFP.timing, data.R.peakThresh, data.R.baseThresh, 1, param.rmsMinEvDiff);
+      
+      if ~isnan(data.R.evStart)
+        for i = 1:length(data.R.evStart)
+          data.R.power(i)    = bandpower(data.R.tSeries(data.R.evStart(i) : data.R.evEnd(i)));
+          data.R.duration(i) = (data.LFP.timing(data.R.evEnd(i)) - data.LFP.timing(data.R.evStart(i)));
+          if (i > 1) data.R.IEI = horzcat(data.R.IEI, (data.LFP.timing(data.R.evPeak(i)) - data.LFP.timing(data.R.evPeak(i-1))) / 1000); end
+        end
+        data.R.frequency = length(data.R.evStart) / ((data.LFP.timing(length(data.LFP.timing)) - data.LFP.timing(1)) / 1000);
+        data.R.power     = data.R.power';
+        data.R.duration  = data.R.duration';
+        data.R.IEI       = data.R.IEI';
       end
-      data.R.frequency = length(data.R.evStart) / ((data.LFP.timing(length(data.LFP.timing)) - data.LFP.timing(1)) / 1000);
-      data.R.power     = data.R.power';
-      data.R.duration  = data.R.duration';
-      data.R.IEI       = data.R.IEI';
     end
     
     %% SWR Event Calculation
@@ -542,15 +546,19 @@ if param.swrOption
     data.SWR.event    = [];
     
     % SW arrays:
-    if ~isfield(data.SW,'SWR') data.SW.SWR = struct; end
-    data.SW.SWR.event = [];
-    data.SW.SWR.power = [];
-    data.SW.SWR.area  = [];
+    if isfield(data,'SW')
+      if ~isfield(data.SW,'SWR') data.SW.SWR = struct; end
+      data.SW.SWR.event = [];
+      data.SW.SWR.power = [];
+      data.SW.SWR.area  = [];
+    end
     
     % Ripple arrays:
-    if ~isfield(data.R,'SWR') data.R.SWR = struct; end
-    data.R.SWR.event  = [];
-    data.R.SWR.power  = [];
+    if isfield(data,'R')
+      if ~isfield(data.R,'SWR') data.R.SWR = struct; end
+      data.R.SWR.event  = [];
+      data.R.SWR.power  = [];
+    end
 
     % Gamma arrays:
     if isfield(data,'gamma')
@@ -591,20 +599,35 @@ if param.swrOption
       
       % Initialize event locked data window cell arrays
       data.SWR.event{length(data.SWR.evStart)}    = [];
-      data.SW.SWR.event{length(data.SWR.evStart)} = [];
-      data.R.SWR.event{length(data.SWR.evStart)}  = [];
+      if isfield(data,'SW')    data.SW.SWR.event{length(data.SWR.evStart)}    = []; end
+      if isfield(data,'R')     data.R.SWR.event{length(data.SWR.evStart)}     = []; end
       if isfield(data,'gamma') data.gamma.SWR.event{length(data.SWR.evStart)} = []; end
       if isfield(data,'fR')    data.fR.SWR.event{length(data.SWR.evStart)}    = []; end
       
-      baseAmp = data.SW.tSeries;
-      baseAmp(baseAmp > quantile(baseAmp, param.baseQuant)) = [];
-      baseAmp = mean(baseAmp);
+      % Determine baseline for amplitude determination
+      if param.swrType == 1 || param.swrType == 2 % use SW signal
+        baseAmp = data.SW.tSeries;
+        baseAmp(baseAmp > quantile(baseAmp, param.baseQuant)) = [];
+        baseAmp = mean(baseAmp);
+      elseif param.swrType == 3 % Use LFP signal, SW filter may not have been performed
+        baseAmp = data.LFP.tSeries;
+        baseAmp(baseAmp > quantile(baseAmp, param.baseQuant)) = [];
+        baseAmp = mean(baseAmp);
+      end
       
       for i = 1:length(data.SWR.evStart)
         data.SWR.power(i)    = bandpower(data.LFP.tSeries(data.SWR.evStart(i) : data.SWR.evEnd(i)));
         data.SWR.duration(i) = (data.LFP.timing(data.SWR.evEnd(i)) - data.LFP.timing(data.SWR.evStart(i)));
-        data.SWR.evPeak(i)   = data.SW.evPeak(find((data.SW.evStart >= data.SWR.evStart(i)) .* (data.SW.evEnd <= data.SWR.evEnd(i)),1));
-        data.SWR.amp(i)      = data.SW.tSeries(data.SWR.evPeak(i)) - baseAmp;
+        
+        % Peak determination:
+        if param.swrType == 1 || param.swrType == 2 % use SW-RMS peak
+          data.SWR.evPeak(i) = data.SW.evPeak(find((data.SW.evStart >= data.SWR.evStart(i)) .* (data.SW.evEnd <= data.SWR.evEnd(i)),1));
+          data.SWR.amp(i)    = data.SW.tSeries(data.SWR.evPeak(i)) - baseAmp;
+        elseif param.swrType == 3 % use R-RMS peak
+          data.SWR.evPeak(i) = data.R.evPeak(i);
+          data.SWR.amp(i)    = data.LFP.tSeries(data.SWR.evPeak(i)) - baseAmp; % Use LFP signal, SW filter may not have been performed
+        end
+
         if (i > 1) data.SWR.IEI = horzcat(data.SWR.IEI, (data.LFP.timing(data.SWR.evPeak(i)) - data.LFP.timing(data.SWR.evPeak(i-1))) / 1000); end
         
         % Calculate SWR-locked event data
@@ -619,13 +642,17 @@ if param.swrOption
         data.SWR.area(i)   = data.LFP.samplingInt * sum(sum(data.LFP.tSeries(loBaseWin : hiBaseWin)));
         
         % SW data:
-        data.SW.SWR.event{i} = data.SW.tSeries(loWin : hiWin);
-        data.SW.SWR.power(i) = bandpower(data.SW.tSeries(loBaseWin : hiBaseWin));
-        data.SW.SWR.area(i)  = data.LFP.samplingInt * sum(sum(data.SW.tSeries(loBaseWin : hiBaseWin)));
+        if isfield(data,'SW')
+          data.SW.SWR.event{i} = data.SW.tSeries(loWin : hiWin);
+          data.SW.SWR.power(i) = bandpower(data.SW.tSeries(loBaseWin : hiBaseWin));
+          data.SW.SWR.area(i)  = data.LFP.samplingInt * sum(sum(data.SW.tSeries(loBaseWin : hiBaseWin)));
+        end
         
         % Ripple data:
-        data.R.SWR.event{i}  = data.R.tSeries(loWin : hiWin);
-        data.R.SWR.power(i)  = bandpower(data.R.tSeries(loBaseWin : hiBaseWin));
+        if isfield(data,'R')
+          data.R.SWR.event{i}  = data.R.tSeries(loWin : hiWin);
+          data.R.SWR.power(i)  = bandpower(data.R.tSeries(loBaseWin : hiBaseWin));
+        end
         
         % Gamma data:
         if isfield(data,'gamma')
@@ -653,12 +680,16 @@ if param.swrOption
       data.SWR.evTiming = data.SWR.evTiming';
       data.SWR.area     = data.SWR.area';
       
-      data.SW.SWR.event = data.SW.SWR.event';
-      data.SW.SWR.power = data.SW.SWR.power';
-      data.SW.SWR.area  = data.SW.SWR.area';
+      if isfield(data,'SW')
+        data.SW.SWR.event = data.SW.SWR.event';
+        data.SW.SWR.power = data.SW.SWR.power';
+        data.SW.SWR.area  = data.SW.SWR.area';
+      end
       
-      data.R.SWR.event  = data.R.SWR.event';
-      data.R.SWR.power  = data.R.SWR.power';
+      if isfield(data,'R')
+        data.R.SWR.event  = data.R.SWR.event';
+        data.R.SWR.power  = data.R.SWR.power';
+      end
       
       if isfield(data,'gamma')
         data.gamma.SWR.event = data.gamma.SWR.event';
@@ -689,10 +720,12 @@ if param.spectOption
     data.SWR = calcEvFFT(data.SWR, data.param, param.spectLim1, param.spectLim2);
     fprintf('done\n');
     
-    % Compute FFTs and phase over time for SWR-locked ripple & gamma (if selected)
-    data.R.SWR = calcEvFFT(data.R.SWR, data.param, data.R.lim1, data.R.lim2);
-    data.R.SWR = calcEvPhase(data.R.SWR, data.SWR, data.R.lim1, data.R.lim2);
-
+    % Compute FFTs and phase over time for SWR-locked gamma, ripple, and fast ripple (if selected)
+    if isfield(data,'R')
+      data.R.SWR = calcEvFFT(data.R.SWR, data.param, data.R.lim1, data.R.lim2);
+      data.R.SWR = calcEvPhase(data.R.SWR, data.SWR, data.R.lim1, data.R.lim2);
+    end
+    
     if isfield(data,'gamma')
       data.gamma.SWR = calcEvFFT(data.gamma.SWR, data.param, data.gamma.lim1, data.gamma.lim2);
       data.gamma.SWR = calcEvPhase(data.gamma.SWR, data.SWR, data.gamma.lim1, data.gamma.lim2);
@@ -786,38 +819,38 @@ data.param = orderStruct(data.param);
 data.LFP   = orderStruct(data.LFP);
 data.LFP.param = orderStruct(data.LFP.param);
 
-if (param.swOption)
+if isfield(data, 'SW')
   data.SW = orderStruct(data.SW);
   if isfield(data.SW, 'SWR') data.SW.SWR = orderStruct(data.SW.SWR); end
 end
 
-if (param.rOption)
+if isfield(data, 'R')
   data.R = orderStruct(data.R);
   if isfield(data.R, 'SWR') data.R.SWR = orderStruct(data.R.SWR); end
 end
 
-if (param.swrOption)    data.SWR    = orderStruct(data.SWR); end
-if (param.thetaOption)  data.theta  = orderStruct(data.theta); end
-if (param.betaOption)   data.beta   = orderStruct(data.beta); end
+if isfield(data, 'SWR')    data.SWR    = orderStruct(data.SWR); end
+if isfield(data, 'theta')  data.theta  = orderStruct(data.theta); end
+if isfield(data, 'beta')   data.beta   = orderStruct(data.beta); end
 
-if (param.gammaOption)
+if isfield(data, 'gamma')
   data.gamma = orderStruct(data.gamma);
   if isfield(data.gamma, 'SWR') data.gamma.SWR = orderStruct(data.gamma.SWR); end
 end
 
-if (param.hgammaOption) data.hgamma = orderStruct(data.hgamma); end
+if isfield(data, 'hgamma') data.hgamma = orderStruct(data.hgamma); end
 
-if (param.fROption)
+if isfield(data, 'fR')
   data.fR = orderStruct(data.fR);
   if isfield(data.fR, 'SWR') data.fR.SWR = orderStruct(data.fR.SWR); end
 end
 
-if (param.cellOption)
+if isfield(data, 'C')
   data.C = orderStruct(data.C);
   if isfield(data.C, 'SWR') data.C.SWR = orderStruct(data.C.SWR); end
 end
 
-if (param.importStimOption)
+if isfield(data, 'stim')
   data.stim = orderStruct(data.stim);
 end
 

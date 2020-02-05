@@ -10,7 +10,7 @@ nTrace   = 1;
 nRaster  = 0;
 limSpectCol = true;
 maxPZScore = 10;
-colOption  = true; % If true will plot all traces of one data structure the same below defined colors, otherwise uses default ColorOrder
+colOption  = false; % If true will plot all traces of one data structure the same below defined colors, otherwise uses default ColorOrder
 dataCol{1} = [48 70 160]/255;
 dataCol{2} = [50 50  50]/255;
 
@@ -237,7 +237,13 @@ for tr = nTrace : -1 : 1
   end
   
   hand.lblTr(tr) = text(hand.axTr(1, tr), hand.axTr(1, tr).XLim(1), hand.axTr(1, tr).YLim(2) - tFact * (hand.axTr(1, tr).YLim(2) - hand.axTr(1, tr).YLim(1)), dataName{1, tr}, 'FontSize', fontSz);
-  hand.scale.(['scale' int2str(tr)]) = createScaleBar(hand.axTr(nData, tr), [], 0, 1, fontSz);
+  
+  % Scale bar, if LFP trace also plot x-scale
+  if tr == 1
+    hand.scale.(['scale' int2str(tr)]) = createScaleBar(hand.axTr(nData, tr), [], 1, 1, fontSz);
+  else
+    hand.scale.(['scale' int2str(tr)]) = createScaleBar(hand.axTr(nData, tr), [], 0, 1, fontSz);
+  end
 
   % Update running y position and color index
   yPos = yPos + plotSz + spacerSz;
@@ -272,7 +278,12 @@ function redrawPZCallback(obj, evd, hand, fontSz, tFact, nData)
 scaleNames = fieldnames(hand.scale);
 for i = 1:length(hand.lblTr)
   hand.lblTr(i).Position = [hand.axTr(1, i).XLim(1), hand.axTr(1, i).YLim(2) - tFact * (hand.axTr(1, i).YLim(2) - hand.axTr(1, i).YLim(1))];
-  createScaleBar(hand.axTr(nData, i), hand.scale.(scaleNames{i}), 0, 1, fontSz);
+  
+  if i == 1
+    createScaleBar(hand.axTr(nData, i), hand.scale.(scaleNames{i}), 1, 1, fontSz);
+  else
+    createScaleBar(hand.axTr(nData, i), hand.scale.(scaleNames{i}), 0, 1, fontSz);
+  end
 end
 
 if isfield(hand, 'lblSp')
