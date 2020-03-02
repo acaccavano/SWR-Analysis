@@ -24,12 +24,12 @@ if ~isfield(param,'cellOption')       param.cellOption       = 1; end
 if ~isfield(param,'cellRawOption')    param.cellRawOption    = 0; end
 if ~isfield(param,'cellGammaOption')  param.cellGammaOption  = 1; end
 if ~isfield(param,'cellRippleOption') param.cellRippleOption = 1; end
-if ~isfield(param,'truncateEvs')      param.truncateEvs      = 1; end
+if ~isfield(param,'truncateEvs')      param.truncateEvs      = 0; end
 if ~isfield(param,'maxNumEvs')        param.maxNumEvs        =  50; end
 if ~isfield(param,'swrWindow')        param.swrWindow        = 100; end
 
 if param.truncateEvs
-  nEvs = param.maxNumEvs;
+  nEvs = max(param.maxNumEvs, length(data.SWR.event));
 else
   nEvs = length(data.SWR.event);
 end
