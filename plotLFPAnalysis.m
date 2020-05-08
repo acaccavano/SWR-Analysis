@@ -16,7 +16,7 @@ dataCol{2} = [50 50  50]/255;
 
 % Timing and LFP array - always necessary
 for i = 1:nData
-  timingPlot{i} = downsampleMean(data(i).LFP.timing/1000, dsPlot);
+  timingPlot{i}       = downsampleMean(data(i).LFP.timing/1000, dsPlot);
   dataPlot{i, nTrace} = downsampleMean(convFact * data(i).LFP.tSeries, dsPlot);
   dataName{i, nTrace} = 'LFP';
   if isfield(data(i).LFP, 'lim1')
@@ -166,7 +166,7 @@ rs = nRaster;
 for tr = nTrace : -1 : 1
   
   %% In forward x order, plot raster data (if applicable):
-  if strcmp(dataName{1, tr}(1:4),'SW (') || strcmp(dataName{1, tr}(1:3),'R (') || (strcmp(dataName{1, tr}(1:3),'LFP') && param.swrOption)
+  if strcmp(dataName{1, tr}(1:3),'SW ') || strcmp(dataName{1, tr}(1:3),'R (') || (strcmp(dataName{1, tr}(1:3),'LFP') && param.swrOption)
     xPos = marginSz;
     for i = 1:nData
       

@@ -68,7 +68,8 @@ if ~isfield(param,'spectOption')          param.spectOption          = 1;   end
 if ~isfield(param,'spectLim1')            param.spectLim1            = 1;   end
 if ~isfield(param,'spectLim2')            param.spectLim2            = 500; end
 if ~isfield(param,'reAnalyzeOption')      param.reAnalyzeOption      = 0;   end
-if ~isfield(param,'nBins')                param.nBins                = 100; end
+if ~isfield(param,'nBins')                param.nBins                = 100; end % Not yet selectable in UI
+if ~isfield(param,'cdfOption')            param.cdfOption            = 1;   end % Not yet selectable in UI
 
 % Assign OS specific variables:
 if ispc

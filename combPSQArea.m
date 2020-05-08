@@ -12,13 +12,21 @@ if (nargin < 1) epscFolder = []; end
 
 % Optional additional place to specify file indeces - comment out if not needed
 
-% PC-5xFAD
-% epscIndex = [1 2 3 4 5 6 7 8 9 10 11 12 13 14];
-% ipscIndex = [1 3 4 5 6 7 8 9 10 11 12 13 14 15];
+% PC-Supe Control
+% epscIndex = [1 2 3 4 5 6 7];
+% ipscIndex = [1 2 3 4 5 6 7];
 
-% PC-Control
-% epscIndex = [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18];
-% ipscIndex = [1 2 3 4 7 8 9 10 11 12 13 14 15 16 17 18 19 20];
+% PC-Deep Control
+epscIndex = [1 2 3 4 5 6 7 8 9 10 11];
+ipscIndex = [1 4 5 6 7 8 9 10 11 12 13];
+
+% PC-Supe 5xFAD
+% epscIndex = [1 2 3 4 5];
+% ipscIndex = [1 2 3 4 5];
+
+% PC-Deep 5xFAD
+% epscIndex = [1 2 3 4 5 6 7 8 9];
+% ipscIndex = [2 3 4 5 6 7 8 9 10];
 
 % PVAAC-5xFAD
 % epscIndex = [5 6];
@@ -37,8 +45,8 @@ if (nargin < 1) epscFolder = []; end
 % ipscIndex = [1 3 4 5 6 7 8];
 
 % PVBSC-5xFAD
-epscIndex = [1 2 7 8];
-ipscIndex = [1 2 3 4];
+% epscIndex = [1 2 7 8];
+% ipscIndex = [1 2 3 4];
 
 % PVBSC-Control
 % epscIndex = [3 4];

@@ -54,14 +54,14 @@ hand.scaleCell = struct;
 
 % Initialize plot data
 for i = 1:nData
-  timing{i} = downsampleMean(data(i).LFP.timing/1000, dsPlot);
-  trLFP{i}  = downsampleMean(convFact * data(i).LFP.tSeries, dsPlot);
-  trCell{i} = downsampleMean(data(i).C.tSeries, dsPlot);
+  timing{i}  = downsampleMean(data(i).LFP.timing/1000, dsPlot);
+  trLFP{i}   = downsampleMean(convFact * data(i).LFP.tSeries, dsPlot);
+  trCell{i}  = downsampleMean(data(i).C.tSeries, dsPlot);
   
   if param.useSWRDurationOption
-    rsSWR{i}   = downsampleMax(data(i).SWR.evStatus, dsPlot);
+    rsSWR{i} = downsampleMax(data(i).SWR.evStatus, dsPlot);
   elseif param.useSWRWindowOption
-    rsSWR{i}   = downsampleMax(data(i).SWR.evStatusStand, dsPlot);
+    rsSWR{i} = downsampleMax(data(i).SWR.evStatusStand, dsPlot);
   end
   
   rsSWRC{i}  = downsampleMax(data(i).SWR.PSC.evStatusC, dsPlot);

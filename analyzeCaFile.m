@@ -66,14 +66,17 @@ if isempty(data)  data     = struct; end
 
 % Set default parameters if not specified
 if ~isfield(param,'fileNum')              param.fileNum              = 1;    end
-if ~isfield(param,'interpOption')         param.interpOption         = 1;    end
-if ~isfield(param,'samplingInt')          param.samplingInt          = 0.5;  end
 if ~isfield(param,'baseCorrectMethod')    param.baseCorrectMethod    = 2;    end
 if ~isfield(param,'CaFiltLim1')           param.CaFiltLim1           = 0.03; end
 if ~isfield(param,'CaFiltLim2')           param.CaFiltLim2           = 4;    end
 if ~isfield(param,'CaFiltOrder')          param.CaFiltOrder          = 80;   end
 if ~isfield(param,'CaFiltAlpha')          param.CaFiltAlpha          = 2.5;  end
 if ~isfield(param,'smoothFactor')         param.smoothFactor         = 0.25; end
+if ~isfield(param,'interpOption')         param.interpOption         = 1;    end
+if ~isfield(param,'samplingInt')          param.samplingInt          = 0.5;  end
+if ~isfield(param,'cellTypeOption')       param.cellTypeOption       = 0;    end
+if ~isfield(param,'cellType1')            param.cellType1          = 'Deep'; end
+if ~isfield(param,'cellType2')            param.cellType2          = 'Supe'; end
 if ~isfield(param,'peakDetectCa')         param.peakDetectCa         = 1;    end
 if ~isfield(param,'baseDetectMethod')     param.baseDetectMethod     = 2;    end
 if ~isfield(param,'baseQuant')            param.baseQuant            = 0.8;  end
@@ -87,13 +90,13 @@ if ~isfield(param,'sdMult')               param.sdMult               = 4;    end
 if ~isfield(param,'sdBaseFactor')         param.sdBaseFactor         = 0.75; end
 if ~isfield(param,'skipDetectLim')        param.skipDetectLim        = 1;    end
 if ~isfield(param,'consThreshOption')     param.consThreshOption     = 0;    end
+if ~isfield(param,'expCaEvOption')        param.expCaEvOption        = 1;    end
 if ~isfield(param,'swrCaOption')          param.swrCaOption          = 1;    end
 if ~isfield(param,'useSWRDurationOption') param.useSWRDurationOption = 1;    end
 if ~isfield(param,'useSWRWindowOption')   param.useSWRWindowOption   = 0;    end
 if ~isfield(param,'swrWindow')            param.swrWindow            = 100;  end
-if ~isfield(param,'expCaEvOption')        param.expCaEvOption        = 1;    end
 if ~isfield(param,'expSWREvOption')       param.expSWREvOption       = 0;    end
-if ~isfield(param,'spkCaOption')          param.spkCaOption          = 0;    end
+if ~isfield(param,'alignEndOption')       param.alignEndOption       = 0;    end
 if ~isfield(param,'stimCaOption')         param.stimCaOption         = 0;    end
 if ~isfield(param,'stimCaLim1')           param.stimCaLim1           = 0;    end
 if ~isfield(param,'stimCaLim2')           param.stimCaLim2           = 1000; end
@@ -110,16 +113,12 @@ end
 
 if ~isfield(data,'Ca') error('missing Calcium data, run processCaFile.m first'); end
 
-if param.swrCaOption || param.spkCaOption || param.stimCaOption
+if param.swrCaOption || param.stimCaOption
   if ~isfield(data,'LFP') error('Must analyze LFP before proceeding'); end
 end
 
 if param.swrCaOption
   if ~isfield(data,'SWR') error('Must analyze LFP channel for SWR events before proceeding'); end
-end
-
-if param.spkCaOption
-  if ~isfield(data,'C') error('Must analyze cell channel before proceeding'); end
 end
 
 if param.stimCaOption
@@ -164,7 +163,7 @@ end
 CaRange = find(data.Ca.timing >= 1000 * param.skipDetectLim);
 
 % Set alignment range of LFP based on param.skipDetectLim
-if param.swrCaOption || param.spkCaOption || param.stimCaOption 
+if param.swrCaOption || param.stimCaOption 
   lfpRange = find(data.LFP.timing >= 1000 * param.skipDetectLim);
 end
 
@@ -227,7 +226,7 @@ if param.peakDetectCa
 end
 
 %% Calculate standard SWR status (if selected)
-if param.useSWRWindowOption && (param.swrCaOption || param.spkCaOption)
+if param.useSWRWindowOption && param.swrCaOption
   if ~isfield(data.SWR,'evStatusStand')
     data.SWR.evStatusStand = zeros(length(data.SWR.evStatus),1);
     if ~isempty(data.SWR.evStart)
@@ -267,11 +266,11 @@ if param.swrCaOption
   for ch = 1:data.Ca.nChannels
     if param.useSWRDurationOption
       [data.SWR.Ca.evStatusA, data.SWR.Ca.evStartA, data.SWR.Ca.evEndA, data.Ca.SWR.evStatusA(:,ch), data.Ca.SWR.evStartA{ch}, data.Ca.SWR.evEndA{ch}, data.SWR.Ca.timingA] = ...
-        timeAlign(data.SWR.evStatus(lfpRange), data.Ca.evStatus(:,ch), data.LFP.timing(lfpRange), data.Ca.timing(CaRange));
+        timeAlign(data.SWR.evStatus(lfpRange), data.Ca.evStatus(:,ch), data.LFP.timing(lfpRange), data.Ca.timing(CaRange), param.alignEndOption);
       
     elseif param.useSWRWindowOption
       [data.SWR.Ca.evStatusA, data.SWR.Ca.evStartA, data.SWR.Ca.evEndA, data.Ca.SWR.evStatusA(:,ch), data.Ca.SWR.evStartA{ch}, data.Ca.SWR.evEndA{ch}, data.SWR.Ca.timingA] = ...
-        timeAlign(data.SWR.evStatusStand(lfpRange), data.Ca.evStatus(:,ch), data.LFP.timing(lfpRange), data.Ca.timing(CaRange));
+        timeAlign(data.SWR.evStatusStand(lfpRange), data.Ca.evStatus(:,ch), data.LFP.timing(lfpRange), data.Ca.timing(CaRange), param.alignEndOption);
       
     end
     
@@ -367,7 +366,7 @@ if param.swrCaOption
   end
   spontTime = ((data.SWR.Ca.timingA(end) - data.SWR.Ca.timingA(1)) / 1000) - swrTime;
 
-  % Calculate events matrices and SWR/Spont variables
+  % Calculate event matrices and SWR/Spont variables
   for ch = 1:data.Ca.nChannels
     
     % Initialize cell arrays
@@ -411,8 +410,18 @@ if param.swrCaOption
      
   end
   
-  data.SWR.Ca.nCellsC = sum(data.SWR.Ca.evMatrix, 2); % # Cells active for each SWR event
+  % Count # cells active for each SWR event
+  data.SWR.Ca.nCellsC = sum(data.SWR.Ca.evMatrix, 2);
   
+  % If data separated by cell type, count for each type
+  if isfield(data.Ca, 'cellType')
+    cellType = unique(data.Ca.cellType);
+    for i = 1:length(cellType)
+      varName = ['n' cellType{i} 'C'];
+      data.SWR.Ca.(varName) = sum(data.SWR.Ca.evMatrix(:,strcmp(cellType{i},data.Ca.cellType)), 2);
+    end
+  end
+    
   %% Correlation Matrices
   data.SWR.Ca.evMatrixCorr = data.SWR.Ca.evMatrix;
   % Only consider events with >0 active cells
@@ -427,7 +436,7 @@ if param.swrCaOption
     
   % Only compute correlations if sufficient number of cells, otherwise may crash
   if data.Ca.nChannels >= 5
-    
+
     % Calculate correlation matrix between SWR events using Jaccard-Similarity distance
     data.SWR.Ca.corrMatrix = 1 - squareform(pdist(data.SWR.Ca.evMatrixCorr, 'jaccard'));
     data.SWR.Ca.corrMatrix(isnan(data.SWR.Ca.corrMatrix)) = 0; % Replace SWRs with no active cells with zero correlation
@@ -443,26 +452,53 @@ if param.swrCaOption
     data.Ca.SWR.corrVector = data.Ca.SWR.corrMatrix(triu(true(size(data.Ca.SWR.corrMatrix)), 1));
     data.Ca.SWR.corrAve    = mean(data.Ca.SWR.corrVector);
     [data.Ca.SWR.cdfF, data.Ca.SWR.cdfX] = ecdf(data.Ca.SWR.corrVector);
-
+    
+    if param.cellTypeOption % Only set for Deep and Supe types
+      indC1    = strcmp(data.Ca.cellType, param.cellType1);
+      indC2    = strcmp(data.Ca.cellType, param.cellType2);
+      maskC1C1 = logical((indC1' * indC1) .* triu(true(size(data.Ca.SWR.corrMatrix)), 1));
+      maskC2C2 = logical((indC2' * indC2) .* triu(true(size(data.Ca.SWR.corrMatrix)), 1));
+      maskC1C2 = (maskC1C1 + maskC2C2) ./ 2;
+      maskC1C2 = logical(~maskC1C2 .* triu(true(size(data.Ca.SWR.corrMatrix)), 1));
+      maskC1   = logical(maskC1C1 + maskC1C2);
+      maskC2   = logical(maskC2C2 + maskC1C2);
+      
+      if sum(indC1) >= 3
+        data.Ca.SWR.corrVectorC1 = data.Ca.SWR.corrMatrix(maskC1);
+        data.Ca.SWR.corrAveC1    = mean(data.Ca.SWR.corrVectorC1);
+        [data.Ca.SWR.cdfC1F, data.Ca.SWR.cdfC1X] = ecdf(data.Ca.SWR.corrVectorC1);
+      end
+      
+      if sum(indC2) >= 3
+        data.Ca.SWR.corrVectorC2 = data.Ca.SWR.corrMatrix(maskC2);
+        data.Ca.SWR.corrAveC2    = mean(data.Ca.SWR.corrVectorC2);
+        [data.Ca.SWR.cdfC2F, data.Ca.SWR.cdfC2X] = ecdf(data.Ca.SWR.corrVectorC2);
+      end
+      
+    end
   end
   
 %   % Plot Event Matrix:
 %   figure
-%   imagesc('XData', 1:size(data.SWR.Ca.evMatrixCorr,1), 'YData', 1:size(data.SWR.Ca.evMatrixCorr,2), 'CData', data.SWR.Ca.evMatrixCorr');
+%   indC1  = strcmp(data.Ca.cellType,'Deep');
+%   indC2  = strcmp(data.Ca.cellType,'Supe');
+%   imagesc('XData', 1:size(data.SWR.Ca.evMatrixCorr,1), 'YData', find(indC1), 'CData', data.SWR.Ca.evMatrixCorr(:,indC1)');
+%   hold on
+%   imagesc('XData', 1:size(data.SWR.Ca.evMatrixCorr,1), 'YData', find(indC2), 'CData', 2*data.SWR.Ca.evMatrixCorr(:,indC2)');
 %   axis([0.5 size(data.SWR.Ca.evMatrixCorr,1) + 0.5 0.5 size(data.SWR.Ca.evMatrixCorr,2) + 0.5]);
-%   caxis([0 1]);
-%   evColMap = [255 255 255; 48 70 160]/255;
+%   caxis([0 2]);
+%   evColMap = [255 255 255; 0 70 0; 128 0 128]/255;
 %   colormap(evColMap);
-%   
-%   Plot SWR-SWR Correlation Matrix:
+% 
+%   % Plot SWR-SWR Correlation Matrix:
 %   figure
 %   imagesc('XData', 1:size(data.SWR.Ca.corrMatrix,1), 'YData', 1:size(data.SWR.Ca.corrMatrix,2), 'CData', data.SWR.Ca.corrMatrix');
 %   axis([0.5 size(data.SWR.Ca.corrMatrix,1) + 0.5 0.5 size(data.SWR.Ca.corrMatrix,2) + 0.5]);
 %   caxis([0 1]);
 %   colormap(flipud(hot));
 %   colorbar
-%   
-%   Plot Cell-Cell Correlation Matrix:
+% 
+%   % Plot Cell-Cell Correlation Matrix:
 %   figure
 %   imagesc('XData', 1:size(data.Ca.SWR.corrMatrix,1), 'YData', 1:size(data.Ca.SWR.corrMatrix,2), 'CData', data.Ca.SWR.corrMatrix');
 %   axis([0.5 size(data.Ca.SWR.corrMatrix,1) + 0.5 0.5 size(data.Ca.SWR.corrMatrix,2) + 0.5]);
@@ -510,7 +546,7 @@ if param.stimCaOption
   fprintf(['aligning time arrays for stim-Calcium coincidence analysis (file ' dataFileName ')... ']);
   for ch = 1:data.Ca.nChannels
     [data.stim.Ca.evStatusA, data.stim.Ca.evStartA, data.stim.Ca.evEndA, data.Ca.stim.evStatusA(:,ch), data.Ca.stim.evStartA{ch}, data.Ca.stim.evEndA{ch}, data.stim.Ca.timingA] = ...
-      timeAlign(data.stim.evStatusExt(lfpRange), data.Ca.evStatus(:,ch), data.LFP.timing(lfpRange), data.Ca.timing(CaRange));
+      timeAlign(data.stim.evStatusExt(lfpRange), data.Ca.evStatus(:,ch), data.LFP.timing(lfpRange), data.Ca.timing(CaRange), param.alignEndOption);
     
     % Re-calculate Ca peaks - truncating if necessary:
     data.Ca.stim.evPeakA{ch} = data.Ca.evPeak{ch}(1:length(data.Ca.stim.evStartA{ch}));
@@ -639,7 +675,7 @@ if param.stimCaOption
       end
     end
     
-    % Calculate Ca transient characteristics for SWR events
+    % Calculate Ca transient characteristics for Stim events
     data.Ca.stim.stim.nEvents(ch)   = sum(data.Ca.stim.stim.evMatrix{ch});
     data.Ca.stim.stim.amp{ch}       = nonzeros(data.Ca.amp{ch}(1:data.Ca.stim.nEventsA(ch)) .* data.Ca.stim.stim.evMatrix{ch}')';
     data.Ca.stim.stim.duration{ch}  = nonzeros(data.Ca.duration{ch}(1:data.Ca.stim.nEventsA(ch)) .* data.Ca.stim.stim.evMatrix{ch}')';
@@ -680,7 +716,9 @@ if param.stimCaOption
     data.stim.Ca.corrMatrix = triu(data.stim.Ca.corrMatrix, 1); % Replace diagonal and redundant half with zero
     data.stim.Ca.corrVector = data.stim.Ca.corrMatrix(triu(true(size(data.stim.Ca.corrMatrix)), 1));
     data.stim.Ca.corrAve    = mean(data.stim.Ca.corrVector);
-    [data.stim.Ca.cdfF, data.stim.Ca.cdfX] = ecdf(data.stim.Ca.corrVector);
+    if length(data.stim.Ca.corrVector) > 1 
+      [data.stim.Ca.cdfF, data.stim.Ca.cdfX] = ecdf(data.stim.Ca.corrVector);
+    end
 
     % Calculate correlation matrix between cells using Jaccard-Similarity distance
     data.Ca.stim.corrMatrix = 1 - squareform(pdist(data.stim.Ca.evMatrixCorr', 'jaccard'));
@@ -688,7 +726,9 @@ if param.stimCaOption
     data.Ca.stim.corrMatrix = triu(data.Ca.stim.corrMatrix, 1); % Replace diagonal and redundant half with zero
     data.Ca.stim.corrVector = data.Ca.stim.corrMatrix(triu(true(size(data.Ca.stim.corrMatrix)), 1));
     data.Ca.stim.corrAve    = mean(data.Ca.stim.corrVector);
-    [data.Ca.stim.cdfF, data.Ca.stim.cdfX] = ecdf(data.Ca.stim.corrVector);
+    if length(data.Ca.stim.corrVector) > 1
+      [data.Ca.stim.cdfF, data.Ca.stim.cdfX] = ecdf(data.Ca.stim.corrVector);
+    end
     
   end
   

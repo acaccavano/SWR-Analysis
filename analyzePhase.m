@@ -11,12 +11,16 @@ hand  = struct;
 if ~isfield(param,'sz')     param.sz     = 60;  end
 if ~isfield(param,'al')     param.al     = 0.6; end
 if ~isfield(param,'lwm')    param.lwm    = 2;   end
-if ~isfield(param,'lwl')    param.lwl    = 4;   end
+if ~isfield(param,'lwl')    param.lwl    = 5;   end
 if ~isfield(param,'fontSz') param.fontSz = 14;  end
 
-% PC
-cMark_CT = [  0  90   0]/255;
-cLine_CT = [  0  90   0]/255;
+% PC-sup
+% cMark_CT = [128   0 128]/255;
+% cLine_CT = [128   0 128]/255;
+
+% % PC-deep
+% cMark_CT = [  0  90   0]/255;
+% cLine_CT = [  0  90   0]/255;
 
 % % PVBC
 % cMark_CT = [128   0   0]/255;
@@ -27,8 +31,8 @@ cLine_CT = [  0  90   0]/255;
 % cLine_CT = [ 65   2  87]/255;
 
 % PVAAC
-% cMark_CT = [192  96   0]/255;
-% cLine_CT = [192  96   0]/255;
+cMark_CT = [192  96   0]/255;
+cLine_CT = [192  96   0]/255;
 
 cMark_AD = [ 50  50  50]/255;
 cLine_AD = [ 50  50  50]/255;
@@ -92,12 +96,12 @@ gAvePhUL_AD_Plot = S.G.avePhHiAD * ones(1,100);
 gAveLen_AD_Plot = linspace(0, S.G.aveLenAD, 100);
 
 polarplot(hand.gAx, gAvePh_CT_Plot, gAveLen_CT_Plot, 'Color', cLine_CT, 'LineWidth', param.lwl);
-polarplot(hand.gAx, gAvePhLL_CT_Plot, gAveLen_CT_Plot, 'Color', cLine_CT, 'LineWidth', param.lwm);
-polarplot(hand.gAx, gAvePhUL_CT_Plot, gAveLen_CT_Plot, 'Color', cLine_CT, 'LineWidth', param.lwm);
+% polarplot(hand.gAx, gAvePhLL_CT_Plot, gAveLen_CT_Plot, 'Color', cLine_CT, 'LineWidth', param.lwm);
+% polarplot(hand.gAx, gAvePhUL_CT_Plot, gAveLen_CT_Plot, 'Color', cLine_CT, 'LineWidth', param.lwm);
 
 polarplot(hand.gAx, gAvePh_AD_Plot, gAveLen_AD_Plot, '-.', 'Color', cLine_AD, 'LineWidth', param.lwl);
-polarplot(hand.gAx, gAvePhLL_AD_Plot, gAveLen_AD_Plot, ':', 'Color', cLine_AD, 'LineWidth', param.lwm);
-polarplot(hand.gAx, gAvePhUL_AD_Plot, gAveLen_AD_Plot, ':', 'Color', cLine_AD, 'LineWidth', param.lwm);
+% polarplot(hand.gAx, gAvePhLL_AD_Plot, gAveLen_AD_Plot, ':', 'Color', cLine_AD, 'LineWidth', param.lwm);
+% polarplot(hand.gAx, gAvePhUL_AD_Plot, gAveLen_AD_Plot, ':', 'Color', cLine_AD, 'LineWidth', param.lwm);
 
 hand.gAx.ThetaTick = [0 90 180 270];
 hand.gAx.RTick = [0.5 1];
@@ -107,6 +111,10 @@ hand.gAx.RColor = [0 0 0];
 hand.gAx.ThetaColor = [0 0 0];
 hand.gAx.GridColor  = [0 0 0];
 hand.gAx.GridAlpha  = 1;
+
+% Hide tick lables:
+rticklabels(hand.gAx,{});
+thetaticklabels(hand.gAx,{});
 
 %% Plot Ripple scatter
 hand.rFig = figure('Name', 'Ripple Phase');
@@ -137,12 +145,12 @@ rAvePhUL_AD_Plot = S.R.avePhHiAD * ones(1,100);
 rAveLen_AD_Plot = linspace(0, S.R.aveLenAD, 100);
 
 polarplot(hand.rAx, rAvePh_CT_Plot, rAveLen_CT_Plot, 'Color', cLine_CT, 'LineWidth', param.lwl);
-polarplot(hand.rAx, rAvePhLL_CT_Plot, rAveLen_CT_Plot, 'Color', cLine_CT, 'LineWidth', param.lwm);
-polarplot(hand.rAx, rAvePhUL_CT_Plot, rAveLen_CT_Plot, 'Color', cLine_CT, 'LineWidth', param.lwm);
+% polarplot(hand.rAx, rAvePhLL_CT_Plot, rAveLen_CT_Plot, 'Color', cLine_CT, 'LineWidth', param.lwm);
+% polarplot(hand.rAx, rAvePhUL_CT_Plot, rAveLen_CT_Plot, 'Color', cLine_CT, 'LineWidth', param.lwm);
 
 polarplot(hand.rAx, rAvePh_AD_Plot, rAveLen_AD_Plot, '-.', 'Color', cLine_AD, 'LineWidth', param.lwl);
-polarplot(hand.rAx, rAvePhLL_AD_Plot, rAveLen_AD_Plot, ':', 'Color', cLine_AD, 'LineWidth', param.lwm);
-polarplot(hand.rAx, rAvePhUL_AD_Plot, rAveLen_AD_Plot, ':', 'Color', cLine_AD, 'LineWidth', param.lwm);
+% polarplot(hand.rAx, rAvePhLL_AD_Plot, rAveLen_AD_Plot, ':', 'Color', cLine_AD, 'LineWidth', param.lwm);
+% polarplot(hand.rAx, rAvePhUL_AD_Plot, rAveLen_AD_Plot, ':', 'Color', cLine_AD, 'LineWidth', param.lwm);
 
 hand.rAx.ThetaTick = [0 90 180 270];
 hand.rAx.RTick = [0.5 1];
@@ -152,6 +160,10 @@ hand.rAx.RColor = [0 0 0];
 hand.rAx.ThetaColor = [0 0 0];
 hand.rAx.GridColor  = [0 0 0];
 hand.rAx.GridAlpha  = 1;
+
+% Hide tick lables:
+rticklabels(hand.rAx,{});
+thetaticklabels(hand.rAx,{});
 
 end
 

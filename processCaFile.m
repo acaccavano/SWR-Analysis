@@ -63,15 +63,18 @@ if isempty(hand)  hand     = struct; end
 if isempty(data)  data     = struct; end
 
 % Set default parameters if not specified
-if ~isfield(param,'fileNum')              param.fileNum              = 2;    end
-if ~isfield(param,'interpOption')         param.interpOption         = 1;    end
-if ~isfield(param,'samplingInt')          param.samplingInt          = 0.5;  end
+if ~isfield(param,'fileNum')              param.fileNum              = 1;    end
 if ~isfield(param,'baseCorrectMethod')    param.baseCorrectMethod    = 2;    end
 if ~isfield(param,'CaFiltLim1')           param.CaFiltLim1           = 0.03; end
 if ~isfield(param,'CaFiltLim2')           param.CaFiltLim2           = 4;    end
 if ~isfield(param,'CaFiltOrder')          param.CaFiltOrder          = 80;   end
 if ~isfield(param,'CaFiltAlpha')          param.CaFiltAlpha          = 2.5;  end
 if ~isfield(param,'smoothFactor')         param.smoothFactor         = 0.25; end
+if ~isfield(param,'interpOption')         param.interpOption         = 1;    end
+if ~isfield(param,'samplingInt')          param.samplingInt          = 0.5;  end
+if ~isfield(param,'cellTypeOption')       param.cellTypeOption       = 0;    end
+if ~isfield(param,'cellType1')            param.cellType1          = 'Deep'; end
+if ~isfield(param,'cellType2')            param.cellType2          = 'Supe'; end
 if ~isfield(param,'peakDetectCa')         param.peakDetectCa         = 1;    end
 if ~isfield(param,'baseDetectMethod')     param.baseDetectMethod     = 2;    end
 if ~isfield(param,'baseQuant')            param.baseQuant            = 0.8;  end
@@ -85,13 +88,13 @@ if ~isfield(param,'sdMult')               param.sdMult               = 4;    end
 if ~isfield(param,'sdBaseFactor')         param.sdBaseFactor         = 0.75; end
 if ~isfield(param,'skipDetectLim')        param.skipDetectLim        = 1;    end
 if ~isfield(param,'consThreshOption')     param.consThreshOption     = 0;    end
+if ~isfield(param,'expCaEvOption')        param.expCaEvOption        = 1;    end
 if ~isfield(param,'swrCaOption')          param.swrCaOption          = 1;    end
 if ~isfield(param,'useSWRDurationOption') param.useSWRDurationOption = 1;    end
 if ~isfield(param,'useSWRWindowOption')   param.useSWRWindowOption   = 0;    end
 if ~isfield(param,'swrWindow')            param.swrWindow            = 100;  end
-if ~isfield(param,'expCaEvOption')        param.expCaEvOption        = 1;    end
 if ~isfield(param,'expSWREvOption')       param.expSWREvOption       = 0;    end
-if ~isfield(param,'spkCaOption')          param.spkCaOption          = 0;    end
+if ~isfield(param,'alignEndOption')       param.alignEndOption       = 0;    end
 if ~isfield(param,'stimCaOption')         param.stimCaOption         = 0;    end
 if ~isfield(param,'stimCaLim1')           param.stimCaLim1           = 0;    end
 if ~isfield(param,'stimCaLim2')           param.stimCaLim2           = 1000; end
@@ -103,7 +106,7 @@ parentPath   = [];
 dataFileName = [];
 
 % Import previously analyzed matlab file if options require it:
-if (param.swrCaOption && ~isfield(data, 'SWR')) || (param.spkCaOption && ~isfield(data, 'C')) || (param.stimCaOption && ~isfield(data, 'stim'))
+if (param.swrCaOption && ~isfield(data, 'SWR')) || (param.stimCaOption && ~isfield(data, 'stim'))
   [fileName, filePath] = uigetfile('.mat', 'Select *.mat file of analyzed LFP and/or cell channel(s)');
   dataFile = [filePath fileName];
   if ~all(dataFile)
@@ -117,16 +120,12 @@ end
 % Check if necessary data structures are present
 if ~isfield(data,'Ca') data.Ca = struct; end
 
-if param.swrCaOption || param.spkCaOption || param.stimCaOption
+if param.swrCaOption || param.stimCaOption
   if ~isfield(data,'LFP') error('Must analyze LFP before proceeding'); end
 end
 
 if param.swrCaOption
   if ~isfield(data,'SWR') error('Must analyze LFP channel for SWR events before proceeding'); end
-end
-
-if param.spkCaOption
-  if ~isfield(data,'C') error('Must analyze cell channel before proceeding'); end
 end
 
 if param.stimCaOption
@@ -191,6 +190,27 @@ if ~param.reAnalyzeOption
   data.Ca.nChannels   = size(data.Ca.tSeries, 2);
   data.Ca.CaFile      = CaFile;
   data.Ca.timingFile  = timingFile;
+  
+  % Import cell type from variable names (last four characters of dFoF file column headings)
+  if param.cellTypeOption
+    fprintf(['sorting by arrays by cell type (file ' dataFileName ')... ']);
+    
+    data.Ca.cellTypeRaw{data.Ca.nChannels} = [];
+    for i = 1:data.Ca.nChannels
+      colName = CaTable.Properties.VariableNames{i};
+      data.Ca.cellTypeRaw{i} = colName(length(colName) - 3 : length(colName));
+    end
+    
+    % Sort cells by cell-type
+    data.Ca.sortInd  = horzcat(find(strcmp(data.Ca.cellTypeRaw, param.cellType1)), find(strcmp(data.Ca.cellTypeRaw, param.cellType2)));
+    data.Ca.tSeriesS = data.Ca.tSeriesR(:, data.Ca.sortInd);
+    
+    % Update tSeries and cellType variables
+    data.Ca.tSeries  = zeros(size(data.Ca.tSeriesS, 1), size(data.Ca.tSeriesS, 2));
+    data.Ca.tSeries  = data.Ca.tSeriesS;
+    data.Ca.cellType = data.Ca.cellTypeRaw(data.Ca.sortInd);
+    fprintf('done\n');
+  end
 end
 
 data.param     = param;
@@ -207,7 +227,7 @@ if (param.baseCorrectMethod > 0)
   data.Ca.tSeriesF = zeros(size(data.Ca.tSeriesR, 1), size(data.Ca.tSeriesR, 2));
   
   for i = 1 : data.Ca.nChannels
-    data.Ca.tSeriesF(:,i) = correctBaseline(data.Ca.timingR, data.Ca.tSeriesR(:,i), param);
+    data.Ca.tSeriesF(:,i) = correctBaseline(data.Ca.timingR, data.Ca.tSeries(:,i), param);
   end
   
   % Update tSeries variable
@@ -225,7 +245,7 @@ if param.interpOption
   data.Ca.timing      = (0 : data.Ca.samplingInt : data.Ca.timingR(length(data.Ca.timingR)))';
   
   % Create static interpolated variable that won't change with subsequent processing
-  data.Ca.tSeriesI = zeros(size(data.Ca.timing, 1), size(data.Ca.tSeries, 2));
+  data.Ca.tSeriesI = zeros(length(data.Ca.timing), size(data.Ca.tSeries, 2));
 
   % Interpolate data
   data.Ca.tSeriesI = interp1(data.Ca.timingR, data.Ca.tSeries, data.Ca.timing, 'linear', 'extrap');

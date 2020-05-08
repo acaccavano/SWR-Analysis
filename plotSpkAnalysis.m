@@ -60,14 +60,14 @@ hand.scaleCell = struct;
 
 % Initialize plot data
 for i = 1:nData
-  maxIndex     = length(data(i).SWR.spike.timingA);
-  timing{i}    = downsampleMean(data(i).SWR.spike.timingA/1000, dsPlot);
-  trLFP{i}     = downsampleMean(convFact * data(i).LFP.tSeries(1:maxIndex), dsPlot);
-  trCell{i}    = downsampleMean(data(i).C.tSeries(1:maxIndex), dsPlot);
-  rsSWR{i}     = downsampleMax(data(i).SWR.spike.evStatusA, dsPlot);
-  rsSWRSpkC{i} = downsampleMax(data(i).SWR.spike.evStatusC, dsPlot);
-  rsSpk{i}     = downsampleMax(data(i).C.spike.evStatusA, dsPlot);
-  rsSpkC{i}    = downsampleMax(data(i).C.spike.evStatusC, dsPlot);
+  maxIndex       = length(data(i).SWR.spike.timingA);
+  timing{i}      = downsampleMean(data(i).SWR.spike.timingA/1000, dsPlot);
+  trLFP{i}       = downsampleMean(convFact * data(i).LFP.tSeries(1:maxIndex), dsPlot);
+  trCell{i}      = downsampleMean(data(i).C.tSeries(1:maxIndex), dsPlot);
+  rsSWR{i}       = downsampleMax(data(i).SWR.spike.evStatusA, dsPlot);
+  rsSWRSpkC{i}   = downsampleMax(data(i).SWR.spike.evStatusC, dsPlot);
+  rsSpk{i}       = downsampleMax(data(i).C.spike.evStatusA, dsPlot);
+  rsSpkC{i}      = downsampleMax(data(i).C.spike.evStatusC, dsPlot);
   
   if param.procBstOption
     rsSWRBstC{i} = downsampleMax(data(i).SWR.burst.evStatusC, dsPlot);

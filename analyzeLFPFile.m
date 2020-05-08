@@ -300,20 +300,7 @@ if ~isfield(data.LFP, 'dataFile')
   %% Assign parameters to structure array
   data.LFP.dataFile  = dataFile;
   
-  % Downsample data if selected
-  if (param.dsFactor >= 2)
-    fprintf(['downsampling by factor of ' num2str(param.dsFactor) ' (file ' dataFileName ')... ']);
-    data.LFP.samplingInt = data.LFP.samplingInt * param.dsFactor;
-    data.LFP.tSeries = downsampleMean(data.LFP.tSeries, param.dsFactor);
-    
-    if param.cellOption
-      data.C.samplingInt = data.C.samplingInt * param.dsFactor;
-      data.C.tSeries = downsampleMean(data.C.tSeries, param.dsFactor);
-    end
-    
-    fprintf('done\n');
-  end
-  
+  % Determine timing:
   data.LFP.nSamples = length(data.LFP.tSeries);
   data.LFP.timing   = (0: data.LFP.samplingInt : (data.LFP.nSamples-1) * data.LFP.samplingInt)';
   
@@ -322,6 +309,23 @@ if ~isfield(data.LFP, 'dataFile')
     data.C.timing   = (0: data.C.samplingInt : (data.C.nSamples-1) * data.C.samplingInt)';
   end
   
+  % Downsample data if selected
+  if (param.dsFactor > 1)
+    fprintf(['downsampling by factor of ' num2str(param.dsFactor) ' (file ' dataFileName ')... ']);
+    data.LFP.samplingInt  = data.LFP.samplingInt * param.dsFactor;
+    data.LFP.tSeries      = downsampleMean(data.LFP.tSeries, param.dsFactor);
+    data.LFP.nSamples     = length(data.LFP.tSeries);
+    data.LFP.timing       = dsTiming;
+
+    if param.cellOption
+      data.C.samplingInt = data.C.samplingInt * param.dsFactor;
+      data.C.tSeries     = downsampleMean(data.C.tSeries, param.dsFactor);
+      data.C.nSamples    = length(data.C.tSeries);
+      data.C.timing      = dsTiming;
+    end
+    
+    fprintf('done\n');
+  end
 end
 
 data.saveFile  = saveFile;
@@ -342,20 +346,18 @@ if param.lfpOption
   data.LFP.tPower  = bandpower(data.LFP.tSeries);
   data.LFP.lim1    = param.lfpLim1;
   data.LFP.lim2    = param.lfpLim2;
+end
+
+if param.notchOption
+  fprintf(['Notch filter 60Hz noise (file ' dataFileName ')... ']);
   
-  if param.notchOption
-    fprintf(['Notch filter 60Hz noise (file ' dataFileName ')... ']);
-    
-    Ord   = round(data.param.Fs / param.notchFreq);  % Order
-    BW    = 10;  % Bandwidth
-    Apass = 1;   % Bandwidth Attenuation
-    
-    [b, a] = iircomb(Ord, BW/(data.param.Fs/2), Apass);
-    data.LFP.tSeries = filtfilt(b, a, data.LFP.tSeries);
-    
-  end
+  Ord   = round(data.param.Fs / param.notchFreq);  % Order
+  BW    = 10;  % Bandwidth
+  Apass = 1;   % Bandwidth Attenuation
   
-  fprintf('done\n');
+  [b, a] = iircomb(Ord, BW/(data.param.Fs/2), Apass);
+  data.LFP.tSeries = filtfilt(b, a, data.LFP.tSeries);
+  
 end
 
 if param.swOption

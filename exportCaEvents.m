@@ -20,28 +20,56 @@ if isempty(exportFile)
   if ~all(exportFile) error('No Calcium events to be exported - no file selected'); end
 end
 
-varNames = {'Cell', 'nEvents', 'frequency_Hz', 'aveIEI_s', 'aveAmplitude_dFoF', 'aveDuration_s', };
 cellInd  = 1:length(data.Ca.nEvents);
-outTable = table(cellInd', data.Ca.nEvents', data.Ca.frequency', data.Ca.IEIAve', data.Ca.ampAve', data.Ca.durAve'/1000, 'VariableNames', varNames);
+outTable = table(cellInd', 'VariableNames', {'Cell'});
+
+if isfield(data.Ca, 'cellType') outTable = [outTable table(data.Ca.cellType', 'VariableNames', {'CellType'})]; end
+
+varNames = {'nEvents', 'frequency_Hz', 'aveIEI_s', 'aveAmplitude_dFoF', 'aveDuration_s'};
+outTable = [outTable table(data.Ca.nEvents', data.Ca.frequency', data.Ca.IEIAve', data.Ca.ampAve', data.Ca.durAve'/1000, 'VariableNames', varNames)];
 
 % If SWR-Ca correlation has been performed:
 if isfield(data.Ca, 'SWR')
-  outTable = [outTable table(data.Ca.SWR.nEventsA', data.Ca.SWR.nEventsC', data.Ca.SWR.fracEventsC', 'VariableNames', {'nEvents_Align', 'nEvents_Coinc', 'fracEvents_Coinc'})];
-  if isfield(data.Ca.SWR, 'swr')   outTable = [outTable table(data.Ca.SWR.swr.nEvents', data.Ca.SWR.swr.frequency', data.Ca.SWR.swr.ampAve', data.Ca.SWR.swr.durAve'/1000, 'VariableNames', {'nEventsSWR', 'freqSWR_Hz', 'aveAmpSWR_dFoF', 'aveDurSWR_s'})]; end
-  if isfield(data.Ca.SWR, 'spont') outTable = [outTable table(data.Ca.SWR.spont.nEvents', data.Ca.SWR.swr.frequency', data.Ca.SWR.swr.ampAve', data.Ca.SWR.swr.durAve'/1000, 'VariableNames', {'nEventsSpont', 'freqSpont_Hz', 'aveAmpSpont_dFoF', 'aveDurSpont_s'})]; end
+  varNames = {'nEvents_Align', 'nEvents_Coinc', 'fracEvents_Coinc'};
+  outTable = [outTable table(data.Ca.SWR.nEventsA', data.Ca.SWR.nEventsC', data.Ca.SWR.fracEventsC', 'VariableNames', varNames)];
+  
+  if isfield(data.Ca.SWR, 'swr')
+    varNames = {'nEventsSWR', 'freqSWR_Hz', 'aveAmpSWR_dFoF', 'aveDurSWR_s'};
+    outTable = [outTable table(data.Ca.SWR.swr.nEvents', data.Ca.SWR.swr.frequency', data.Ca.SWR.swr.ampAve', data.Ca.SWR.swr.durAve'/1000, 'VariableNames', varNames)]; 
+  end
+  
+  if isfield(data.Ca.SWR, 'spont') 
+    varNames = {'nEventsSpont', 'freqSpont_Hz', 'aveAmpSpont_dFoF', 'aveDurSpont_s'};
+    outTable = [outTable table(data.Ca.SWR.spont.nEvents', data.Ca.SWR.spont.frequency', data.Ca.SWR.spont.ampAve', data.Ca.SWR.spont.durAve'/1000, 'VariableNames', varNames)]; 
+  end
 end
 
 % If Stim-Ca correlation has been performed:
 if isfield(data.Ca, 'stim')
-  outTable = [outTable table(data.Ca.stim.nEventsA', data.Ca.stim.nEventsC', data.Ca.stim.fracEventsC', 'VariableNames', {'nEvents_Align', 'nEvents_Coinc', 'fracEvents_Coinc'})];
-  if isfield(data.Ca.stim, 'stim')  outTable = [outTable table(data.Ca.stim.stim.nEvents', data.Ca.stim.stim.frequency', data.Ca.stim.stim.ampAve', data.Ca.stim.stim.durAve'/1000, 'VariableNames', {'nEventsStim', 'freqStim_Hz', 'aveAmpStim_dFoF', 'aveDurStim_s'})]; end
-  if isfield(data.Ca.stim, 'spont') outTable = [outTable table(data.Ca.stim.spont.nEvents', data.Ca.stim.spont.frequency', data.Ca.stim.spont.ampAve', data.Ca.stim.spont.durAve'/1000, 'VariableNames', {'nEventsSpont', 'freqSpont_Hz', 'aveAmpSpont_dFoF', 'aveDurSpont_s'})]; end
+  varNames = {'nEvents_Align', 'nEvents_Coinc', 'fracEvents_Coinc'};
+  outTable = [outTable table(data.Ca.stim.nEventsA', data.Ca.stim.nEventsC', data.Ca.stim.fracEventsC', 'VariableNames', varNames)];
+  
+  if isfield(data.Ca.stim, 'stim')  
+    varNames = {'nEventsStim', 'freqStim_Hz', 'aveAmpStim_dFoF', 'aveDurStim_s'};
+    outTable = [outTable table(data.Ca.stim.stim.nEvents', data.Ca.stim.stim.frequency', data.Ca.stim.stim.ampAve', data.Ca.stim.stim.durAve'/1000, 'VariableNames', varNames)]; 
+  end
+  
+  if isfield(data.Ca.stim, 'spont') 
+    varNames = {'nEventsSpont', 'freqSpont_Hz', 'aveAmpSpont_dFoF', 'aveDurSpont_s'};
+    outTable = [outTable table(data.Ca.stim.spont.nEvents', data.Ca.stim.spont.frequency', data.Ca.stim.spont.ampAve', data.Ca.stim.spont.durAve'/1000, 'VariableNames', varNames)]; 
+  end
 end
 
 % Replace NaN values with blanks
-tmp = table2cell(outTable);
-tmp(isnan(outTable.Variables)) = {[]};
-outTable = array2table(tmp,'VariableNames',outTable.Properties.VariableNames);
+if isfield(data.Ca, 'cellType')
+  tmp = table2cell(outTable(:, 3:end));
+  tmp(isnan(cell2mat(tmp))) = {[]};
+  outTable = [outTable(:, 1:2) array2table(tmp,'VariableNames',outTable.Properties.VariableNames(3:end))];
+else
+  tmp = table2cell(outTable);
+  tmp(isnan(outTable.Variables)) = {[]};
+  outTable = array2table(tmp,'VariableNames',outTable.Properties.VariableNames);
+end
 
 writetable(outTable, exportFile, 'Delimiter', ',');
 

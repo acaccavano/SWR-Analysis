@@ -54,29 +54,34 @@ if isempty(hand)  hand     = struct; end
 if isempty(data)  data     = struct; end
 
 % Set default parameters if not specified
-if ~isfield(param,'fileNum')              param.fileNum              = 1;   end
-if ~isfield(param,'pscEventPolarity')     param.pscEventPolarity     = 0;   end
-if ~isfield(param,'swrPSQOption')         param.swrPSQOption         = 1;   end
-if ~isfield(param,'importPSCOption')      param.importPSCOption      = 1;   end
-if ~isfield(param,'swrPSCOption')         param.swrPSCOption         = 1;   end
-if ~isfield(param,'useSWRDurationOption') param.useSWRDurationOption = 0;   end
-if ~isfield(param,'useSWRWindowOption')   param.useSWRWindowOption   = 1;   end
-if ~isfield(param,'swrWindow')            param.swrWindow            = 100; end
-if ~isfield(param,'parsePSCOption')       param.parsePSCOption       = 1;   end
-if ~isfield(param,'calcEvMatrixOption')   param.calcEvMatrixOption   = 1;   end
-if ~isfield(param,'expPSCEvOption')       param.expPSCEvOption       = 1;   end
-if ~isfield(param,'expSWREvOption')       param.expSWREvOption       = 1;   end
-if ~isfield(param,'gammaOption')          param.gammaOption          = 1;   end
-if ~isfield(param,'gammaLim1')            param.gammaLim1            = 20;  end
-if ~isfield(param,'gammaLim2')            param.gammaLim2            = 50;  end
-if ~isfield(param,'rOption')              param.rOption              = 1;   end
-if ~isfield(param,'rLim1')                param.rLim1                = 120; end
-if ~isfield(param,'rLim2')                param.rLim2                = 220; end
-if ~isfield(param,'spectOption')          param.spectOption          = 1;   end
-if ~isfield(param,'spectLim1')            param.spectLim1            = 1;   end
-if ~isfield(param,'spectLim2')            param.spectLim2            = 500; end
-if ~isfield(param,'reAnalyzeOption')      param.reAnalyzeOption      = 0;   end
-if ~isfield(param,'nBins')                param.nBins                = 100; end
+if ~isfield(param,'fileNum')              param.fileNum              = 1;    end
+if ~isfield(param,'pscEventPolarity')     param.pscEventPolarity     = 0;    end
+if ~isfield(param,'swrPSQOption')         param.swrPSQOption         = 1;    end
+if ~isfield(param,'importPSCOption')      param.importPSCOption      = 1;    end
+if ~isfield(param,'swrPSCOption')         param.swrPSCOption         = 1;    end
+if ~isfield(param,'useSWRDurationOption') param.useSWRDurationOption = 0;    end
+if ~isfield(param,'useSWRWindowOption')   param.useSWRWindowOption   = 1;    end
+if ~isfield(param,'swrWindow')            param.swrWindow            = 100;  end
+if ~isfield(param,'parsePSCOption')       param.parsePSCOption       = 1;    end
+if ~isfield(param,'calcEvMatrixOption')   param.calcEvMatrixOption   = 1;    end
+if ~isfield(param,'expPSCEvOption')       param.expPSCEvOption       = 1;    end
+if ~isfield(param,'expSWREvOption')       param.expSWREvOption       = 1;    end
+if ~isfield(param,'gammaOption')          param.gammaOption          = 1;    end
+if ~isfield(param,'gammaLim1')            param.gammaLim1            = 20;   end
+if ~isfield(param,'gammaLim2')            param.gammaLim2            = 50;   end
+if ~isfield(param,'rOption')              param.rOption              = 1;    end
+if ~isfield(param,'rLim1')                param.rLim1                = 120;  end
+if ~isfield(param,'rLim2')                param.rLim2                = 220;  end
+if ~isfield(param,'spectOption')          param.spectOption          = 1;    end
+if ~isfield(param,'spectLim1')            param.spectLim1            = 1;    end
+if ~isfield(param,'spectLim2')            param.spectLim2            = 500;  end
+if ~isfield(param,'reAnalyzeOption')      param.reAnalyzeOption      = 0;    end
+if ~isfield(param,'nBins')                param.nBins                = 100;  end % Not yet selectable in UI
+if ~isfield(param,'cdfOption')            param.cdfOption            = 1;    end % Not yet selectable in UI
+if ~isfield(param,'minRise')              param.minRise              = 0.1; end % Not yet selectable in UI
+if ~isfield(param,'maxRise')              param.maxRise              = 10;    end % Not yet selectable in UI
+if ~isfield(param,'minDecay')             param.minDecay             = 3;    end % Not yet selectable in UI
+if ~isfield(param,'maxDecay')             param.maxDecay             = 100;   end % Not yet selectable in UI
 
 if ~isfield(data, 'LFP')
   [fileName, filePath] = uigetfile('.mat', 'Select *.mat file of analyzed LFP + imported cell channel');
@@ -748,6 +753,49 @@ if isfield(data,'SWR') && (isfield(data,'gammaC') || isfield(data,'RC') || param
     end
     
   end
+end
+
+%% Cumulative Distribution Functions
+if param.cdfOption
+  
+  if ~isfield(data.C.PSC,'CDF') data.C.PSC.CDF = struct; end
+  
+  % Exclude Outliers for rise and decay (pClamp fitting often bad):
+  exInd = data.C.PSC.riseTau < param.minRise | data.C.PSC.riseTau > param.maxRise;
+  riseTau  = data.C.PSC.riseTau;
+  riseTau(exInd) = [];
+  if isfield(data.C.PSC,'swrMatrix')
+    swrMatRise = data.C.PSC.swrMatrix;
+    swrMatRise(exInd) = [];
+  end
+  
+  exInd = data.C.PSC.decayTau < param.minDecay | data.C.PSC.decayTau > param.maxDecay;
+  decayTau = data.C.PSC.decayTau;
+  decayTau(exInd) = [];
+  if isfield(data.C.PSC,'swrMatrix')
+    swrMatDecay = data.C.PSC.swrMatrix;
+    swrMatDecay(exInd) = [];
+  end
+
+  if isfield(data.C.PSC,'swrMatrix') % Separate Spont and SWR events
+    [data.C.PSC.CDF.ampSpontF, data.C.PSC.CDF.ampSpontX] = ecdf(abs(data.C.PSC.amp(data.C.PSC.swrMatrix == 0)));
+    [data.C.PSC.CDF.areaSpontF, data.C.PSC.CDF.areaSpontX] = ecdf(abs(data.C.PSC.area(data.C.PSC.swrMatrix == 0)));
+    [data.C.PSC.CDF.riseSpontF, data.C.PSC.CDF.riseSpontX] = ecdf(riseTau(swrMatRise == 0));
+    [data.C.PSC.CDF.decaySpontF, data.C.PSC.CDF.decaySpontX] = ecdf(decayTau(swrMatDecay == 0));
+    
+    [data.C.PSC.CDF.ampSWRF, data.C.PSC.CDF.ampSWRX] = ecdf(abs(data.C.PSC.amp(data.C.PSC.swrMatrix == 1)));
+    [data.C.PSC.CDF.areaSWRF, data.C.PSC.CDF.areaSWRX] = ecdf(abs(data.C.PSC.area(data.C.PSC.swrMatrix == 1)));
+    [data.C.PSC.CDF.riseSWRF, data.C.PSC.CDF.riseSWRX] = ecdf(riseTau(swrMatRise == 1));
+    [data.C.PSC.CDF.decaySWRF, data.C.PSC.CDF.decaySWRX] = ecdf(decayTau(swrMatDecay == 1));
+    
+  else % Combine all events
+    [data.C.PSC.CDF.ampF, data.C.PSC.CDF.ampX] = ecdf(abs(data.C.PSC.amp));
+    [data.C.PSC.CDF.areaF, data.C.PSC.CDF.areaX] = ecdf(abs(data.C.PSC.area));
+    [data.C.PSC.CDF.riseF, data.C.PSC.CDF.riseX] = ecdf(riseTau);
+    [data.C.PSC.CDF.decayF, data.C.PSC.CDF.decayX] = ecdf(decayTau);
+    
+  end
+  data.C.PSC.CDF = orderStruct(data.C.PSC.CDF);
 end
 
 % Re-order structure arrays:

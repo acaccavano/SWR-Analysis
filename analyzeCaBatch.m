@@ -62,14 +62,17 @@ if isempty(param) param      = struct; end
 
 % Set default parameters if not specified
 if ~isfield(param,'fileNum')              param.fileNum              = 2;    end
-if ~isfield(param,'interpOption')         param.interpOption         = 1;    end
-if ~isfield(param,'samplingInt')          param.samplingInt          = 0.5;  end
 if ~isfield(param,'baseCorrectMethod')    param.baseCorrectMethod    = 2;    end
 if ~isfield(param,'CaFiltLim1')           param.CaFiltLim1           = 0.03; end
 if ~isfield(param,'CaFiltLim2')           param.CaFiltLim2           = 4;    end
 if ~isfield(param,'CaFiltOrder')          param.CaFiltOrder          = 80;   end
 if ~isfield(param,'CaFiltAlpha')          param.CaFiltAlpha          = 2.5;  end
 if ~isfield(param,'smoothFactor')         param.smoothFactor         = 0.25; end
+if ~isfield(param,'interpOption')         param.interpOption         = 1;    end
+if ~isfield(param,'samplingInt')          param.samplingInt          = 0.5;  end
+if ~isfield(param,'cellTypeOption')       param.cellTypeOption       = 0;    end
+if ~isfield(param,'cellType1')            param.cellType1          = 'Deep'; end
+if ~isfield(param,'cellType2')            param.cellType2          = 'Supe'; end
 if ~isfield(param,'peakDetectCa')         param.peakDetectCa         = 1;    end
 if ~isfield(param,'baseDetectMethod')     param.baseDetectMethod     = 2;    end
 if ~isfield(param,'baseQuant')            param.baseQuant            = 0.8;  end
@@ -83,19 +86,19 @@ if ~isfield(param,'sdMult')               param.sdMult               = 4;    end
 if ~isfield(param,'sdBaseFactor')         param.sdBaseFactor         = 0.75; end
 if ~isfield(param,'skipDetectLim')        param.skipDetectLim        = 1;    end
 if ~isfield(param,'consThreshOption')     param.consThreshOption     = 0;    end
+if ~isfield(param,'expCaEvOption')        param.expCaEvOption        = 1;    end
 if ~isfield(param,'swrCaOption')          param.swrCaOption          = 1;    end
 if ~isfield(param,'useSWRDurationOption') param.useSWRDurationOption = 1;    end
 if ~isfield(param,'useSWRWindowOption')   param.useSWRWindowOption   = 0;    end
 if ~isfield(param,'swrWindow')            param.swrWindow            = 100;  end
-if ~isfield(param,'expCaEvOption')        param.expCaEvOption        = 1;    end
 if ~isfield(param,'expSWREvOption')       param.expSWREvOption       = 0;    end
-if ~isfield(param,'spkCaOption')          param.spkCaOption          = 0;    end
+if ~isfield(param,'alignEndOption')       param.alignEndOption       = 0;    end
 if ~isfield(param,'stimCaOption')         param.stimCaOption         = 0;    end
 if ~isfield(param,'stimCaLim1')           param.stimCaLim1           = 0;    end
 if ~isfield(param,'stimCaLim2')           param.stimCaLim2           = 1000; end
 if ~isfield(param,'expStimEvOption')      param.expStimEvOption      = 0;    end
 if ~isfield(param,'reAnalyzeOption')      param.reAnalyzeOption      = 0;    end
-
+    
 % Assign OS specific variables:
 if ispc
   slash = '\';
@@ -111,7 +114,7 @@ if isempty(dataFolder)
     dataFolder = uigetdir(pwd, 'Select folder containing analyzed dFoF *.mat files');
     if (dataFolder == 0) return; end
     [parentPath, ~, ~] = parsePath(dataFolder);
-  elseif (param.swrCaOption || param.spkCaOption || param.stimCaOption)
+  elseif (param.swrCaOption || param.stimCaOption)
     dataFolder = uigetdir(pwd, 'Select folder containing analyzed LFP and/or cell *.mat files');
     if (dataFolder == 0) return; end
     [parentPath, ~, ~] = parsePath(dataFolder);
@@ -171,7 +174,7 @@ curPath = pwd;
 path(path, curPath);
 
 % Extract matlab data file names (if options require)
-if param.swrCaOption || param.spkCaOption || param.stimCaOption || param.reAnalyzeOption
+if param.swrCaOption || param.stimCaOption || param.reAnalyzeOption
   cd (dataFolder);
   dir_temp   = dir('*.mat'); % Find only *.mat files
   names      = {dir_temp.name}; % extract all the names in the struct returned by 'dir': ".", "..", file 1,2....
@@ -191,7 +194,7 @@ end
 cd (curPath);
 
 % Error handling - file number mismatch:
-if ~param.reAnalyzeOption && (param.swrCaOption || param.spkCaOption || param.stimCaOption)
+if ~param.reAnalyzeOption && (param.swrCaOption || param.stimCaOption)
   if (nDataFiles ~= nCaFiles)
     error('Unequal number of files in data and Ca folders - analysis will be mismatched');
   end
@@ -213,7 +216,7 @@ expStimFile{nFiles} = [];
 for i = 1:nFiles
   
   % Determine dataFile (if options require)
-  if param.reAnalyzeOption || param.swrCaOption || param.spkCaOption || param.stimCaOption
+  if param.reAnalyzeOption || param.swrCaOption || param.stimCaOption
     dataFile{i} = [dataFolder slash dataFiles{i}];
     [~, dataFileName, ~] = parsePath(dataFile{i});
   end
@@ -221,7 +224,7 @@ for i = 1:nFiles
   % Determine CaFile (if options require)
   if ~param.reAnalyzeOption
     CaFile{i} = [CaFolder slash CaFiles{i}];
-    if ~param.swrCaOption && ~param.spkCaOption && ~param.stimCaOption [~, dataFileName, ~] = parsePath(CaFile{i}); end
+    if ~param.swrCaOption && ~param.stimCaOption [~, dataFileName, ~] = parsePath(CaFile{i}); end
   end
   
   % Determine individual output *.mat file names
@@ -261,11 +264,10 @@ if ~param.reAnalyzeOption || (param.baseCorrectMethod > 0) || param.interpOption
   % Initialize local parameters to not broadcast to parfor loop:
   reAnalyzeOption = param.reAnalyzeOption;
   swrCaOption     = param.swrCaOption;
-  spkCaOption     = param.spkCaOption;
   stimCaOption    = param.stimCaOption;
   
   parfor i = 1:nFiles
-    if reAnalyzeOption || swrCaOption || spkCaOption || stimCaOption
+    if reAnalyzeOption || swrCaOption || stimCaOption
       data = load(dataFile{i});
       processCaFile(data, [], param, saveFile{i}, CaFile{i}, timingFile);
     else
