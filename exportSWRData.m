@@ -8,6 +8,8 @@ if (nargin < 3) expDataFile = []; end
 if (nargin < 2) param = struct; end
 if (nargin < 1) error('Supply data structure to use exportSWRData'); end
 
+% param = []; % comment out normally, quick fix if want to use defaults below instead of GUI params. 
+
 % Select export file if not supplied
 if isempty(expDataFile)
   [parentPath, saveFileName, ~] = parsePath(data.saveFile);
@@ -29,7 +31,7 @@ if ~isfield(param,'maxNumEvs')        param.maxNumEvs        =  50; end
 if ~isfield(param,'swrWindow')        param.swrWindow        = 100; end
 
 if param.truncateEvs
-  nEvs = max(param.maxNumEvs, length(data.SWR.event));
+  nEvs = min(param.maxNumEvs, length(data.SWR.event));
 else
   nEvs = length(data.SWR.event);
 end

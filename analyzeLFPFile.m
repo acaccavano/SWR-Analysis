@@ -864,7 +864,7 @@ if all(saveFile)
 end
 
 %% Export SWR event table
-if all(expEvFile) && param.expSWREvOption && param.swrOption
+if all(expEvFile) && param.expSWREvOption
   fprintf(['exporting SWR events (file ' dataFileName ')... ']);
   exportSWREvents(data, saveFile, expEvFile);
   data.SWR.expEvFile = expEvFile;
@@ -872,7 +872,7 @@ if all(expEvFile) && param.expSWREvOption && param.swrOption
 end
 
 %% Export SWR event-locked episodic data files
-if all(expDataFile) && param.expSWRDataOption && param.swrOption
+if all(expDataFile) && param.expSWRDataOption
   fprintf(['exporting SWR event-locked data (file ' dataFileName ')... ']);
   exportSWRData(data, param, expDataFile);
   data.SWR.expDataFile = expDataFile;
