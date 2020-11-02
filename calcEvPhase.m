@@ -74,8 +74,9 @@ for ev = 1:length(S.event)
     if isempty(firstPeak) firstPeak = 1; end
     if isempty(lastPeak) lastPeak = length(SWR.evTiming); end
     
-    evStartStand = max(2001 - (SWR.evPeak(ev) - SWR.evStart(ev)), firstPeak);
-    evEndStand   = min(2001 + (SWR.evEnd(ev)  - SWR.evPeak(ev)), lastPeak);
+    midPoint = floor(length(SWR.evTiming)/2) + 1;
+    evStartStand = max(midPoint - (SWR.evPeak(ev) - SWR.evStart(ev)), firstPeak);
+    evEndStand   = min(midPoint + (SWR.evEnd(ev)  - SWR.evPeak(ev)), lastPeak);
     
     contPhase = S.phase.evPhase{ev}(evStartStand:evEndStand);
     nCycle = 0;
