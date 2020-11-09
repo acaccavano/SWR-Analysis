@@ -1,4 +1,4 @@
-function [data, hand] = analyzeLFPFile(data, hand, param, dataFile, saveFile, expEvFile, expDataFile, stimFile)
+function [data, hand] = analyzeLFPFile(data, hand, param, dataFile, saveFile, expEvFile, expAveFile, expDataFile, stimFile)
 %% [data, hand] = analyzeLFPFile(data, hand, param, dataFile, saveFile, expEvFile, expDataFile, stimFile)
 %
 %  Function to detect sharp wave ripple (SWR) events, theta, beta, and gamma analysis, time-frequency 
@@ -40,6 +40,7 @@ function [data, hand] = analyzeLFPFile(data, hand, param, dataFile, saveFile, ex
 %     param.swrType          = Option to determine what qualifies as SWR (1: SW & R (default), 2: SW only, 3: R only)
 %     param.swrWindow        = +/- window around SWR peak events for swrData file [ms]
 %     param.expSWREvOption   = boolean flag to determine whether to export csv table of SWR events
+%     param.expLFPAveOption  = boolean flag to determine whether to export csv table of average statistics
 %     param.expSWRDataOption = boolean flag to determine whether to export txt file of episodic SWR events for pClamp analysis
 %     param.thetaOption      = boolean flag to filter and analyze theta signal
 %     param.thetaLim1        = lower theta band-pass lim (default = 4Hz)
@@ -64,6 +65,7 @@ function [data, hand] = analyzeLFPFile(data, hand, param, dataFile, saveFile, ex
 %   dataFile    = full path to file/folder containing data to be analysed (if not set, will prompt)
 %   saveFile    = full path to matlab file to save (if not set, will prompt)
 %   expEvFile   = full path to exported csv event table (if not set and expSWREvOption = 1, will prompt
+%   expAveFile  = full path to exported csv average table (if not set and expLFPAveOption = 1, will prompt
 %   expDataFile = full path to exported txt data file (if not set and expSWRDataOption = 1, will prompt
 %   stimFile    = full path to pClamp stim event file (if not set and importStimOption = 1, will prompt
 %
@@ -72,8 +74,9 @@ function [data, hand] = analyzeLFPFile(data, hand, param, dataFile, saveFile, ex
 %   hand       = handle structure for figure
 
 %% Handle input arguments - if not entered
-if (nargin < 8) stimFile    = []; end
-if (nargin < 7) expDataFile = []; end
+if (nargin < 9) stimFile    = []; end
+if (nargin < 8) expDataFile = []; end
+if (nargin < 7) expAveFile  = []; end
 if (nargin < 6) expEvFile   = []; end
 if (nargin < 5) saveFile    = []; end
 if (nargin < 4) dataFile    = []; end
@@ -115,6 +118,7 @@ if ~isfield(param,'baseQuant')        param.baseQuant         = 0.95; end
 if ~isfield(param,'swrType')          param.swrType           = 1;    end
 if ~isfield(param,'swrWindow')        param.swrWindow         = 100;  end
 if ~isfield(param,'expSWREvOption')   param.expSWREvOption    = 1;    end
+if ~isfield(param,'expLFPAveOption')  param.expLFPAveOption   = 1;    end
 if ~isfield(param,'expSWRDataOption') param.expSWRDataOption  = 1;    end
 if ~isfield(param,'thetaOption')      param.thetaOption       = 0;    end
 if ~isfield(param,'thetaLim1')        param.thetaLim1         = 4;    end
@@ -182,6 +186,18 @@ if isempty(expEvFile) && param.expSWREvOption
     warning('No SWR events to be exported - no file selected');
   else
     [parentPath, ~, ~] = parsePath(expEvFile);
+  end
+end
+
+% Select export LFP average file, if option selected
+if isempty(expAveFile) && param.expLFPAveOption
+  defaultPath = [parentPath dataFileName '_lfpAve.csv'];
+  [exportName, exportPath] = uiputfile('.csv','Select *.csv file to export table of LFP averages', defaultPath);
+  expAveFile = [exportPath exportName];
+  if ~all(expAveFile)
+    warning('No LFP averages to be exported - no file selected');
+  else
+    [parentPath, ~, ~] = parsePath(expAveFile);
   end
 end
 
@@ -868,6 +884,14 @@ if all(expEvFile) && param.expSWREvOption
   fprintf(['exporting SWR events (file ' dataFileName ')... ']);
   exportSWREvents(data, saveFile, expEvFile);
   data.SWR.expEvFile = expEvFile;
+  fprintf('done\n');
+end
+
+%% Export LFP average table
+if all(expAveFile) && param.expLFPAveOption
+  fprintf(['exporting LFP averages (file ' dataFileName ')... ']);
+  exportLFPAverages(data, saveFile, expAveFile);
+  data.LFP.expAveFile = expAveFile;
   fprintf('done\n');
 end
 

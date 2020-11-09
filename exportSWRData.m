@@ -8,7 +8,7 @@ if (nargin < 3) expDataFile = []; end
 if (nargin < 2) param = struct; end
 if (nargin < 1) error('Supply data structure to use exportSWRData'); end
 
-% param = []; % comment out normally, quick fix if want to use defaults below instead of GUI params. 
+param = []; % comment out normally, quick fix if want to use defaults below instead of GUI params. 
 
 % Select export file if not supplied
 if isempty(expDataFile)
@@ -22,11 +22,12 @@ end
 % Set default parameters
 if ~isfield(param,'gammaOption')      param.gammaOption      = 1; end
 if ~isfield(param,'rOption')          param.rOption          = 1; end
-if ~isfield(param,'cellOption')       param.cellOption       = 1; end
+if ~isfield(param,'fROption')         param.fROption         = 1; end
+if ~isfield(param,'cellOption')       param.cellOption       = 0; end
 if ~isfield(param,'cellRawOption')    param.cellRawOption    = 0; end
-if ~isfield(param,'cellGammaOption')  param.cellGammaOption  = 1; end
-if ~isfield(param,'cellRippleOption') param.cellRippleOption = 1; end
-if ~isfield(param,'truncateEvs')      param.truncateEvs      = 0; end
+if ~isfield(param,'cellGammaOption')  param.cellGammaOption  = 0; end
+if ~isfield(param,'cellRippleOption') param.cellRippleOption = 0; end
+if ~isfield(param,'truncateEvs')      param.truncateEvs      = 1; end
 if ~isfield(param,'maxNumEvs')        param.maxNumEvs        =  50; end
 if ~isfield(param,'swrWindow')        param.swrWindow        = 100; end
 
@@ -45,6 +46,7 @@ if (dataOutSize(1) < max(dataOutSize))
   data.SWR.event(1) = [];
   if param.gammaOption   data.gamma.SWR.event(1) = []; end
   if param.rOption       data.R.SWR.event(1)     = []; end
+  if param.fROption      data.fR.SWR.event(1)    = []; end
   if param.cellOption
     if param.cellRawOption    data.C.SWR.event(1)      = []; end
     data.C.SWR.evNorm(1) = [];
@@ -59,6 +61,7 @@ if (dataOutSize(nEvs) < max(dataOutSize))
   data.SWR.event(nEvs) = [];
   if param.gammaOption   data.gamma.SWR.event(nEvs) = []; end
   if param.rOption       data.R.SWR.event(nEvs)     = []; end
+  if param.fROption      data.fR.SWR.event(nEvs)    = []; end
   if param.cellOption
     if param.cellRawOption    data.C.SWR.event(nEvs)      = []; end
     data.C.SWR.evNorm(nEvs) = [];
@@ -97,6 +100,13 @@ for i = 1:nEvs
   if param.rOption
     dataOut = horzcat(dataOut, data.R.SWR.event{i});
     tableVarNames{nameInd} = ['R_' num2str(i)];
+    nameInd = nameInd + 1;
+  end
+
+  % Fast Ripple event-locked data:
+  if param.fROption
+    dataOut = horzcat(dataOut, data.fR.SWR.event{i});
+    tableVarNames{nameInd} = ['fR_' num2str(i)];
     nameInd = nameInd + 1;
   end
   

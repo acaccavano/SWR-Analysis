@@ -34,12 +34,18 @@ end
 
 % SW plots and raster events
 if param.swOption
+    
   nTrace  = nTrace + 1;
-  nRaster = nRaster + 1;
   for i = 1:nData
     dataPlot{i, nTrace}    = downsampleMean(convFact * data(i).SW.tSeries, dsPlot);
-    dataRaster{i, nRaster} = downsampleMax(data(i).SW.evStatus, dsPlot);
     dataName{i, nTrace}    = ['SW (' int2str(data(i).SW.lim1) '-' int2str(data(i).SW.lim2) 'Hz)'];
+  end
+  
+  if (param.swrType == 1 || param.swrType == 2)
+    nRaster = nRaster + 1;
+    for i = 1:nData
+      dataRaster{i, nRaster} = downsampleMax(data(i).SW.evStatus, dsPlot);
+    end
   end
   
   if param.rmsOption
@@ -53,12 +59,18 @@ end
 
 % Ripple plots and raster events
 if param.rOption
+    
   nTrace  = nTrace + 1;
-  nRaster = nRaster + 1;
   for i = 1:nData
     dataPlot{i, nTrace}    = downsampleMean(convFact * data(i).R.tSeries, dsPlot);
-    dataRaster{i, nRaster} = downsampleMax(data(i).R.evStatus, dsPlot);
     dataName{i, nTrace}    = ['R (' int2str(data(i).R.lim1) '-' int2str(data(i).R.lim2) 'Hz)'];
+  end
+  
+  if (param.swrType == 1 || param.swrType == 3)
+    nRaster = nRaster + 1;
+    for i = 1:nData
+      dataRaster{i, nRaster} = downsampleMax(data(i).R.evStatus, dsPlot);
+    end
   end
   
   if param.rmsOption
@@ -166,7 +178,9 @@ rs = nRaster;
 for tr = nTrace : -1 : 1
   
   %% In forward x order, plot raster data (if applicable):
-  if strcmp(dataName{1, tr}(1:3),'SW ') || strcmp(dataName{1, tr}(1:3),'R (') || (strcmp(dataName{1, tr}(1:3),'LFP') && param.swrOption)
+  if (strcmp(dataName{1, tr}(1:4),'SW (') && (param.swrType == 1 || param.swrType == 2)) ...
+      || strcmp(dataName{1, tr}(1:3),'R (') && (param.swrType == 1 || param.swrType == 3) ...
+      || (strcmp(dataName{1, tr}(1:3),'LFP') && param.swrOption)
     xPos = marginSz;
     for i = 1:nData
       
@@ -216,10 +230,10 @@ for tr = nTrace : -1 : 1
     end
     
     % If RMS selected, plot thresholds for peak detection:
-    if strcmp(dataName{i, tr},'SW RMS')
+    if strcmp(dataName{i, tr},'SW RMS') && (param.swrType == 1 || param.swrType == 2)
       plot(hand.axTr(i, tr), [data(i).LFP.timing(1) data(i).LFP.timing(length(data(i).LFP.timing))/1000], convFact * [data(i).SW.peakThresh data(i).SW.peakThresh], 'Color', hand.plot.Color, 'LineWidth', 1.0, 'LineStyle', '--');
       plot(hand.axTr(i, tr), [data(i).LFP.timing(1) data(i).LFP.timing(length(data(i).LFP.timing))/1000], convFact * [data(i).SW.baseThresh data(i).SW.baseThresh], 'Color', hand.plot.Color, 'LineWidth', 0.6, 'LineStyle', '--');
-    elseif strcmp(dataName{tr},'R RMS')
+    elseif strcmp(dataName{tr},'R RMS') && (param.swrType == 1 || param.swrType == 3)
       plot(hand.axTr(i, tr), [data(i).LFP.timing(1) data(i).LFP.timing(length(data(i).LFP.timing))/1000], convFact * [data(i).R.peakThresh data(i).R.peakThresh], 'Color', hand.plot.Color, 'LineWidth', 1.0, 'LineStyle', '--');
       plot(hand.axTr(i, tr), [data(i).LFP.timing(1) data(i).LFP.timing(length(data(i).LFP.timing))/1000], convFact * [data(i).R.baseThresh data(i).R.baseThresh], 'Color', hand.plot.Color, 'LineWidth', 0.6, 'LineStyle', '--');
     end

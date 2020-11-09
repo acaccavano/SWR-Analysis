@@ -1,5 +1,5 @@
 function hand = plotLFPUpdate(data, hand, param, ev)
-%% hand = plotLFPUpdate(data, data2, hand, param, ev, dsPlot)
+%% hand = plotLFPUpdate(data, hand, param, ev)
 %
 % Function to resize LFP plot centered around specific SWR event
 
