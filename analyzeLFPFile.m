@@ -584,6 +584,13 @@ if param.swrOption
       data.gamma.SWR.event = [];
       data.gamma.SWR.power = [];
     end
+
+    % High gamma arrays:
+    if isfield(data,'hgamma')
+      if ~isfield(data.hgamma,'SWR') data.hgamma.SWR = struct; end
+      data.hgamma.SWR.event = [];
+      data.hgamma.SWR.power = [];
+    end
     
     % Fast ripple arrays:
     if isfield(data,'fR')
@@ -617,10 +624,11 @@ if param.swrOption
       
       % Initialize event locked data window cell arrays
       data.SWR.event{length(data.SWR.evStart)}    = [];
-      if isfield(data,'SW')    data.SW.SWR.event{length(data.SWR.evStart)}    = []; end
-      if isfield(data,'R')     data.R.SWR.event{length(data.SWR.evStart)}     = []; end
-      if isfield(data,'gamma') data.gamma.SWR.event{length(data.SWR.evStart)} = []; end
-      if isfield(data,'fR')    data.fR.SWR.event{length(data.SWR.evStart)}    = []; end
+      if isfield(data,'SW')     data.SW.SWR.event{length(data.SWR.evStart)}     = []; end
+      if isfield(data,'R')      data.R.SWR.event{length(data.SWR.evStart)}      = []; end
+      if isfield(data,'gamma')  data.gamma.SWR.event{length(data.SWR.evStart)}  = []; end
+      if isfield(data,'hgamma') data.hgamma.SWR.event{length(data.SWR.evStart)} = []; end
+      if isfield(data,'fR')     data.fR.SWR.event{length(data.SWR.evStart)}     = []; end
       
       % Determine baseline for amplitude determination
       if param.swrType == 1 || param.swrType == 2 % use SW signal
@@ -678,6 +686,12 @@ if param.swrOption
           data.gamma.SWR.power(i) = bandpower(data.gamma.tSeries(loBaseWin : hiBaseWin));
         end
 
+        % High gamma data:
+        if isfield(data,'hgamma')
+          data.hgamma.SWR.event{i} = data.hgamma.tSeries(loWin : hiWin);
+          data.hgamma.SWR.power(i) = bandpower(data.hgamma.tSeries(loBaseWin : hiBaseWin));
+        end
+        
         % Fast ripple data:
         if isfield(data,'fR')
           data.fR.SWR.event{i} = data.fR.tSeries(loWin : hiWin);
@@ -713,6 +727,11 @@ if param.swrOption
         data.gamma.SWR.event = data.gamma.SWR.event';
         data.gamma.SWR.power = data.gamma.SWR.power';
       end
+
+      if isfield(data,'hgamma')
+        data.hgamma.SWR.event = data.hgamma.SWR.event';
+        data.hgamma.SWR.power = data.hgamma.SWR.power';
+      end
       
       if isfield(data,'fR')
         data.fR.SWR.event = data.fR.SWR.event';
@@ -747,6 +766,11 @@ if param.spectOption
     if isfield(data,'gamma')
       data.gamma.SWR = calcEvFFT(data.gamma.SWR, data.param, data.gamma.lim1, data.gamma.lim2);
       data.gamma.SWR = calcEvPhase(data.gamma.SWR, data.SWR, data.gamma.lim1, data.gamma.lim2);
+    end
+
+    if isfield(data,'hgamma')
+      data.hgamma.SWR = calcEvFFT(data.hgamma.SWR, data.param, data.hgamma.lim1, data.hgamma.lim2);
+      data.hgamma.SWR = calcEvPhase(data.hgamma.SWR, data.SWR, data.hgamma.lim1, data.hgamma.lim2);
     end
     
     if isfield(data,'fR')
@@ -856,7 +880,10 @@ if isfield(data, 'gamma')
   if isfield(data.gamma, 'SWR') data.gamma.SWR = orderStruct(data.gamma.SWR); end
 end
 
-if isfield(data, 'hgamma') data.hgamma = orderStruct(data.hgamma); end
+if isfield(data, 'hgamma')
+  data.hgamma = orderStruct(data.hgamma);
+  if isfield(data.hgamma, 'SWR') data.hgamma.SWR = orderStruct(data.hgamma.SWR); end
+end
 
 if isfield(data, 'fR')
   data.fR = orderStruct(data.fR);

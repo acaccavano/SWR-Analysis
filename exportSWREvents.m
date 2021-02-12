@@ -49,6 +49,20 @@ if isfield(data, 'gamma')
   end
 end
 
+% LFP High Gamma
+if isfield(data, 'hgamma')
+  if isfield(data.hgamma, 'SWR')
+    if isfield(data.hgamma.SWR, 'power') outTable = [outTable table(10^6 * data.hgamma.SWR.power, 'VariableNames', {'HGamma_Power_uV2'})]; end
+    if isfield(data.hgamma.SWR, 'FFT')
+      if isfield(data.hgamma.SWR.FFT, 'pkFreq') outTable = [outTable table(data.hgamma.SWR.FFT.pkFreq, 'VariableNames', {'HGamma_pkFreq_Hz'})]; end
+    end
+    if isfield(data.hgamma.SWR, 'phase')
+      if isfield(data.hgamma.SWR.phase, 'nCycle') outTable = [outTable table(data.hgamma.SWR.phase.nCycle, 'VariableNames', {'HGamma_nCycle'})]; end
+      if isfield(data.hgamma.SWR.phase, 'phFreq') outTable = [outTable table(data.hgamma.SWR.phase.phFreq, 'VariableNames', {'HGamma_phFreq_Hz'})]; end
+    end
+  end
+end
+
 % LFP Ripple
 if isfield(data, 'R')
   if isfield(data.R, 'SWR')

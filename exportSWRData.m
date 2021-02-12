@@ -21,6 +21,7 @@ end
 
 % Set default parameters
 if ~isfield(param,'gammaOption')      param.gammaOption      = 1; end
+if ~isfield(param,'hgammaOption')     param.hgammaOption     = 1; end
 if ~isfield(param,'rOption')          param.rOption          = 1; end
 if ~isfield(param,'fROption')         param.fROption         = 1; end
 if ~isfield(param,'cellOption')       param.cellOption       = 0; end
@@ -44,9 +45,10 @@ end
 % Check for partial first and last events, and remove if so:
 if (dataOutSize(1) < max(dataOutSize))
   data.SWR.event(1) = [];
-  if param.gammaOption   data.gamma.SWR.event(1) = []; end
-  if param.rOption       data.R.SWR.event(1)     = []; end
-  if param.fROption      data.fR.SWR.event(1)    = []; end
+  if param.gammaOption   data.gamma.SWR.event(1)  = []; end
+  if param.hgammaOption  data.hgamma.SWR.event(1) = []; end
+  if param.rOption       data.R.SWR.event(1)      = []; end
+  if param.fROption      data.fR.SWR.event(1)     = []; end
   if param.cellOption
     if param.cellRawOption    data.C.SWR.event(1)      = []; end
     data.C.SWR.evNorm(1) = [];
@@ -59,9 +61,10 @@ end
 
 if (dataOutSize(nEvs) < max(dataOutSize))
   data.SWR.event(nEvs) = [];
-  if param.gammaOption   data.gamma.SWR.event(nEvs) = []; end
-  if param.rOption       data.R.SWR.event(nEvs)     = []; end
-  if param.fROption      data.fR.SWR.event(nEvs)    = []; end
+  if param.gammaOption   data.gamma.SWR.event(nEvs)  = []; end
+  if param.hgammaOption  data.hgamma.SWR.event(nEvs) = []; end
+  if param.rOption       data.R.SWR.event(nEvs)      = []; end
+  if param.fROption      data.fR.SWR.event(nEvs)     = []; end
   if param.cellOption
     if param.cellRawOption    data.C.SWR.event(nEvs)      = []; end
     data.C.SWR.evNorm(nEvs) = [];
@@ -73,7 +76,7 @@ if (dataOutSize(nEvs) < max(dataOutSize))
 end
 
 dataOut = (0: data.LFP.samplingInt : 2*param.swrWindow)';
-nSignals = 1 + param.gammaOption + param.rOption;
+nSignals = 1 + param.gammaOption + param.hgammaOption + param.rOption + param.fROption;
 if param.cellOption nSignals = nSignals + 1 + param.cellRawOption + param.cellGammaOption + param.cellRippleOption; end
 
 % Output table names
@@ -93,6 +96,13 @@ for i = 1:nEvs
   if param.gammaOption
     dataOut = horzcat(dataOut, data.gamma.SWR.event{i});
     tableVarNames{nameInd} = ['G_' num2str(i)];
+    nameInd = nameInd + 1;
+  end
+
+  % High Gamma event-locked data
+  if param.hgammaOption
+    dataOut = horzcat(dataOut, data.hgamma.SWR.event{i});
+    tableVarNames{nameInd} = ['hG_' num2str(i)];
     nameInd = nameInd + 1;
   end
   

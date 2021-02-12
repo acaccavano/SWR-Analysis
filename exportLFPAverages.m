@@ -61,7 +61,17 @@ end
 
 % LFP High Gamma
 if isfield(data, 'hgamma')
-  if isfield(data.hgamma, 'tPower') outTable = [outTable table(10^6 * data.hgamma.tPower, 'VariableNames', {'HighGamma_Total_Power_uV2'})]; end
+  if isfield(data.hgamma, 'tPower') outTable = [outTable table(10^6 * data.hgamma.tPower, 'VariableNames', {'HGamma_Total_Power_uV2'})]; end
+    if isfield(data.hgamma, 'SWR')
+    if isfield(data.hgamma.SWR, 'power') outTable = [outTable table(10^6 * mean(data.hgamma.SWR.power,'omitnan'), 'VariableNames', {'HGamma_SWR_Power_uV2'})]; end
+    if isfield(data.hgamma.SWR, 'FFT')
+      if isfield(data.hgamma.SWR.FFT, 'pkFreq') outTable = [outTable table(mean(data.hgamma.SWR.FFT.pkFreq,'omitnan'), 'VariableNames', {'HGamma_SWR_pkFreq_Hz'})]; end
+    end
+    if isfield(data.hgamma.SWR, 'phase')
+      if isfield(data.hgamma.SWR.phase, 'nCycle') outTable = [outTable table(mean(data.hgamma.SWR.phase.nCycle,'omitnan'), 'VariableNames', {'HGamma_SWR_nCycle'})]; end
+      if isfield(data.hgamma.SWR.phase, 'phFreq') outTable = [outTable table(mean(data.hgamma.SWR.phase.phFreq,'omitnan'), 'VariableNames', {'HGamma_SWR_phFreq_Hz'})]; end
+    end
+  end
 end
 
 % LFP Ripple
