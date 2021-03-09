@@ -31,19 +31,19 @@ S.phase.minLoc = NaN * ones(length(S.phase.maxVal) - 1, 1);
 % Piecewise Linear Interpolation
 S.phase.tPhase = zeros(length(S.tSeries), 1);
 
-formatSpec = fprintfInline('interpolating piecewise linear phase function for peak =  ', length(S.phase.maxLoc)-1);
+% formatSpec = fprintfInline('interpolating piecewise linear phase function for peak =  ', length(S.phase.maxLoc)-1);
 for i = 1 : length(S.phase.maxLoc) - 1
   
   [S.phase.minVal(i), S.phase.minLoc(i)] = min(S.tSeries(S.phase.maxLoc(i) : S.phase.maxLoc(i+1)));
-  S.phase.minLoc(i) = S.phase.minLoc(i) + S.phase.maxLoc(i);
+  S.phase.minLoc(i) = S.phase.maxLoc(i) + S.phase.minLoc(i);
   
   tSubArray1 = S.phase.maxLoc(i) : S.phase.minLoc(i);
   tSubArray2 = S.phase.minLoc(i) : S.phase.maxLoc(i+1);
   S.phase.tPhase(tSubArray1) = linspace(0, pi, length(tSubArray1));
   S.phase.tPhase(tSubArray2) = linspace(pi, 2*pi, length(tSubArray2));
-  fprintf(formatSpec,i);
+%   fprintf(formatSpec,i);
 end
-fprintf('...done\n');
+% fprintf('...done\n');
 
 % Calculate number of cycles and frequency
 S.phase.nCycle = length(S.phase.maxLoc) - 1;

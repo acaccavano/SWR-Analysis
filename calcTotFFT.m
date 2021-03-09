@@ -42,12 +42,6 @@ S.FFT.subRange = find(S.FFT.fftRange>S.lim1 & S.FFT.fftRange<S.lim2);
 [~, pkFreqInd] = max(S.FFT.F1(S.FFT.subRange));
 S.FFT.pkFreq = S.FFT.fftRange(S.FFT.subRange(pkFreqInd));
 
-
-% Calculate full-width half-maximum
-% S.FFT.fftAve    = mean(cat(2, S.FFT.F1{:}), 2);
-% S.FFT.fftAve    = S.FFT.fftAve';
-% [~, pkFreqInd]  = max(S.FFT.fftAve(S.FFT.subRange));
-% S.FFT.pkFreqAve = S.FFT.fftRange(S.FFT.subRange(pkFreqInd));
-% S.FFT = orderStruct(S.FFT);
+S.FFT = orderStruct(S.FFT);
 
 end

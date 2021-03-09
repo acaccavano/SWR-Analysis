@@ -747,35 +747,58 @@ end
 if param.spectOption
   fprintf(['spectral analysis of total LFP signal (file ' dataFileName ')... ']);
   fRange = param.spectLim1 : param.spectLim2;
+  data.LFP = calcTotFFT(data.LFP, data.param);
   [data.LFP, ~] = calcSpect(data.LFP, [], fRange, data.param.Fs, 30, 0);
-  fprintf('done\n');
+
+  % Compute total FFT and phase for theta, beta, gamma, and high gamma (if selected)
+  if isfield(data,'theta')
+    data.theta = calcTotFFT(data.theta, data.param);
+    data.theta = calcTotPhase(data.theta, data.LFP, data.param);
+  end
   
+  if isfield(data,'beta')
+    data.beta = calcTotFFT(data.beta, data.param);
+    data.beta = calcTotPhase(data.beta, data.LFP, data.param);
+  end
+  
+  if isfield(data,'gamma')
+    data.gamma = calcTotFFT(data.gamma, data.param);
+    data.gamma = calcTotPhase(data.gamma, data.LFP, data.param);
+  end
+  
+  if isfield(data,'hgamma')
+    data.hgamma = calcTotFFT(data.hgamma, data.param);
+    data.hgamma = calcTotPhase(data.hgamma, data.LFP, data.param);
+  end
+  
+  fprintf('done\n');
+      
   % If SWR events analyzed, detect spectrogram for event-locked data
   if (param.swrOption)
     fprintf(['spectral analysis of SWR-locked events (file ' dataFileName ')... ']);
     [data.SWR, ~] = calcSpect(data.SWR, [], fRange, data.param.Fs, 3, 0);
-    data.SWR = calcEvFFT(data.SWR, data.param, param.spectLim1, param.spectLim2);
+    data.SWR = calcEvFFT(data.SWR, data.param, data.param.spectLim1, data.param.spectLim2);
     fprintf('done\n');
     
-    % Compute FFTs and phase over time for SWR-locked gamma, ripple, and fast ripple (if selected)
+    % Compute SWR event-locked FFT and phase for gamma, high gamma, ripple, and fast ripple (if selected)
     if isfield(data,'R')
       data.R.SWR = calcEvFFT(data.R.SWR, data.param, data.R.lim1, data.R.lim2);
-      data.R.SWR = calcEvPhase(data.R.SWR, data.SWR, data.R.lim1, data.R.lim2);
+      data.R.SWR = calcEvPhase(data.R.SWR, data.SWR, data.param, data.R.lim1, data.R.lim2);
     end
     
     if isfield(data,'gamma')
       data.gamma.SWR = calcEvFFT(data.gamma.SWR, data.param, data.gamma.lim1, data.gamma.lim2);
-      data.gamma.SWR = calcEvPhase(data.gamma.SWR, data.SWR, data.gamma.lim1, data.gamma.lim2);
+      data.gamma.SWR = calcEvPhase(data.gamma.SWR, data.SWR, data.param, data.gamma.lim1, data.gamma.lim2);
     end
 
     if isfield(data,'hgamma')
       data.hgamma.SWR = calcEvFFT(data.hgamma.SWR, data.param, data.hgamma.lim1, data.hgamma.lim2);
-      data.hgamma.SWR = calcEvPhase(data.hgamma.SWR, data.SWR, data.hgamma.lim1, data.hgamma.lim2);
+      data.hgamma.SWR = calcEvPhase(data.hgamma.SWR, data.SWR, data.param, data.hgamma.lim1, data.hgamma.lim2);
     end
     
     if isfield(data,'fR')
       data.fR.SWR = calcEvFFT(data.fR.SWR, data.param, data.fR.lim1, data.fR.lim2);
-      data.fR.SWR = calcEvPhase(data.fR.SWR, data.SWR, data.fR.lim1, data.fR.lim2);
+      data.fR.SWR = calcEvPhase(data.fR.SWR, data.SWR, data.param, data.fR.lim1, data.fR.lim2);
     end
     
   end
