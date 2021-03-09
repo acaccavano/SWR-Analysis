@@ -20,15 +20,35 @@ if isempty(exportFile)
   if ~all(exportFile) error('No spike events to be exported - no file selected'); end
 end
 
-varNames = {'evStart', 'evPeak', 'evEnd', 'swrCoinc'};
-outTable = table(data.C.spike.evStartA, data.C.spike.evPeakA, data.C.spike.evEndA, data.C.spike.swrMatrix, 'VariableNames', varNames);
+varNames = {'evStart', 'evPeak', 'evEnd'};
+outTable = table(data.C.spike.evStartA, data.C.spike.evPeakA, data.C.spike.evEndA, 'VariableNames', varNames);
+
+if isfield(data.C.spike, 'swrMatrix')
+  outTable = [outTable table(data.C.spike.swrMatrix, 'VariableNames', {'swrCoinc'})];
+end
+
+if isfield(data.C.spike, 'theta')
+  outTable = [outTable table(data.C.spike.theta.phase, data.C.spike.theta.phaseX, data.C.spike.theta.phaseY, 'VariableNames', {'theta.phase', 'theta.phaseX', 'theta.phaseY'})];
+end
+
+if isfield(data.C.spike, 'beta')
+  outTable = [outTable table(data.C.spike.beta.phase, data.C.spike.beta.phaseX, data.C.spike.beta.phaseY, 'VariableNames', {'beta.phase', 'beta.phaseX', 'beta.phaseY'})];
+end
 
 if isfield(data.C.spike, 'gamma')
   outTable = [outTable table(data.C.spike.gamma.phase, data.C.spike.gamma.phaseX, data.C.spike.gamma.phaseY, 'VariableNames', {'gamma.phase', 'gamma.phaseX', 'gamma.phaseY'})];
 end
 
+if isfield(data.C.spike, 'hgamma')
+  outTable = [outTable table(data.C.spike.hgamma.phase, data.C.spike.hgamma.phaseX, data.C.spike.hgamma.phaseY, 'VariableNames', {'hgamma.phase', 'hgamma.phaseX', 'hgamma.phaseY'})];
+end
+
 if isfield(data.C.spike, 'R')
   outTable = [outTable table(data.C.spike.R.phase, data.C.spike.R.phaseX, data.C.spike.R.phaseY, 'VariableNames', {'R.phase', 'R.phaseX', 'R.phaseY'})];
+end
+
+if isfield(data.C.spike, 'fR')
+  outTable = [outTable table(data.C.spike.fR.phase, data.C.spike.fR.phaseX, data.C.spike.fR.phaseY, 'VariableNames', {'fR.phase', 'fR.phaseX', 'fR.phaseY'})];
 end
 
 % Replace NaN values with blanks

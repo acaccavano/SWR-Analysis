@@ -10,8 +10,10 @@ function [data, hand] = analyzeSpkFile(data, hand, param, saveFile, spkFile, bst
 %   param      = structure containing all parameters including:
 %     param.fileNum              = 1 = Single Recording, 2 = Multiple/Batch analysis (disables plotting)
 %     param.importSpkOption      = boolean flag to import spike file (needed unless reanalyzing) (default = 1)
-%     param.swrSpkOption         = boolean flag to calculate coincidence of SWRs and spikes (default = 1)
+%     param.swrSpkOption         = boolean flag to calculate coincidence of SWRs and spikes and spike-phase coupling during SWRs (default = 1)
 %     param.swrBstOption         = boolean flag to calculate coincidence of SWRs and bursts (default = 1)
+%     param.lfpSpkOption         = boolean flag to calculate spike-phase over duration of recording (instead of swrSpkOption - only 1 selectable, default = 0)
+%     param.sdMultPhase          = for spike-phase coupling, the SD multiple the peak-trough amplitude must exceed in the oscillation surrounding the spike to be be considered
 %     param.useSWRDurationOption = boolean flag to use detected SWR detection for coincidence detection (default = 1)
 %     param.useSWRWindowOption   = boolean flag to use standard swrWindow for coincidence detection (default = 0)
 %     param.swrWindow            = +/- window around SWR peak events (default = 100 ms)
@@ -56,6 +58,7 @@ if ~isfield(param,'importSpkOption')      param.importSpkOption      = 1;   end
 if ~isfield(param,'swrSpkOption')         param.swrSpkOption         = 1;   end
 if ~isfield(param,'swrBstOption')         param.swrBstOption         = 1;   end
 if ~isfield(param,'lfpSpkOption')         param.lfpSpkOption         = 0;   end
+if ~isfield(param,'sdMultPhase')          param.sdMultPhase          = 4;   end
 if ~isfield(param,'useSWRDurationOption') param.useSWRDurationOption = 1;   end
 if ~isfield(param,'useSWRWindowOption')   param.useSWRWindowOption   = 0;   end
 if ~isfield(param,'swrWindow')            param.swrWindow            = 100; end
@@ -501,21 +504,13 @@ if param.swrSpkOption
     end
   end
   
-  %% Calculate ripple phase of spikes
+  %% Calculate spike-phase within SWRs
   if ~isempty(data.SWR.spike.evStartA) && isfield(data.R.SWR.phase, 'evPhase')
     fprintf(['detecting oscillation phase of spikes during SWRs (file ' dataFileName ')... ']);
     
-    % Initialize phase variables
-    data.C.SWR.spike.R = struct;
-    data.C.SWR.spike.R.phase = [];
-    data.C.SWR.spike.R.phase{length(data.C.SWR.spike.evStartA)} = [];
-    data.C.SWR.spike.R.phase = data.C.SWR.spike.R.phase';
+    % Initialize phase variables:
     
-    data.C.spike.R.phase  = NaN*ones(length(data.C.spike.evStartA), 1);
-    data.C.spike.R.phaseX = NaN*ones(length(data.C.spike.evPeak), 1);
-    data.C.spike.R.phaseY = NaN*ones(length(data.C.spike.evPeak), 1);
-    
-    % Calculate gamma phase if available (have to iterate through structure to not throw error)
+    % Gamma:
     if isfield(data, 'gamma')
       if isfield(data.gamma, 'SWR')
         if isfield(data.gamma.SWR, 'phase')
@@ -523,165 +518,63 @@ if param.swrSpkOption
           data.C.SWR.spike.gamma.phase = [];
           data.C.SWR.spike.gamma.phase{length(data.C.SWR.spike.evStartA)} = [];
           data.C.SWR.spike.gamma.phase = data.C.SWR.spike.gamma.phase';
-          
           data.C.spike.gamma.phase  = NaN*ones(length(data.C.spike.evStartA), 1);
           data.C.spike.gamma.phaseX = NaN*ones(length(data.C.spike.evStartA), 1);
           data.C.spike.gamma.phaseY = NaN*ones(length(data.C.spike.evStartA), 1);
+          minAmpG = std(data.gamma.tSeries) * param.sdMultPhase;
         end
-      end
-    end
-    
-    nSamples = max(cellfun(@length, data.SWR.event));
-    
-    % Thresholds for phase using previously saved param.sdMult from analyzeLFP
-    minAmpR = std(data.R.tSeries) * data.LFP.param.sdMult;
-    if isfield(data.C.SWR.spike, 'gamma') minAmpG = std(data.gamma.tSeries) * data.LFP.param.sdMult; end
-    
-    for spk1 = 1:data.C.spike.nEventsA
-      if (data.C.spike.swrMatrix(spk1) == 1) % Coincident spike
-        spkInd = data.C.spike.evIndex(:, 2);
-        swr    = data.C.spike.evIndex(spkInd == spk1, 1);
-        loWin  = max(round(data.SWR.spike.evPeakA(swr) - param.swrWindow / data.LFP.samplingInt), 1);
-        spk2   = find(data.C.SWR.spike.evStartA{swr} == data.C.spike.evStartA(spk1) - (loWin - 1));
-        
-        % Only consider non-truncated SWRs with spikes
-        if(length(data.SWR.event{swr}) == nSamples) && ~isempty(spk2)
-
-          peakTime = data.SWR.evTiming(data.C.SWR.spike.evPeakA{swr}(spk2));
-          
-          % Only select spikes for which trough-to-peak amplitude is greater than minAmpR
-          precMin  = max(data.R.SWR.phase.minLoc{swr}(data.R.SWR.phase.minLoc{swr} < peakTime));
-          procMin  = min(data.R.SWR.phase.minLoc{swr}(data.R.SWR.phase.minLoc{swr} >= peakTime));
-          precMax  = max(data.R.SWR.phase.maxLoc{swr}(data.R.SWR.phase.maxLoc{swr} < peakTime));
-          procMax  = min(data.R.SWR.phase.maxLoc{swr}(data.R.SWR.phase.maxLoc{swr} >= peakTime));
-          
-          if ~isempty(precMin) && ~isempty(precMax) && ~isempty(procMin) && ~isempty(procMax)
-            if precMin > precMax
-              ampR = data.R.SWR.phase.maxVal{swr}(data.R.SWR.phase.maxLoc{swr} == procMax) - data.R.SWR.phase.minVal{swr}(data.R.SWR.phase.minLoc{swr} == precMin);
-            else
-              ampR = data.R.SWR.phase.maxVal{swr}(data.R.SWR.phase.maxLoc{swr} == precMax) - data.R.SWR.phase.minVal{swr}(data.R.SWR.phase.minLoc{swr} == procMin);
-            end
-            
-            if ampR > minAmpR
-              data.C.SWR.spike.R.phase{swr}(spk2) = data.R.SWR.phase.evPhase{swr}(data.C.SWR.spike.evPeakA{swr}(spk2));
-              data.C.spike.R.phase(spk1)  = data.C.SWR.spike.R.phase{swr}(spk2);
-              data.C.spike.R.phaseX(spk1) = cos(data.C.spike.R.phase(spk1));
-              data.C.spike.R.phaseY(spk1) = sin(data.C.spike.R.phase(spk1));
-            end
-          end
-          
-          % Calculate gamma phase if available
-          if isfield(data.C.SWR.spike, 'gamma')
-            
-            % Only select spikes for which trough-to-peak amplitude is greater than minAmpG
-            precMin  = max(data.gamma.SWR.phase.minLoc{swr}(data.gamma.SWR.phase.minLoc{swr} < peakTime));
-            procMin  = min(data.gamma.SWR.phase.minLoc{swr}(data.gamma.SWR.phase.minLoc{swr} >= peakTime));
-            precMax  = max(data.gamma.SWR.phase.maxLoc{swr}(data.gamma.SWR.phase.maxLoc{swr} < peakTime));
-            procMax  = min(data.gamma.SWR.phase.maxLoc{swr}(data.gamma.SWR.phase.maxLoc{swr} >= peakTime));
-            
-            if ~isempty(precMin) && ~isempty(precMax) && ~isempty(procMin) && ~isempty(procMax)
-              if precMin > precMax
-                ampG = data.gamma.SWR.phase.maxVal{swr}(data.gamma.SWR.phase.maxLoc{swr} == procMax) - data.gamma.SWR.phase.minVal{swr}(data.gamma.SWR.phase.minLoc{swr} == precMin);
-              else
-                ampG = data.gamma.SWR.phase.maxVal{swr}(data.gamma.SWR.phase.maxLoc{swr} == precMax) - data.gamma.SWR.phase.minVal{swr}(data.gamma.SWR.phase.minLoc{swr} == procMin);
-              end
-              
-              if ampG > minAmpG
-                data.C.SWR.spike.gamma.phase{swr}(spk2) = data.gamma.SWR.phase.evPhase{swr}(data.C.SWR.spike.evPeakA{swr}(spk2));
-                data.C.spike.gamma.phase(spk1) = data.C.SWR.spike.gamma.phase{swr}(spk2);
-                data.C.spike.gamma.phaseX(spk1) = cos(data.C.spike.gamma.phase(spk1));
-                data.C.spike.gamma.phaseY(spk1) = sin(data.C.spike.gamma.phase(spk1));
-              end
-            end
-          end
-        end
-      end
-    end
-    
-    if param.calcPhaseStats
-      rPhase = data.C.spike.R.phase(~isnan(data.C.spike.R.phase));
-      if length(rPhase) > 0
-        data.C.spike.R.phaseAve = circ_mean(rPhase);
-        if (data.C.spike.R.phaseAve < 0) data.C.spike.R.phaseAve = data.C.spike.R.phaseAve + 2*pi; end
-        data.C.spike.R.phaseR   = circ_r(rPhase);
-        if length(rPhase) > 1
-          [data.C.spike.R.phaseP, data.C.spike.R.phaseZ] = circ_rtest(rPhase);
-        end
-      end
-      
-      if isfield(data.C.SWR.spike, 'gamma')
-        gPhase = data.C.spike.gamma.phase(~isnan(data.C.spike.gamma.phase));
-        if length(gPhase) > 0
-          data.C.spike.gamma.phaseAve = circ_mean(gPhase);
-          if (data.C.spike.gamma.phaseAve < 0) data.C.spike.gamma.phaseAve = data.C.spike.gamma.phaseAve + 2*pi; end
-          data.C.spike.gamma.phaseR   = circ_r(gPhase);
-          if length(gPhase) > 1
-            [data.C.spike.gamma.phaseP, data.C.spike.gamma.phaseZ] = circ_rtest(gPhase);
-          end
-        end
-      end
-    end
-    
-    fprintf('done\n');
-  end
-end
-
-
-% Calculate spike-phase coupling of entire file (if option selected)
-  if param.lfpSpkOption
-    fprintf(['detecting oscillation phase of spikes (file ' dataFileName ')... ']);
-    
-    % Gamma:
-    if isfield(data, 'gamma')
-      if isfield(data.gamma, 'phase')
-        data.C.spike.gamma = struct;
-        data.C.spike.gamma.phase  = NaN*ones(length(data.C.spike.evStartA), 1);
-        data.C.spike.gamma.phaseX = NaN*ones(length(data.C.spike.evStartA), 1);
-        data.C.spike.gamma.phaseY = NaN*ones(length(data.C.spike.evStartA), 1);
       end
     end
     
     % High Gamma:
     if isfield(data, 'hgamma')
-      if isfield(data.hgamma, 'phase')
-        data.C.spike.hgamma = struct;
-        data.C.spike.hgamma.phase  = NaN*ones(length(data.C.spike.evStartA), 1);
-        data.C.spike.hgamma.phaseX = NaN*ones(length(data.C.spike.evStartA), 1);
-        data.C.spike.hgamma.phaseY = NaN*ones(length(data.C.spike.evStartA), 1);
-      end
-    end
-    
-    % Initialize phase variables
-    data.C.SWR.spike.R = struct;
-    data.C.SWR.spike.R.phase = [];
-    data.C.SWR.spike.R.phase{length(data.C.SWR.spike.evStartA)} = [];
-    data.C.SWR.spike.R.phase = data.C.SWR.spike.R.phase';
-    
-    data.C.spike.R.phase  = NaN*ones(length(data.C.spike.evStartA), 1);
-    data.C.spike.R.phaseX = NaN*ones(length(data.C.spike.evPeak), 1);
-    data.C.spike.R.phaseY = NaN*ones(length(data.C.spike.evPeak), 1);
-    
-    % Calculate gamma phase if available (have to iterate through structure to not throw error)
-    if isfield(data, 'gamma')
-      if isfield(data.gamma, 'SWR')
-        if isfield(data.gamma.SWR, 'phase')
-          data.C.SWR.spike.gamma = struct;
-          data.C.SWR.spike.gamma.phase = [];
-          data.C.SWR.spike.gamma.phase{length(data.C.SWR.spike.evStartA)} = [];
-          data.C.SWR.spike.gamma.phase = data.C.SWR.spike.gamma.phase';
-          
-          data.C.spike.gamma.phase  = NaN*ones(length(data.C.spike.evStartA), 1);
-          data.C.spike.gamma.phaseX = NaN*ones(length(data.C.spike.evStartA), 1);
-          data.C.spike.gamma.phaseY = NaN*ones(length(data.C.spike.evStartA), 1);
+      if isfield(data.hgamma, 'SWR')
+        if isfield(data.hgamma.SWR, 'phase')
+          data.C.SWR.spike.hgamma = struct;
+          data.C.SWR.spike.hgamma.phase = [];
+          data.C.SWR.spike.hgamma.phase{length(data.C.SWR.spike.evStartA)} = [];
+          data.C.SWR.spike.hgamma.phase = data.C.SWR.spike.hgamma.phase';
+          data.C.spike.hgamma.phase  = NaN*ones(length(data.C.spike.evStartA), 1);
+          data.C.spike.hgamma.phaseX = NaN*ones(length(data.C.spike.evStartA), 1);
+          data.C.spike.hgamma.phaseY = NaN*ones(length(data.C.spike.evStartA), 1);
+          minAmpHG = std(data.hgamma.tSeries) * param.sdMultPhase;
         end
       end
     end
     
-    nSamples = max(cellfun(@length, data.SWR.event));
+    % Ripple:
+    if isfield(data, 'R')
+      if isfield(data.R, 'SWR')
+        if isfield(data.R.SWR, 'phase')
+          data.C.SWR.spike.R = struct;
+          data.C.SWR.spike.R.phase = [];
+          data.C.SWR.spike.R.phase{length(data.C.SWR.spike.evStartA)} = [];
+          data.C.SWR.spike.R.phase = data.C.SWR.spike.R.phase';
+          data.C.spike.R.phase  = NaN*ones(length(data.C.spike.evStartA), 1);
+          data.C.spike.R.phaseX = NaN*ones(length(data.C.spike.evStartA), 1);
+          data.C.spike.R.phaseY = NaN*ones(length(data.C.spike.evStartA), 1);
+          minAmpR = std(data.R.tSeries) * param.sdMultPhase;
+        end
+      end
+    end
     
-    % Thresholds for phase using previously saved param.sdMult from analyzeLFP
-    minAmpR = std(data.R.tSeries) * data.LFP.param.sdMult;
-    if isfield(data.C.SWR.spike, 'gamma') minAmpG = std(data.gamma.tSeries) * data.LFP.param.sdMult; end
+    % Fast Ripple:
+    if isfield(data, 'fR')
+      if isfield(data.fR, 'SWR')
+        if isfield(data.fR.SWR, 'phase')
+          data.C.SWR.spike.fR = struct;
+          data.C.SWR.spike.fR.phase = [];
+          data.C.SWR.spike.fR.phase{length(data.C.SWR.spike.evStartA)} = [];
+          data.C.SWR.spike.fR.phase = data.C.SWR.spike.fR.phase';
+          data.C.spike.fR.phase  = NaN*ones(length(data.C.spike.evStartA), 1);
+          data.C.spike.fR.phaseX = NaN*ones(length(data.C.spike.evStartA), 1);
+          data.C.spike.fR.phaseY = NaN*ones(length(data.C.spike.evStartA), 1);
+          minAmpFR = std(data.fR.tSeries) * param.sdMultPhase;
+        end
+      end
+    end
+
+    nSamples = max(cellfun(@length, data.SWR.event));
     
     for spk1 = 1:data.C.spike.nEventsA
       if (data.C.spike.swrMatrix(spk1) == 1) % Coincident spike
@@ -692,88 +585,162 @@ end
         
         % Only consider non-truncated SWRs with spikes
         if(length(data.SWR.event{swr}) == nSamples) && ~isempty(spk2)
-
-          peakTime = data.SWR.evTiming(data.C.SWR.spike.evPeakA{swr}(spk2));
           
-          % Only select spikes for which trough-to-peak amplitude is greater than minAmpR
-          precMin  = max(data.R.SWR.phase.minLoc{swr}(data.R.SWR.phase.minLoc{swr} < peakTime));
-          procMin  = min(data.R.SWR.phase.minLoc{swr}(data.R.SWR.phase.minLoc{swr} >= peakTime));
-          precMax  = max(data.R.SWR.phase.maxLoc{swr}(data.R.SWR.phase.maxLoc{swr} < peakTime));
-          procMax  = min(data.R.SWR.phase.maxLoc{swr}(data.R.SWR.phase.maxLoc{swr} >= peakTime));
-          
-          if ~isempty(precMin) && ~isempty(precMax) && ~isempty(procMin) && ~isempty(procMax)
-            if precMin > precMax
-              ampR = data.R.SWR.phase.maxVal{swr}(data.R.SWR.phase.maxLoc{swr} == procMax) - data.R.SWR.phase.minVal{swr}(data.R.SWR.phase.minLoc{swr} == precMin);
-            else
-              ampR = data.R.SWR.phase.maxVal{swr}(data.R.SWR.phase.maxLoc{swr} == precMax) - data.R.SWR.phase.minVal{swr}(data.R.SWR.phase.minLoc{swr} == procMin);
+          % Gamma:
+          if isfield(data.C.SWR.spike, 'gamma')
+            ampG = calcEvPhaseAmp(data.gamma.SWR.phase, swr, data.C.SWR.spike.evPeakA{swr}(spk2));
+            if ampG > minAmpG
+              data.C.SWR.spike.gamma.phase{swr}(spk2) = data.gamma.SWR.phase.evPhase{swr}(data.C.SWR.spike.evPeakA{swr}(spk2));
+              data.C.spike.gamma.phase(spk1) = data.C.SWR.spike.gamma.phase{swr}(spk2);
+              data.C.spike.gamma.phaseX(spk1) = cos(data.C.spike.gamma.phase(spk1));
+              data.C.spike.gamma.phaseY(spk1) = sin(data.C.spike.gamma.phase(spk1));
             end
-            
+          end
+          
+          % High Gamma:
+          if isfield(data.C.SWR.spike, 'hgamma')
+            ampHG = calcEvPhaseAmp(data.hgamma.SWR.phase, swr, data.C.SWR.spike.evPeakA{swr}(spk2));
+            if ampHG > minAmpHG
+              data.C.SWR.spike.hgamma.phase{swr}(spk2) = data.hgamma.SWR.phase.evPhase{swr}(data.C.SWR.spike.evPeakA{swr}(spk2));
+              data.C.spike.hgamma.phase(spk1)  = data.C.SWR.spike.hgamma.phase{swr}(spk2);
+              data.C.spike.hgamma.phaseX(spk1) = cos(data.C.spike.hgamma.phase(spk1));
+              data.C.spike.hgamma.phaseY(spk1) = sin(data.C.spike.hgamma.phase(spk1));
+            end
+          end
+          
+          % Ripple:
+          if isfield(data.C.SWR.spike, 'R')
+            ampR = calcEvPhaseAmp(data.R.SWR.phase, swr, data.C.SWR.spike.evPeakA{swr}(spk2));
             if ampR > minAmpR
               data.C.SWR.spike.R.phase{swr}(spk2) = data.R.SWR.phase.evPhase{swr}(data.C.SWR.spike.evPeakA{swr}(spk2));
               data.C.spike.R.phase(spk1)  = data.C.SWR.spike.R.phase{swr}(spk2);
               data.C.spike.R.phaseX(spk1) = cos(data.C.spike.R.phase(spk1));
               data.C.spike.R.phaseY(spk1) = sin(data.C.spike.R.phase(spk1));
             end
-          end
+          end 
           
-          % Calculate gamma phase if available
-          if isfield(data.C.SWR.spike, 'gamma')
-            
-            % Only select spikes for which trough-to-peak amplitude is greater than minAmpG
-            precMin  = max(data.gamma.SWR.phase.minLoc{swr}(data.gamma.SWR.phase.minLoc{swr} < peakTime));
-            procMin  = min(data.gamma.SWR.phase.minLoc{swr}(data.gamma.SWR.phase.minLoc{swr} >= peakTime));
-            precMax  = max(data.gamma.SWR.phase.maxLoc{swr}(data.gamma.SWR.phase.maxLoc{swr} < peakTime));
-            procMax  = min(data.gamma.SWR.phase.maxLoc{swr}(data.gamma.SWR.phase.maxLoc{swr} >= peakTime));
-            
-            if ~isempty(precMin) && ~isempty(precMax) && ~isempty(procMin) && ~isempty(procMax)
-              if precMin > precMax
-                ampG = data.gamma.SWR.phase.maxVal{swr}(data.gamma.SWR.phase.maxLoc{swr} == procMax) - data.gamma.SWR.phase.minVal{swr}(data.gamma.SWR.phase.minLoc{swr} == precMin);
-              else
-                ampG = data.gamma.SWR.phase.maxVal{swr}(data.gamma.SWR.phase.maxLoc{swr} == precMax) - data.gamma.SWR.phase.minVal{swr}(data.gamma.SWR.phase.minLoc{swr} == procMin);
-              end
-              
-              if ampG > minAmpG
-                data.C.SWR.spike.gamma.phase{swr}(spk2) = data.gamma.SWR.phase.evPhase{swr}(data.C.SWR.spike.evPeakA{swr}(spk2));
-                data.C.spike.gamma.phase(spk1) = data.C.SWR.spike.gamma.phase{swr}(spk2);
-                data.C.spike.gamma.phaseX(spk1) = cos(data.C.spike.gamma.phase(spk1));
-                data.C.spike.gamma.phaseY(spk1) = sin(data.C.spike.gamma.phase(spk1));
-              end
+          % Fast Ripple:
+          if isfield(data.C.SWR.spike, 'fR')
+            ampFR = calcEvPhaseAmp(data.fR.SWR.phase, swr, data.C.SWR.spike.evPeakA{swr}(spk2));
+            if ampFR > minAmpFR
+              data.C.SWR.spike.gamma.phase{swr}(spk2) = data.fR.SWR.phase.evPhase{swr}(data.C.SWR.spike.evPeakA{swr}(spk2));
+              data.C.spike.fR.phase(spk1)  = data.C.SWR.spike.fR.phase{swr}(spk2);
+              data.C.spike.fR.phaseX(spk1) = cos(data.C.spike.fR.phase(spk1));
+              data.C.spike.fR.phaseY(spk1) = sin(data.C.spike.fR.phase(spk1));
             end
           end
         end
       end
     end
+    fprintf('done\n');
+  end
+end
+
+%% Calculate spike-phase coupling of entire file (if option selected)
+if param.lfpSpkOption
+  fprintf(['detecting oscillation phase of spikes over entire file (' dataFileName ')... ']);
+  
+  % Theta:
+  if isfield(data, 'theta')
+    if isfield(data.theta, 'phase')
+      data.C.spike.theta = struct;
+      data.C.spike.theta.phase  = NaN*ones(length(data.C.spike.evStartA), 1);
+      data.C.spike.theta.phaseX = NaN*ones(length(data.C.spike.evStartA), 1);
+      data.C.spike.theta.phaseY = NaN*ones(length(data.C.spike.evStartA), 1);
+      minAmpT = std(data.theta.tSeries) * param.sdMultPhase;
+    end
+  end
+  
+  % Beta:
+  if isfield(data, 'beta')
+    if isfield(data.beta, 'phase')
+      data.C.spike.beta = struct;
+      data.C.spike.beta.phase  = NaN*ones(length(data.C.spike.evStartA), 1);
+      data.C.spike.beta.phaseX = NaN*ones(length(data.C.spike.evStartA), 1);
+      data.C.spike.beta.phaseY = NaN*ones(length(data.C.spike.evStartA), 1);
+      minAmpB = std(data.beta.tSeries) * param.sdMultPhase;
+    end
+  end
+  
+  % Gamma:
+  if isfield(data, 'gamma')
+    if isfield(data.gamma, 'phase')
+      data.C.spike.gamma = struct;
+      data.C.spike.gamma.phase  = NaN*ones(length(data.C.spike.evStartA), 1);
+      data.C.spike.gamma.phaseX = NaN*ones(length(data.C.spike.evStartA), 1);
+      data.C.spike.gamma.phaseY = NaN*ones(length(data.C.spike.evStartA), 1);
+      minAmpG = std(data.gamma.tSeries) * param.sdMultPhase;
+    end
+  end
+  
+  % High Gamma:
+  if isfield(data, 'hgamma')
+    if isfield(data.hgamma, 'phase')
+      data.C.spike.hgamma = struct;
+      data.C.spike.hgamma.phase  = NaN*ones(length(data.C.spike.evStartA), 1);
+      data.C.spike.hgamma.phaseX = NaN*ones(length(data.C.spike.evStartA), 1);
+      data.C.spike.hgamma.phaseY = NaN*ones(length(data.C.spike.evStartA), 1);
+      minAmpHG = std(data.hgamma.tSeries) * param.sdMultPhase;
+    end
+  end
+  
+  %% Spike by spike, calculate phase if oscillation above threshold
+  for spk = 1:data.C.spike.nEventsA
     
-    if param.calcPhaseStats
-      rPhase = data.C.spike.R.phase(~isnan(data.C.spike.R.phase));
-      if length(rPhase) > 0
-        data.C.spike.R.phaseAve = circ_mean(rPhase);
-        if (data.C.spike.R.phaseAve < 0) data.C.spike.R.phaseAve = data.C.spike.R.phaseAve + 2*pi; end
-        data.C.spike.R.phaseR   = circ_r(rPhase);
-        if length(rPhase) > 1
-          [data.C.spike.R.phaseP, data.C.spike.R.phaseZ] = circ_rtest(rPhase);
-        end
-      end
-      
-      if isfield(data.C.SWR.spike, 'gamma')
-        gPhase = data.C.spike.gamma.phase(~isnan(data.C.spike.gamma.phase));
-        if length(gPhase) > 0
-          data.C.spike.gamma.phaseAve = circ_mean(gPhase);
-          if (data.C.spike.gamma.phaseAve < 0) data.C.spike.gamma.phaseAve = data.C.spike.gamma.phaseAve + 2*pi; end
-          data.C.spike.gamma.phaseR   = circ_r(gPhase);
-          if length(gPhase) > 1
-            [data.C.spike.gamma.phaseP, data.C.spike.gamma.phaseZ] = circ_rtest(gPhase);
-          end
-        end
+    % Theta:
+    if isfield(data.C.spike, 'theta')
+      ampT = calcTotPhaseAmp(data.theta.phase, data.C.spike.evPeakA(spk));
+      if ampT > minAmpT
+        data.C.spike.theta.phase(spk)  = data.theta.phase.tPhase(data.C.spike.evPeakA(spk));
+        data.C.spike.theta.phaseX(spk) = cos(data.C.spike.theta.phase(spk));
+        data.C.spike.theta.phaseY(spk) = sin(data.C.spike.theta.phase(spk));
       end
     end
     
-    fprintf('done\n');
+    % Beta:
+    if isfield(data.C.spike, 'beta')
+      ampB = calcTotPhaseAmp(data.beta.phase, data.C.spike.evPeakA(spk));
+      if ampB > minAmpB
+        data.C.spike.beta.phase(spk)  = data.beta.phase.tPhase(data.C.spike.evPeakA(spk));
+        data.C.spike.beta.phaseX(spk) = cos(data.C.spike.beta.phase(spk));
+        data.C.spike.beta.phaseY(spk) = sin(data.C.spike.beta.phase(spk));
+      end
+    end
+    
+    % Gamma:
+    if isfield(data.C.spike, 'gamma')
+      ampG = calcTotPhaseAmp(data.gamma.phase, data.C.spike.evPeakA(spk));
+      if ampG > minAmpG
+        data.C.spike.gamma.phase(spk)  = data.gamma.phase.tPhase(data.C.spike.evPeakA(spk));
+        data.C.spike.gamma.phaseX(spk) = cos(data.C.spike.gamma.phase(spk));
+        data.C.spike.gamma.phaseY(spk) = sin(data.C.spike.gamma.phase(spk));
+      end
+    end
+    
+    % High Gamma:
+    if isfield(data.C.spike, 'hgamma')
+      ampHG = calcTotPhaseAmp(data.hgamma.phase, data.C.spike.evPeakA(spk));
+      if ~isnan(ampHG) && ampHG > minAmpHG
+        data.C.spike.hgamma.phase(spk)  = data.hgamma.phase.tPhase(data.C.spike.evPeakA(spk));
+        data.C.spike.hgamma.phaseX(spk) = cos(data.C.spike.hgamma.phase(spk));
+        data.C.spike.hgamma.phaseY(spk) = sin(data.C.spike.hgamma.phase(spk));
+      end
+    end
   end
-
-
-
-
+  fprintf('done\n');
+end
+    
+%% Calculate additional phase stats if option selected (requires circular statistics package)
+if param.calcPhaseStats
+  fprintf(['calculating circular phase statistics (file: ' dataFileName ')... ']);
+  if isfield(data.C.spike, 'theta')  data.C.spike.theta  = calcPhaseStats(data.C.spike.theta);  end
+  if isfield(data.C.spike, 'beta')   data.C.spike.beta   = calcPhaseStats(data.C.spike.beta);   end
+  if isfield(data.C.spike, 'gamma')  data.C.spike.gamma  = calcPhaseStats(data.C.spike.gamma);  end
+  if isfield(data.C.spike, 'hgamma') data.C.spike.hgamma = calcPhaseStats(data.C.spike.hgamma); end
+  if isfield(data.C.spike, 'R')      data.C.spike.R      = calcPhaseStats(data.C.spike.R);      end
+  if isfield(data.C.spike, 'fR')     data.C.spike.fR     = calcPhaseStats(data.C.spike.fR);     end
+  fprintf('done\n');
+end
 
 % Re-order structure arrays:
 data.C         = orderStruct(data.C);

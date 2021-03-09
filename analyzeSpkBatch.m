@@ -9,6 +9,8 @@ function analyzeSpkBatch(param, dataFolder, saveFolder, spkFolder, bstFolder, ex
 %     param.importSpkOption      = boolean flag to import spike file (needed unless reanalyzing) (default = 1)
 %     param.swrSpkOption         = boolean flag to calculate coincidence of SWRs and spikes (default = 1)
 %     param.swrBstOption         = boolean flag to calculate coincidence of SWRs and bursts (default = 1)
+%     param.lfpSpkOption         = boolean flag to calculate spike-phase over duration of recording (instead of swrSpkOption - only 1 selectable, default = 0)
+%     param.sdMultPhase          = for spike-phase coupling, the SD multiple the peak-trough amplitude must exceed in the oscillation surrounding the spike to be be considered
 %     param.useSWRDurationOption = boolean flag to use detected SWR detection for coincidence detection (default = 1)
 %     param.useSWRWindowOption   = boolean flag to use standard swrWindow for coincidence detection (default = 0)
 %     param.swrWindow            = +/- window around SWR peak events (default = 100 ms)
@@ -46,6 +48,8 @@ if ~isfield(param,'fileNum')              param.fileNum              = 2;   end
 if ~isfield(param,'importSpkOption')      param.importSpkOption      = 1;   end
 if ~isfield(param,'swrSpkOption')         param.swrSpkOption         = 1;   end
 if ~isfield(param,'swrBstOption')         param.swrBstOption         = 1;   end
+if ~isfield(param,'lfpSpkOption')         param.lfpSpkOption         = 0;   end
+if ~isfield(param,'sdMultPhase')          param.sdMultPhase          = 4;   end
 if ~isfield(param,'useSWRDurationOption') param.useSWRDurationOption = 1;   end
 if ~isfield(param,'useSWRWindowOption')   param.useSWRWindowOption   = 0;   end
 if ~isfield(param,'swrWindow')            param.swrWindow            = 100; end
