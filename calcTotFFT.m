@@ -23,33 +23,24 @@ S.FFT.fftRange = linspace(0,param.Fs,nfft+1);
 S.FFT.fftRange = S.FFT.fftRange(1:nfft/2+1);
 
 % Divide the data into nSections with length of nfft
-S.tSeries = reshape(S.tSeries(1:nSection*nfft), [nfft, nSection]);
+U = reshape(S.tSeries(1:nSection*nfft), [nfft, nSection]);
 
 % Window function
-win = hann(nfft,'Periodic')'; % create a hanning window with nfft values
-W = repmat(win, nSection,1);  % create "window" matrix to multiply with each section
-k = nfft/sum(win,2);          % correction coefficient of window function (not sure if correct)
-Uw = S.tSeries .* W;          % values of the section multiplied by window function
+win = hann(nfft,'Periodic')';   % create a hanning window with nfft values
+W = repmat(win, nSection, 1)';  % create "window" matrix to multiply with each section
+k = nfft/sum(win,2);            % correction coefficient of window function (not sure if correct)
+Uw = U .* W;                    % values of the section multiplied by window function
 
 % Calculate the frequency spectrum
-dim = 2;       % defining direction for fft()
-S.FFT.F = fft(Uw,nfft,dim);
+S.FFT.F = fft(Uw,nfft,1);
 S.FFT.F2 = k*abs(S.FFT.F);   % Multiply with correction coefficient for window function
-S.FFT.F1 = (1/(nSection*nfft))*sum(S.FFT.F2);  % Average the sections
-S.FFT.F1 = 2*S.FFT.F1(1,1:nfft/2+1);     % Multiply the values by 2 --> two spectral lines make up one amplitude                       
+S.FFT.F1 = (1/(nSection*nfft))*sum(S.FFT.F2, 2);  % Average the sections
+S.FFT.F1 = 2*S.FFT.F1(1:nfft/2+1);     % Multiply the values by 2 --> two spectral lines make up one amplitude                       
 S.FFT.F1(1) = S.FFT.F1(1)/2;             % Only the first nfft/2+1 values needed because of multiplication by 2
 
-
-% % Compute FFT for valid events:
-% 
-% S.FFT.F  = fft(S.tSeries, nSample - 1);
-% S.FFT.F2 = abs(S.FFT.F/(nSample - 1));
-% S.FFT.F1 = S.FFT.F2(1 : (nSample - 1)/2 + 1);
-% S.FFT.F1(2 : end - 1) = 2 * S.FFT.F1(2 : end - 1);
-% S.FFT.fftRange = param.Fs * (0:((nSample - 1)/2))/(nSample - 1);
-% S.FFT.subRange = find(S.FFT.fftRange>S.lim1 & S.FFT.fftRange<S.lim2);
-% [~, pkFreqInd] = max(S.FFT.F1(S.FFT.subRange));
-% S.FFT.pkFreq = S.FFT.fftRange(S.FFT.subRange(pkFreqInd));
+S.FFT.subRange = find(S.FFT.fftRange>S.lim1 & S.FFT.fftRange<S.lim2);
+[~, pkFreqInd] = max(S.FFT.F1(S.FFT.subRange));
+S.FFT.pkFreq = S.FFT.fftRange(S.FFT.subRange(pkFreqInd));
 
 
 % Calculate full-width half-maximum
