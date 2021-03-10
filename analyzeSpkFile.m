@@ -1,4 +1,4 @@
-function [data, hand] = analyzeSpkFile(data, hand, param, saveFile, spkFile, bstFile, expSpkFile, expBstFile, expSWRFile)
+function [data, hand] = analyzeSpkFile(data, hand, param, saveFile, spkFile, bstFile, expSpkFile, expBstFile, expSWRFile, expAveFile)
 %% [data, hand] = analyzeSpkFile(data, hand, param, saveFile, spkFile, bstFile, expSpkFile, expBstFile, expSWRFile)
 %
 %  Function to detect coincidence of spikes/bursts and SWR events, construct 
@@ -24,6 +24,7 @@ function [data, hand] = analyzeSpkFile(data, hand, param, saveFile, spkFile, bst
 %     param.expBstEvOption       = boolean flag to determine whether to export csv table of Bst events (default = 1)
 %     param.expSWREvOption       = boolean flag to determine whether to export csv table of SWR events (default = 1)
 %     param.reAnalyzeOption      = option to re-analyze file (default = 0)
+%     param.expAveOption         = boolean flag to determine whether to export csv table of average statistics
 %     param.nBins                = For spike histogram, not currently selectable from UI (default = 100)
 %   saveFile    = full path to matlab file to save (if not set, will prompt)
 %   spkFile     = full path to pClamp spike event file to import (if not set, will prompt)
@@ -31,12 +32,14 @@ function [data, hand] = analyzeSpkFile(data, hand, param, saveFile, spkFile, bst
 %   expSpkFile  = full path to spike event csv file to export (if not set, will prompt)
 %   expBstFile  = full path to burst event csv file to export (if not set, will prompt)
 %   expSWRFile  = full path to SWR event csv file to export (if not set, will prompt)
+%   expAveFile  = full path to file of exported csv table of average (if not set and expAveOption = 1, will prompt)
 %
 %  Outputs:
 %   data       = structure containing all data to be saved
 %   hand       = handle structure for figure
 
 %% Handle input arguments - if not entered
+if (nargin < 10) expAveFile = []; end
 if (nargin < 9) expSWRFile = []; end
 if (nargin < 8) expBstFile = []; end
 if (nargin < 7) expSpkFile = []; end
@@ -69,7 +72,8 @@ if ~isfield(param,'expSpkEvOption')       param.expSpkEvOption       = 1;   end
 if ~isfield(param,'expBstEvOption')       param.expBstEvOption       = 1;   end
 if ~isfield(param,'expSWREvOption')       param.expSWREvOption       = 1;   end
 if ~isfield(param,'reAnalyzeOption')      param.reAnalyzeOption      = 0;   end
-if ~isfield(param,'nBins')                param.nBins                = 100; end
+if ~isfield(param,'expAveOption')         param.expAveOption         = 1;   end
+if ~isfield(param,'nBins')                param.nBins                = 100; end % Not yet selectable in UI
 
 if ~isfield(data, 'LFP')
   [fileName, filePath] = uigetfile('.mat', 'Select *.mat file of analyzed LFP + imported cell channel');
@@ -174,10 +178,26 @@ if param.expSWREvOption
     if ~all(expSWRFile)
       warning('No SWR events to be exported - no file selected');
     else
-      [~, expSWRFileName, ~] = parsePath(expSWRFile);
+      [parentPath, expSWRFileName, ~] = parsePath(expSWRFile);
     end
   else
-    [~, expSWRFileName, ~] = parsePath(expSWRFile);
+    [parentPath, expSWRFileName, ~] = parsePath(expSWRFile);
+  end
+end
+
+% Select export average statistics file, if option selected
+if param.expAveOption
+  if isempty(expAveFile)
+    defaultName = [parentPath dataFileName '_aveStats.csv'];
+    [exportName, exportPath] = uiputfile('.csv','Select *.csv file to export table of average statistics', defaultName);
+    expAveFile = [exportPath exportName];
+    if ~all(expAveFile)
+      warning('No average statistics to be exported - no file selected');
+    else
+      [~, expAveFileName, ~] = parsePath(expAveFile);
+    end
+  else
+    [~, expAveFileName, ~] = parsePath(expAveFile);
   end
 end
 
@@ -241,6 +261,8 @@ if param.importSpkOption && ~param.reAnalyzeOption
       data.C.spike.evPeak = data.C.spike.evPeak';
     end
   end
+  data.C.spike.nEvents = length(data.C.spike.evStart);
+  data.C.spike.frequency = data.C.spike.nEvents / ((data.C.timing(end) - data.C.timing(1)) / 1000);
   fprintf('done\n');
   
   % compute spike status array
@@ -251,6 +273,7 @@ if param.importSpkOption && ~param.reAnalyzeOption
     end
   end
   
+
   %% Import burst file (if selected)
   if param.swrBstOption
     
@@ -291,6 +314,8 @@ if param.importSpkOption && ~param.reAnalyzeOption
         data.C.burst.intraBI = burstTable{:,i};
       end
     end
+    data.C.burst.nEvents   = length(data.C.burst.evStart);
+    data.C.burst.frequency = data.C.burst.nEvents / ((data.C.timing(end) - data.C.timing(1)) / 1000);
     fprintf('done\n');
     
     % compute burst status array
@@ -360,7 +385,7 @@ if param.swrSpkOption
   fprintf('done\n');
 end
 
-%% Parse events into SWR blocks (currently mandatory)
+%% Parse events into SWR blocks (mandatory for SWR analysis)
 if param.parseSpkOption
   data.C.SWR.spike.evStartA  = [];
   data.C.SWR.spike.evPeakA   = [];
@@ -644,9 +669,9 @@ if param.lfpSpkOption
   if isfield(data, 'theta')
     if isfield(data.theta, 'phase')
       data.C.spike.theta = struct;
-      data.C.spike.theta.phase  = NaN*ones(length(data.C.spike.evStartA), 1);
-      data.C.spike.theta.phaseX = NaN*ones(length(data.C.spike.evStartA), 1);
-      data.C.spike.theta.phaseY = NaN*ones(length(data.C.spike.evStartA), 1);
+      data.C.spike.theta.phase  = NaN*ones(length(data.C.spike.evStart), 1);
+      data.C.spike.theta.phaseX = NaN*ones(length(data.C.spike.evStart), 1);
+      data.C.spike.theta.phaseY = NaN*ones(length(data.C.spike.evStart), 1);
       minAmpT = std(data.theta.tSeries) * param.sdMultPhase;
     end
   end
@@ -655,9 +680,9 @@ if param.lfpSpkOption
   if isfield(data, 'beta')
     if isfield(data.beta, 'phase')
       data.C.spike.beta = struct;
-      data.C.spike.beta.phase  = NaN*ones(length(data.C.spike.evStartA), 1);
-      data.C.spike.beta.phaseX = NaN*ones(length(data.C.spike.evStartA), 1);
-      data.C.spike.beta.phaseY = NaN*ones(length(data.C.spike.evStartA), 1);
+      data.C.spike.beta.phase  = NaN*ones(length(data.C.spike.evStart), 1);
+      data.C.spike.beta.phaseX = NaN*ones(length(data.C.spike.evStart), 1);
+      data.C.spike.beta.phaseY = NaN*ones(length(data.C.spike.evStart), 1);
       minAmpB = std(data.beta.tSeries) * param.sdMultPhase;
     end
   end
@@ -666,9 +691,9 @@ if param.lfpSpkOption
   if isfield(data, 'gamma')
     if isfield(data.gamma, 'phase')
       data.C.spike.gamma = struct;
-      data.C.spike.gamma.phase  = NaN*ones(length(data.C.spike.evStartA), 1);
-      data.C.spike.gamma.phaseX = NaN*ones(length(data.C.spike.evStartA), 1);
-      data.C.spike.gamma.phaseY = NaN*ones(length(data.C.spike.evStartA), 1);
+      data.C.spike.gamma.phase  = NaN*ones(length(data.C.spike.evStart), 1);
+      data.C.spike.gamma.phaseX = NaN*ones(length(data.C.spike.evStart), 1);
+      data.C.spike.gamma.phaseY = NaN*ones(length(data.C.spike.evStart), 1);
       minAmpG = std(data.gamma.tSeries) * param.sdMultPhase;
     end
   end
@@ -677,21 +702,21 @@ if param.lfpSpkOption
   if isfield(data, 'hgamma')
     if isfield(data.hgamma, 'phase')
       data.C.spike.hgamma = struct;
-      data.C.spike.hgamma.phase  = NaN*ones(length(data.C.spike.evStartA), 1);
-      data.C.spike.hgamma.phaseX = NaN*ones(length(data.C.spike.evStartA), 1);
-      data.C.spike.hgamma.phaseY = NaN*ones(length(data.C.spike.evStartA), 1);
+      data.C.spike.hgamma.phase  = NaN*ones(length(data.C.spike.evStart), 1);
+      data.C.spike.hgamma.phaseX = NaN*ones(length(data.C.spike.evStart), 1);
+      data.C.spike.hgamma.phaseY = NaN*ones(length(data.C.spike.evStart), 1);
       minAmpHG = std(data.hgamma.tSeries) * param.sdMultPhase;
     end
   end
   
   %% Spike by spike, calculate phase if oscillation above threshold
-  for spk = 1:data.C.spike.nEventsA
+  for spk = 1:data.C.spike.nEvents
     
     % Theta:
     if isfield(data.C.spike, 'theta')
-      ampT = calcTotPhaseAmp(data.theta.phase, data.C.spike.evPeakA(spk));
+      ampT = calcTotPhaseAmp(data.theta.phase, data.C.spike.evPeak(spk));
       if ampT > minAmpT
-        data.C.spike.theta.phase(spk)  = data.theta.phase.tPhase(data.C.spike.evPeakA(spk));
+        data.C.spike.theta.phase(spk)  = data.theta.phase.tPhase(data.C.spike.evPeak(spk));
         data.C.spike.theta.phaseX(spk) = cos(data.C.spike.theta.phase(spk));
         data.C.spike.theta.phaseY(spk) = sin(data.C.spike.theta.phase(spk));
       end
@@ -699,9 +724,9 @@ if param.lfpSpkOption
     
     % Beta:
     if isfield(data.C.spike, 'beta')
-      ampB = calcTotPhaseAmp(data.beta.phase, data.C.spike.evPeakA(spk));
+      ampB = calcTotPhaseAmp(data.beta.phase, data.C.spike.evPeak(spk));
       if ampB > minAmpB
-        data.C.spike.beta.phase(spk)  = data.beta.phase.tPhase(data.C.spike.evPeakA(spk));
+        data.C.spike.beta.phase(spk)  = data.beta.phase.tPhase(data.C.spike.evPeak(spk));
         data.C.spike.beta.phaseX(spk) = cos(data.C.spike.beta.phase(spk));
         data.C.spike.beta.phaseY(spk) = sin(data.C.spike.beta.phase(spk));
       end
@@ -709,9 +734,9 @@ if param.lfpSpkOption
     
     % Gamma:
     if isfield(data.C.spike, 'gamma')
-      ampG = calcTotPhaseAmp(data.gamma.phase, data.C.spike.evPeakA(spk));
+      ampG = calcTotPhaseAmp(data.gamma.phase, data.C.spike.evPeak(spk));
       if ampG > minAmpG
-        data.C.spike.gamma.phase(spk)  = data.gamma.phase.tPhase(data.C.spike.evPeakA(spk));
+        data.C.spike.gamma.phase(spk)  = data.gamma.phase.tPhase(data.C.spike.evPeak(spk));
         data.C.spike.gamma.phaseX(spk) = cos(data.C.spike.gamma.phase(spk));
         data.C.spike.gamma.phaseY(spk) = sin(data.C.spike.gamma.phase(spk));
       end
@@ -719,9 +744,9 @@ if param.lfpSpkOption
     
     % High Gamma:
     if isfield(data.C.spike, 'hgamma')
-      ampHG = calcTotPhaseAmp(data.hgamma.phase, data.C.spike.evPeakA(spk));
+      ampHG = calcTotPhaseAmp(data.hgamma.phase, data.C.spike.evPeak(spk));
       if ~isnan(ampHG) && ampHG > minAmpHG
-        data.C.spike.hgamma.phase(spk)  = data.hgamma.phase.tPhase(data.C.spike.evPeakA(spk));
+        data.C.spike.hgamma.phase(spk)  = data.hgamma.phase.tPhase(data.C.spike.evPeak(spk));
         data.C.spike.hgamma.phaseX(spk) = cos(data.C.spike.hgamma.phase(spk));
         data.C.spike.hgamma.phaseY(spk) = sin(data.C.spike.hgamma.phase(spk));
       end
@@ -746,11 +771,13 @@ end
 data.C         = orderStruct(data.C);
 data.C.spike   = orderStruct(data.C.spike);
 data.C.param   = orderStruct(data.C.param);
-data.SWR       = orderStruct(data.SWR);
-data.SWR.spike = orderStruct(data.SWR.spike);
 
-if param.parseSpkOption
-  data.C.SWR.spike = orderStruct(data.C.SWR.spike);
+if param.swrSpkOption
+  data.SWR       = orderStruct(data.SWR);
+  data.SWR.spike = orderStruct(data.SWR.spike);
+  if param.parseSpkOption
+    data.C.SWR.spike = orderStruct(data.C.SWR.spike);
+  end
 end
 
 if param.swrBstOption
@@ -759,31 +786,43 @@ if param.swrBstOption
 end
 
 
-%% Save matlab file
-if all(saveFile)
-  fprintf(['saving file ' dataFileName '... ']);
-  save(saveFile,'-struct','data');
-  fprintf('done\n');
-end
-
-%% Export Spike event table
+%% Save and export results
+% Export Spike event table
 if all(expSpkFile) && param.expSpkEvOption
   fprintf(['exporting spike event file ' expSpkFileName '... ']);
   exportSpkEvents(data, saveFile, expSpkFile);
+  data.C.expSpkFile = expSpkFile;
   fprintf('done\n');
 end
 
-%% Export Burst event table
+% Export Burst event table
 if all(expBstFile) && param.expBstEvOption
   fprintf(['exporting burst event file ' expBstFileName '... ']);
   exportBstEvents(data, saveFile, expBstFile);
+  data.C.expBstFile = expBstFile;
   fprintf('done\n');
 end
 
-%% Export SWR event file
+% Export SWR event file
 if (all(expSWRFile) && param.expSWREvOption)
   fprintf(['exporting updated SWR events (file ' expSWRFileName ')... ']);
   exportSWREvents(data, saveFile, expSWRFile)
+  data.SWR.expEvFile = expSWRFile;
+  fprintf('done\n');
+end
+
+% Export average table
+if all(expAveFile) && param.expAveOption
+  fprintf(['exporting averages statistics (file ' expAveFileName ')... ']);
+  exportAveStats(data, saveFile, expAveFile);
+  data.C.expAveFile = expAveFile;
+  fprintf('done\n');
+end
+
+% Save matlab file
+if all(saveFile)
+  fprintf(['saving file ' dataFileName '... ']);
+  save(saveFile,'-struct','data');
   fprintf('done\n');
 end
 

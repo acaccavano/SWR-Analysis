@@ -1,5 +1,5 @@
-function [data, hand] = analyzeLFPFile(data, hand, param, dataFile, saveFile, expEvFile, expAveFile, expDataFile, stimFile)
-%% [data, hand] = analyzeLFPFile(data, hand, param, dataFile, saveFile, expEvFile, expDataFile, stimFile)
+function [data, hand] = analyzeLFPFile(data, hand, param, dataFile, saveFile, expEvFile, expDataFile, stimFile, expAveFile)
+%% [data, hand] = analyzeLFPFile(data, hand, param, dataFile, saveFile, expEvFile, expDataFile, stimFile, expAveFile)
 %
 %  Function to detect sharp wave ripple (SWR) events, theta, beta, and gamma analysis, time-frequency 
 %  spectrogram analysis, and/or stimulation event pre-processing of single LFP recording. SWRs are detected
@@ -40,7 +40,6 @@ function [data, hand] = analyzeLFPFile(data, hand, param, dataFile, saveFile, ex
 %     param.swrType          = Option to determine what qualifies as SWR (1: SW & R (default), 2: SW only, 3: R only)
 %     param.swrWindow        = +/- window around SWR peak events for swrData file [ms]
 %     param.expSWREvOption   = boolean flag to determine whether to export csv table of SWR events
-%     param.expLFPAveOption  = boolean flag to determine whether to export csv table of average statistics
 %     param.expSWRDataOption = boolean flag to determine whether to export txt file of episodic SWR events for pClamp analysis
 %     param.thetaOption      = boolean flag to filter and analyze theta signal
 %     param.thetaLim1        = lower theta band-pass lim (default = 4Hz)
@@ -62,12 +61,13 @@ function [data, hand] = analyzeLFPFile(data, hand, param, dataFile, saveFile, ex
 %     param.spectLim2        = upper lim of spectrogram (default = 500Hz)
 %     param.importStimOption = option to import stim file from pClamp (default = 0)
 %     param.reAnalyzeOption  = option to re-analyze file - will prompt for *.mat instead of raw data file
+%     param.expAveOption     = boolean flag to determine whether to export csv table of average statistics
 %   dataFile    = full path to file/folder containing data to be analysed (if not set, will prompt)
 %   saveFile    = full path to matlab file to save (if not set, will prompt)
 %   expEvFile   = full path to exported csv event table (if not set and expSWREvOption = 1, will prompt
-%   expAveFile  = full path to exported csv average table (if not set and expLFPAveOption = 1, will prompt
 %   expDataFile = full path to exported txt data file (if not set and expSWRDataOption = 1, will prompt
 %   stimFile    = full path to pClamp stim event file (if not set and importStimOption = 1, will prompt
+%   expAveFile  = full path to exported csv average table (if not set and expAveOption = 1, will prompt
 %
 %  Outputs:
 %   data       = structure containing all data to be saved
@@ -118,7 +118,6 @@ if ~isfield(param,'baseQuant')        param.baseQuant         = 0.95; end
 if ~isfield(param,'swrType')          param.swrType           = 1;    end
 if ~isfield(param,'swrWindow')        param.swrWindow         = 100;  end
 if ~isfield(param,'expSWREvOption')   param.expSWREvOption    = 1;    end
-if ~isfield(param,'expLFPAveOption')  param.expLFPAveOption   = 1;    end
 if ~isfield(param,'expSWRDataOption') param.expSWRDataOption  = 1;    end
 if ~isfield(param,'thetaOption')      param.thetaOption       = 0;    end
 if ~isfield(param,'thetaLim1')        param.thetaLim1         = 4;    end
@@ -140,6 +139,7 @@ if ~isfield(param,'spectLim1')        param.spectLim1         = 1;    end
 if ~isfield(param,'spectLim2')        param.spectLim2         = 500;  end
 if ~isfield(param,'importStimOption') param.importStimOption  = 0;    end
 if ~isfield(param,'reAnalyzeOption')  param.reAnalyzeOption   = 0;    end
+if ~isfield(param,'expAveOption')     param.expAveOption      = 1;    end
 
 % Initialize LFP structure if it doesn't already exist
 if ~isfield(data,'LFP') data.LFP = struct; end
@@ -189,24 +189,16 @@ if isempty(expEvFile) && param.expSWREvOption
   end
 end
 
-% Select export LFP average file, if option selected
-if isempty(expAveFile) && param.expLFPAveOption
-  defaultPath = [parentPath dataFileName '_lfpAve.csv'];
-  [exportName, exportPath] = uiputfile('.csv','Select *.csv file to export table of LFP averages', defaultPath);
-  expAveFile = [exportPath exportName];
-  if ~all(expAveFile)
-    warning('No LFP averages to be exported - no file selected');
-  else
-    [parentPath, ~, ~] = parsePath(expAveFile);
-  end
-end
-
 % Select export SWR data file, if option selected
 if isempty(expDataFile) && param.expSWRDataOption
   defaultPath = [parentPath dataFileName '_swrData.txt'];
   [exportName, exportPath] = uiputfile('.txt','Select *.txt file to export episodic SWR data', defaultPath);
   expDataFile = [exportPath exportName];
-  if ~all(expDataFile) warning('No SWR events to be exported - no file selected'); end
+  if ~all(expDataFile) 
+    warning('No SWR events to be exported - no file selected'); 
+  else
+    [parentPath, ~, ~] = parsePath(expDataFile);
+  end
 end
 
 % Select stimulation event file, if option selected
@@ -217,6 +209,14 @@ if param.importStimOption
     if ~all(stimFile) error('No stimulation file selected'); end
   end
   [~, stimFileName, ~] = parsePath(stimFile);
+end
+
+% Select export average statistics file, if option selected
+if isempty(expAveFile) && param.expAveOption
+  defaultPath = [parentPath dataFileName '_aveStats.csv'];
+  [exportName, exportPath] = uiputfile('.csv','Select *.csv file to export table of average statistics', defaultPath);
+  expAveFile = [exportPath exportName];
+  if ~all(expAveFile) warning('No average statistics to be exported - no file selected'); end
 end
 
 %% Import data
@@ -922,14 +922,8 @@ if isfield(data, 'stim')
   data.stim = orderStruct(data.stim);
 end
 
-%% Save file
-if all(saveFile)
-  fprintf(['saving file ' dataFileName '... ']);
-  save(saveFile,'-struct','data');
-  fprintf('done\n');
-end
-
-%% Export SWR event table
+%% Save and export results
+% Export SWR event table
 if all(expEvFile) && param.expSWREvOption
   fprintf(['exporting SWR events (file ' dataFileName ')... ']);
   exportSWREvents(data, saveFile, expEvFile);
@@ -937,19 +931,26 @@ if all(expEvFile) && param.expSWREvOption
   fprintf('done\n');
 end
 
-%% Export LFP average table
-if all(expAveFile) && param.expLFPAveOption
-  fprintf(['exporting LFP averages (file ' dataFileName ')... ']);
-  exportLFPAverages(data, saveFile, expAveFile);
-  data.LFP.expAveFile = expAveFile;
-  fprintf('done\n');
-end
-
-%% Export SWR event-locked episodic data files
+% Export SWR event-locked episodic data files
 if all(expDataFile) && param.expSWRDataOption
   fprintf(['exporting SWR event-locked data (file ' dataFileName ')... ']);
   exportSWRData(data, param, expDataFile);
   data.SWR.expDataFile = expDataFile;
+  fprintf('done\n');
+end
+
+% Export average table
+if all(expAveFile) && param.expAveOption
+  fprintf(['exporting averages statistics (file ' dataFileName ')... ']);
+  exportAveStats(data, saveFile, expAveFile);
+  data.LFP.expAveFile = expAveFile;
+  fprintf('done\n');
+end
+
+% Save matlab file
+if all(saveFile)
+  fprintf(['saving file ' dataFileName '... ']);
+  save(saveFile,'-struct','data');
   fprintf('done\n');
 end
 

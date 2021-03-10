@@ -21,7 +21,11 @@ if isempty(exportFile)
 end
 
 varNames = {'evStart', 'evPeak', 'evEnd'};
-outTable = table(data.C.spike.evStartA, data.C.spike.evPeakA, data.C.spike.evEndA, 'VariableNames', varNames);
+if isfield(data.C.spike, 'evStartA')
+  outTable = table(data.C.spike.evStartA, data.C.spike.evPeakA, data.C.spike.evEndA, 'VariableNames', varNames);
+else
+  outTable = table(data.C.spike.evStart, data.C.spike.evPeak, data.C.spike.evEnd, 'VariableNames', varNames);
+end
 
 if isfield(data.C.spike, 'swrMatrix')
   outTable = [outTable table(data.C.spike.swrMatrix, 'VariableNames', {'swrCoinc'})];

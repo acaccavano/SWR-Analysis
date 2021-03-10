@@ -1,4 +1,4 @@
-function analyzeSpkBatch(param, dataFolder, saveFolder, spkFolder, bstFolder, expSpkFolder, expBstFolder, expSWRFolder)
+function analyzeSpkBatch(param, dataFolder, saveFolder, spkFolder, bstFolder, expSpkFolder, expBstFolder, expSWRFolder, expAveFolder)
 %% analyzeSpkBatch(param, dataFolder, saveFolder, spkFolder, bstFolder, expSpkFolder, expBstFolder, expSWRFolder)
 %
 %  Function to run batch analyzeSpkFile on batch of files
@@ -21,6 +21,7 @@ function analyzeSpkBatch(param, dataFolder, saveFolder, spkFolder, bstFolder, ex
 %     param.expBstEvOption       = boolean flag to determine whether to export csv table of Bst events (default = 1)
 %     param.expSWREvOption       = boolean flag to determine whether to export csv table of SWR events (default = 1)
 %     param.reAnalyzeOption      = option to re-analyze file (default = 0)
+%     param.expAveOption         = boolean flag to determine whether to export csv table of average statistics
 %     param.nBins                = For spike histogram, not currently selectable from UI (default = 100)
 %   dataFolder    = full path to matlab folder to import (if not set, will prompt)
 %   saveFolder    = full path to matlab folder to save (can be same, if not set, will prompt)
@@ -29,8 +30,10 @@ function analyzeSpkBatch(param, dataFolder, saveFolder, spkFolder, bstFolder, ex
 %   expSpkFolder  = full path to spike event csv folder to export (if not set, will prompt)
 %   expBstFolder  = full path to burst event csv folder to export (if not set, will prompt)
 %   expSWRFolder  = full path to SWR event csv folder to export (if not set, will prompt)
+%   expAveFolder  = full path to folder of exported csv table of averages (if not set and expAveOption = 1, will prompt)
 
 %% Handle input arguments
+if (nargin < 9) expAveFolder = []; end
 if (nargin < 8) expSWRFolder = []; end
 if (nargin < 7) expBstFolder = []; end
 if (nargin < 6) expSpkFolder = []; end
@@ -60,7 +63,8 @@ if ~isfield(param,'expSpkEvOption')       param.expSpkEvOption       = 1;   end
 if ~isfield(param,'expBstEvOption')       param.expBstEvOption       = 1;   end
 if ~isfield(param,'expSWREvOption')       param.expSWREvOption       = 1;   end
 if ~isfield(param,'reAnalyzeOption')      param.reAnalyzeOption      = 0;   end
-if ~isfield(param,'nBins')                param.nBins                = 100; end
+if ~isfield(param,'expAveOption')         param.expAveOption         = 1;   end
+if ~isfield(param,'nBins')                param.nBins                = 100; end % Not yet selectable in UI
 
 % Assign OS specific variables:
 if ispc
@@ -128,7 +132,17 @@ end
 % Select export folder of SWR events (if selected)
 if isempty(expSWRFolder) && param.expSWREvOption
   expSWRFolder = uigetdir(parentPath, 'Select folder to export updated SWR event *.csv files');
-  if (expSWRFolder == 0) warning('No updated SWR event files to be exported - folder not selected'); end
+  if (expSWRFolder == 0) 
+    warning('No updated SWR event files to be exported - folder not selected'); 
+  else
+    [parentPath, ~, ~] = parsePath(expSWRFolder);
+  end
+end
+
+% Select folder to export average files, if option selected
+if isempty(expAveFolder) && param.expAveOption
+  expAveFolder = uigetdir(parentPath, 'Select folder to export average statistics *.csv files');
+  if (expAveFolder == 0) warning('No files to be exported - average folder not selected'); end
 end
 
 % ensure current dir is in path so we can call helper funcs
@@ -181,6 +195,7 @@ bstFile{nDataFiles}    = [];
 expSpkFile{nDataFiles} = [];
 expBstFile{nDataFiles} = [];
 expSWRFile{nDataFiles} = [];
+expAveFile{nDataFiles} = [];
 
 for i = 1:nDataFiles
   
@@ -218,12 +233,19 @@ for i = 1:nDataFiles
       expSWRFile{i} = [expSWRFolder slash dataFileName '_swrEvents.csv'];
     end
   end
+
+  % Determine individual exported average *.csv file names (if selected)
+  if ~isempty(expAveFolder) && param.expAveOption
+    if (expAveFolder ~= 0)
+      expAveFile{i} = [expAveFolder slash dataFileName '_aveStats.csv'];
+    end
+  end
   
 end
 
 parfor i = 1:nDataFiles
   data = load(dataFile{i});
-  analyzeSpkFile(data, [], param, saveFile{i}, spkFile{i}, bstFile{i}, expSpkFile{i}, expBstFile{i}, expSWRFile{i});
+  analyzeSpkFile(data, [], param, saveFile{i}, spkFile{i}, bstFile{i}, expSpkFile{i}, expBstFile{i}, expSWRFile{i}, expAveFile{i});
 end
 fprintf('complete\n');
 end

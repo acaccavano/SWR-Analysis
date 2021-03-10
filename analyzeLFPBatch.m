@@ -1,5 +1,5 @@
-function analyzeLFPBatch(param, dataFolder, saveFolder, expEvFolder, expAveFolder, expDataFolder, stimFolder)
-%% analyzeLFPBatch(param, dataFolder, saveFolder, expEvFolder, expAveFolder, expDataFolder, stimFolder)
+function analyzeLFPBatch(param, dataFolder, saveFolder, expEvFolder, expDataFolder, stimFolder, expAveFolder)
+%% analyzeLFPBatch(param, dataFolder, saveFolder, expEvFolder, expDataFolder, stimFolder, expAveFolder)
 %
 %  Function to run analyzeLFPFile on batch of files
 %
@@ -32,7 +32,6 @@ function analyzeLFPBatch(param, dataFolder, saveFolder, expEvFolder, expAveFolde
 %     param.swrType          = Option to determine what qualifies as SWR (1: SW & R (default), 2: SW only, 3: R only)
 %     param.swrWindow        = +/- window around SWR peak events for swrData file [ms]
 %     param.expSWREvOption   = boolean flag to determine whether to export csv table of SWR events
-%     param.expLFPAveOption  = boolean flag to determine whether to export csv table of average statistics
 %     param.expSWRDataOption = boolean flag to determine whether to export txt file of episodic SWR events for pClamp analysis
 %     param.thetaOption      = boolean flag to filter and analyze theta signal
 %     param.thetaLim1        = lower theta band-pass lim (default = 4Hz)
@@ -54,17 +53,18 @@ function analyzeLFPBatch(param, dataFolder, saveFolder, expEvFolder, expAveFolde
 %     param.spectLim2        = upper lim of spectrogram (default = 500Hz)
 %     param.importStimOption = option to import stim file from pClamp (default = 0)
 %     param.reAnalyzeOption  = option to re-analyze file - will prompt for *.mat instead of raw data file
+%     param.expAveOption     = boolean flag to determine whether to export csv table of average statistics
 %   dataFolder    = full path to folder containing raw data to be analysed (if not set, will prompt)
 %   saveFolder    = full path to folder of matlab files to save (if not set, will prompt)
 %   expEvFolder   = full path to folder of exported csv event table (if not set and expSWREvOption = 1, will prompt)
-%   expAveFolder  = full path to folder of exported csv table of averages (if not set and expLFPAveOption = 1, will prompt)
 %   expDataFolder = full path to folder of exported txt data file (if not set and expSWRDataOption = 1, will prompt)
 %   stimFolder    = full path to folder of pClamp stim events (if not set and importStimOption = 1, will prompt)
+%   expAveFolder  = full path to folder of exported csv table of averages (if not set and expAveOption = 1, will prompt)
 
 %% Handle optional arguments
-if (nargin < 7) stimFolder    = []; end
-if (nargin < 6) expDataFolder = []; end
-if (nargin < 5) expAveFolder  = []; end
+if (nargin < 7) expAveFolder  = []; end
+if (nargin < 6) stimFolder    = []; end
+if (nargin < 5) expDataFolder = []; end
 if (nargin < 4) expEvFolder   = []; end
 if (nargin < 3) saveFolder    = []; end
 if (nargin < 2) dataFolder    = []; end
@@ -101,7 +101,6 @@ if ~isfield(param,'baseQuant')        param.baseQuant         = 0.95; end
 if ~isfield(param,'swrType')          param.swrType           = 1;    end
 if ~isfield(param,'swrWindow')        param.swrWindow         = 100;  end
 if ~isfield(param,'expSWREvOption')   param.expSWREvOption    = 1;    end
-if ~isfield(param,'expLFPAveOption')  param.expLFPAveOption   = 1;    end
 if ~isfield(param,'expSWRDataOption') param.expSWRDataOption  = 1;    end
 if ~isfield(param,'thetaOption')      param.thetaOption       = 0;    end
 if ~isfield(param,'thetaLim1')        param.thetaLim1         = 4;    end
@@ -123,6 +122,7 @@ if ~isfield(param,'spectLim1')        param.spectLim1         = 1;    end
 if ~isfield(param,'spectLim2')        param.spectLim2         = 500;  end
 if ~isfield(param,'importStimOption') param.importStimOption  = 0;    end
 if ~isfield(param,'reAnalyzeOption')  param.reAnalyzeOption   = 0;    end
+if ~isfield(param,'expAveOption')     param.expAveOption      = 1;    end
 
 % Assign OS specific variables:
 if ispc
@@ -168,26 +168,26 @@ if isempty(expEvFolder) && param.expSWREvOption
   end
 end
 
-% Select folder to export average files, if option selected
-if isempty(expAveFolder) && param.expLFPAveOption
-  expAveFolder = uigetdir(parentPath, 'Select folder to export average statistics *.csv files');
-  if (expAveFolder == 0)
-    warning('No files to be exported - LFP average folder not selected');
-  else
-    [parentPath, ~, ~] = parsePath(expAveFolder);
-  end
-end
-
 % Select folder to export SWR event-locked episodic data files, if option selected
 if isempty(expDataFolder) && param.expSWRDataOption
   expDataFolder = uigetdir(parentPath, 'Select folder to export SWR event-locked episodic data *.txt files');
-  if (expDataFolder == 0) warning('No files to be exported - SWR data folder not selected'); end
+  if (expDataFolder == 0) 
+    warning('No files to be exported - SWR data folder not selected'); 
+  else
+    [parentPath, ~, ~] = parsePath(expDataFolder);
+  end
 end
 
 % Select folder of stimulation events, if option selected
 if isempty(stimFolder) && param.importStimOption
   stimFolder = uigetdir(parentPath, 'Select folder of stimulation event *.csv files');
   if (stimFolder == 0) error('No stimulation folder selected'); end
+end
+
+% Select folder to export average files, if option selected
+if isempty(expAveFolder) && param.expAveOption
+  expAveFolder = uigetdir(parentPath, 'Select folder to export average statistics *.csv files');
+  if (expAveFolder == 0) warning('No files to be exported - average folder not selected'); end
 end
 
 % ensure current dir is in path so we can call helper funcs
@@ -232,9 +232,9 @@ cd (curPath);
 dataFile{nDataFiles}    = [];
 saveFile{nDataFiles}    = [];
 expEvFile{nDataFiles}   = [];
-expAveFile{nDataFiles}  = [];
 expDataFile{nDataFiles} = [];
 stimFile{nDataFiles}    = [];
+expAveFile{nDataFiles}  = [];
 
 for i = 1:nDataFiles
   % Determine individual import files/folders
@@ -255,13 +255,6 @@ for i = 1:nDataFiles
     end
   end
   
-  % Determine individual exported average *.csv file names (if selected)
-  if ~isempty(expAveFolder) && param.expLFPAveOption
-    if (expAveFolder ~= 0)
-      expAveFile{i} = [expAveFolder slash dataFileName '_lfpAve.csv'];
-    end
-  end
-  
   % Determine individual exported SWR event-locked episodic data *.txt file names (if selected)
   if ~isempty(expDataFolder) && param.expSWRDataOption
     if (expDataFolder ~= 0)
@@ -269,8 +262,16 @@ for i = 1:nDataFiles
     end
   end
   
+  % Determine individual imported stim file names (if selected)
   if param.importStimOption
     stimFile{i} = [stimFolder slash stimFiles{i}];
+  end
+  
+  % Determine individual exported average *.csv file names (if selected)
+  if ~isempty(expAveFolder) && param.expAveOption
+    if (expAveFolder ~= 0)
+      expAveFile{i} = [expAveFolder slash dataFileName '_aveStats.csv'];
+    end
   end
     
 end
@@ -279,9 +280,9 @@ reAnalyzeOption = param.reAnalyzeOption;
 parfor i = 1:nDataFiles
   if reAnalyzeOption
     data = load(dataFile{i});
-    analyzeLFPFile(data, [], param, dataFile{i}, saveFile{i}, expEvFile{i}, expAveFile{i}, expDataFile{i}, stimFile{i});
+    analyzeLFPFile(data, [], param, dataFile{i}, saveFile{i}, expEvFile{i}, expDataFile{i}, stimFile{i}, expAveFile{i});
   else
-    analyzeLFPFile([], [], param, dataFile{i}, saveFile{i}, expEvFile{i}, expAveFile{i}, expDataFile{i}, stimFile{i});
+    analyzeLFPFile([], [], param, dataFile{i}, saveFile{i}, expEvFile{i}, expDataFile{i}, stimFile{i}, expAveFile{i});
   end
 end
 fprintf('complete\n');

@@ -76,12 +76,13 @@ if ~isfield(param,'spectOption')          param.spectOption          = 1;    end
 if ~isfield(param,'spectLim1')            param.spectLim1            = 1;    end
 if ~isfield(param,'spectLim2')            param.spectLim2            = 500;  end
 if ~isfield(param,'reAnalyzeOption')      param.reAnalyzeOption      = 0;    end
+if ~isfield(param,'expAveOption')         param.expAveOption         = 1;    end
 if ~isfield(param,'nBins')                param.nBins                = 100;  end % Not yet selectable in UI
 if ~isfield(param,'cdfOption')            param.cdfOption            = 1;    end % Not yet selectable in UI
-if ~isfield(param,'minRise')              param.minRise              = 0.1; end % Not yet selectable in UI
-if ~isfield(param,'maxRise')              param.maxRise              = 10;    end % Not yet selectable in UI
+if ~isfield(param,'minRise')              param.minRise              = 0.1;  end % Not yet selectable in UI
+if ~isfield(param,'maxRise')              param.maxRise              = 10;   end % Not yet selectable in UI
 if ~isfield(param,'minDecay')             param.minDecay             = 3;    end % Not yet selectable in UI
-if ~isfield(param,'maxDecay')             param.maxDecay             = 100;   end % Not yet selectable in UI
+if ~isfield(param,'maxDecay')             param.maxDecay             = 100;  end % Not yet selectable in UI
 
 if ~isfield(data, 'LFP')
   [fileName, filePath] = uigetfile('.mat', 'Select *.mat file of analyzed LFP + imported cell channel');
