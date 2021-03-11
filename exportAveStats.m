@@ -8,6 +8,8 @@ if (nargin < 3) exportFile = []; end
 if (nargin < 2) saveFile   = []; end
 if (nargin < 1) data       = []; end
 
+transposeOption = false; % Set to true to get one data column with headings as row titles
+
 if isempty(data) || isempty(saveFile)
   error('Enter sufficient inputs to use function exportAveStats');
 end
@@ -161,10 +163,76 @@ if isfield(data, 'fR')
 end
 
 %% Cell-Attached
-% if isfield(data, 'C')
-%   
-%   
-% end
+if isfield(data, 'C')
+  % Spike Stats:
+  if isfield(data.C, 'spike')
+    
+    % Total Stats:
+    if isfield(data.C.spike, 'nEvents') outTable = [outTable table(data.C.spike.nEvents, 'VariableNames', {'nSpikes'})]; end
+    if isfield(data.C.spike, 'frequency') outTable = [outTable table(data.C.spike.frequency, 'VariableNames', {'Spike_frequency_Hz'})]; end
+    
+    % SWR Stats:
+    if isfield(data.C.spike, 'nEventsA') outTable = [outTable table(data.C.spike.nEventsA, 'VariableNames', {'nSpikes_Align'})]; end
+    if isfield(data.C.spike, 'nEventsC') outTable = [outTable table(data.C.spike.nEventsC, 'VariableNames', {'nSpikes_Coinc'})]; end
+    
+    % Theta Stats:
+    if isfield(data.C.spike, 'theta')
+      if isfield(data.C.spike.theta, 'phaseAve') 
+        varNames = {'Spike-Theta_Ave_rad', 'Spike-Theta_R', 'Spike-Theta_P', 'Spike-Theta_Z'};
+        outTable = [outTable table(data.C.spike.theta.phaseAve, data.C.spike.theta.phaseR, data.C.spike.theta.phaseP, data.C.spike.theta.phaseZ, 'VariableNames', varNames)];
+      end
+    end
+    
+    % Beta Stats:
+    if isfield(data.C.spike, 'beta')
+      if isfield(data.C.spike.beta, 'phaseAve') 
+        varNames = {'Spike-Beta_Ave_rad', 'Spike-Beta_R', 'Spike-Beta_P', 'Spike-Beta_Z'};
+        outTable = [outTable table(data.C.spike.beta.phaseAve, data.C.spike.beta.phaseR, data.C.spike.beta.phaseP, data.C.spike.beta.phaseZ, 'VariableNames', varNames)];
+      end
+    end
+    
+    % Gamma Stats:
+    if isfield(data.C.spike, 'gamma')
+      if isfield(data.C.spike.gamma, 'phaseAve') 
+        varNames = {'Spike-Gamma_Ave_rad', 'Spike-Gamma_R', 'Spike-Gamma_P', 'Spike-Gamma_Z'};
+        outTable = [outTable table(data.C.spike.gamma.phaseAve, data.C.spike.gamma.phaseR, data.C.spike.gamma.phaseP, data.C.spike.gamma.phaseZ, 'VariableNames', varNames)];
+      end
+    end
+    
+    % High Gamma Stats:
+    if isfield(data.C.spike, 'hgamma')
+      if isfield(data.C.spike.hgamma, 'phaseAve') 
+        varNames = {'Spike-highGamma_Ave_rad', 'Spike-highGamma_R', 'Spike-highGamma_P', 'Spike-highGamma_Z'};
+        outTable = [outTable table(data.C.spike.hgamma.phaseAve, data.C.spike.hgamma.phaseR, data.C.spike.hgamma.phaseP, data.C.spike.hgamma.phaseZ, 'VariableNames', varNames)];
+      end
+    end
+
+    % Ripple Stats:
+    if isfield(data.C.spike, 'R')
+      if isfield(data.C.spike.R, 'phaseAve') 
+        varNames = {'Spike-Ripple_Ave_rad', 'Spike-Ripple_R', 'Spike-Ripple_P', 'Spike-Ripple_Z'};
+        outTable = [outTable table(data.C.spike.R.phaseAve, data.C.spike.R.phaseR, data.C.spike.R.phaseP, data.C.spike.R.phaseZ, 'VariableNames', varNames)];
+      end
+    end
+    
+    % Fast Ripple Stats:
+    if isfield(data.C.spike, 'fR')
+      if isfield(data.C.spike.fR, 'phaseAve') 
+        varNames = {'Spike-fastRipple_Ave_rad', 'Spike-fastRipple_R', 'Spike-fastRipple_P', 'Spike-fastRipple_Z'};
+        outTable = [outTable table(data.C.spike.fR.phaseAve, data.C.spike.fR.phaseR, data.C.spike.fR.phaseP, data.C.spike.fR.phaseZ, 'VariableNames', varNames)];
+      end
+    end
+  end
+  
+  % Burst Stats:
+  if isfield(data.C, 'burst')
+    % SWR Stats:
+    if isfield(data.C.burst, 'nEventsA') outTable = [outTable table(data.C.burst.nEventsA, 'VariableNames', {'nBursts_Align'})]; end
+    if isfield(data.C.burst, 'nEventsC') outTable = [outTable table(data.C.burst.nEventsC, 'VariableNames', {'nBursts_Coinc'})]; end
+    if isfield(data.C.burst, 'nSpike') outTable = [outTable table(mean(data.C.burst.nSpike,'omitnan'), 'VariableNames', {'nSpikesinBurst'})]; end
+    if isfield(data.C.burst, 'intraBI') outTable = [outTable table(mean(data.C.burst.intraBI,'omitnan'), 'VariableNames', {'intraBurstInt_ms'})]; end
+  end
+end
 
 % Convert to cell array and replace NaN values with blanks:
 varNames = outTable.Properties.VariableNames;
@@ -172,10 +240,17 @@ tmpCell  = table2cell(outTable);
 tmpCell(isnan(outTable.Variables)) = {[]};
 
 % Convert to array and transpose table:
-tmpArray = cell2mat(tmpCell);
-outTable = array2table(tmpArray.');
-outTable.Properties.RowNames = varNames;
+if transposeOption
+  tmpArray = cell2mat(tmpCell);
+  outTable = array2table(tmpArray.');
+  outTable.Properties.RowNames = varNames;
+  writetable(outTable, exportFile, 'Delimiter', ',', 'WriteVariableNames', false, 'WriteRowNames', true);
+else
+  outTable = cell2table(tmpCell);
+  outTable.Properties.VariableNames = varNames;
+  writetable(outTable, exportFile, 'Delimiter', ',');
+end
 
-writetable(outTable, exportFile, 'Delimiter', ',', 'WriteVariableNames', false, 'WriteRowNames', true);
+
 
 end
