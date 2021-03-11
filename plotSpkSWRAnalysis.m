@@ -1,7 +1,7 @@
-function hand = plotSpkAnalysis(data, hand, param, dsPlot)
-%% hand = plotSpkAnalysis(data, hand, param, dsPlot)
+function hand = plotSpkSWRAnalysis(data, hand, param, dsPlot)
+%% hand = plotSpkSWRAnalysis(data, hand, param, dsPlot)
 % 
-%  Function to plot output of analyzeSpkFile
+%  Function to plot output of analyzeSpkFile for Spk-SWR coincidence detection
 
 nData = length(data);
 
