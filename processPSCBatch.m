@@ -91,13 +91,12 @@ for i = 1:nPSCFiles
   % Determine individual exported PSC *.txt file names (if selected)
   if ~isempty(statFolder)
     if (statFolder ~= 0)
-      statFile{i} = [statFolder slash pscFileName '_stats.csv'];
+      statFile{i} = [statFolder slash pscFileName '_Stats.csv'];
     end
   end 
 end
 
-for i = 1:nPSCFiles
-  A = 5;
+parfor i = 1:nPSCFiles
   processPSCFile(param, pscFile{i}, expFile{i}, statFile{i}, duration)
 end
 fprintf('complete\n');

@@ -58,7 +58,7 @@ end
 
 % Prompt for statFile
 if isempty(statFile)
-  defaultPath = [parentPath pscFileName '_stats.csv'];
+  defaultPath = [parentPath pscFileName '_Stats.csv'];
   [statName, statPath] = uiputfile('.csv','Select *.csv file to save averaged stats', defaultPath);
   statFile = [statPath statName];
   if ~all(statFile) warning('No stat file to be saved - no file selected'); end
@@ -75,7 +75,9 @@ pscTable = pscTable(ia, :); % Remove duplicates
 nTrace  = max(pscTable{:,1});
 trace   = 1:nTrace;
 trace   = trace';
-nPSC    = histcounts(pscTable{:,1}, nTrace)';
+bins    = 1:nTrace+1;
+bins    = bins';
+nPSC    = histcounts(pscTable{:,1}, bins)';
 pscFreq = nPSC / duration;
 pscAmp  = zeros(nTrace, 1);
 for i = 1:nTrace
