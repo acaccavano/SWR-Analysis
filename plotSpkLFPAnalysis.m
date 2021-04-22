@@ -5,6 +5,13 @@ function hand = plotSpkLFPAnalysis(data, hand, param, dsPlot)
 
 nData = length(data);
 
+% Input parameters
+if isempty(param) param     = struct; end
+if ~isfield(param,'thetaOption')      param.thetaOption       = 0;    end
+if ~isfield(param,'betaOption')       param.betaOption        = 0;    end
+if ~isfield(param,'gammaOption')      param.gammaOption       = 1;    end
+if ~isfield(param,'hgammaOption')     param.hgammaOption      = 1;    end
+
 % Initialization
 convFact = 1000; % Convert from mV to uV
 nTrace   = 1;
@@ -22,7 +29,7 @@ for i = 1:nData
 end
 
 % Theta plots
-if isfield(data(1).C.spike, 'theta')
+if isfield(data(1).C.spike, 'theta') && param.thetaOption
   nTrace  = nTrace + 1;
   for i = 1:nData
     dataPlot{i, nTrace}  = downsampleMean(convFact * data(i).theta.tSeries, dsPlot);
@@ -32,7 +39,7 @@ if isfield(data(1).C.spike, 'theta')
 end
 
 % Beta plots
-if isfield(data(1).C.spike, 'beta')
+if isfield(data(1).C.spike, 'beta') && param.betaOption
   nTrace  = nTrace + 1;
   for i = 1:nData
     dataPlot{i, nTrace}  = downsampleMean(convFact * data(i).beta.tSeries, dsPlot);
@@ -42,7 +49,7 @@ if isfield(data(1).C.spike, 'beta')
 end
 
 % Gamma plots
-if isfield(data(1).C.spike, 'gamma')
+if isfield(data(1).C.spike, 'gamma') && param.gammaOption
   nTrace  = nTrace + 1;
   for i = 1:nData
     dataPlot{i, nTrace}  = downsampleMean(convFact * data(i).gamma.tSeries, dsPlot);
@@ -52,7 +59,7 @@ if isfield(data(1).C.spike, 'gamma')
 end
 
 % High Gamma plots
-if isfield(data(1).C.spike, 'hgamma')
+if isfield(data(1).C.spike, 'hgamma') && param.hgammaOption
   nTrace  = nTrace + 1;
   for i = 1:nData
     dataPlot{i, nTrace}  = downsampleMean(convFact * data(i).hgamma.tSeries, dsPlot);
