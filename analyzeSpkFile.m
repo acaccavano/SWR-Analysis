@@ -10,21 +10,22 @@ function [data, hand] = analyzeSpkFile(data, hand, param, saveFile, spkFile, bst
 %   param      = structure containing all parameters including:
 %     param.fileNum              = 1 = Single Recording, 2 = Multiple/Batch analysis (disables plotting)
 %     param.importSpkOption      = boolean flag to import spike file (needed unless reanalyzing) (default = 1)
-%     param.swrSpkOption         = boolean flag to calculate coincidence of SWRs and spikes and spike-phase coupling during SWRs (default = 1)
+%     param.swrSpkOption         = boolean flag to calculate coincidence of SWRs and spikes (default = 1)
 %     param.swrBstOption         = boolean flag to calculate coincidence of SWRs and bursts (default = 1)
 %     param.lfpSpkOption         = boolean flag to calculate spike-phase over duration of recording (instead of swrSpkOption - only 1 selectable, default = 0)
-%     param.sdMultPhase          = for spike-phase coupling, the SD multiple the peak-trough amplitude must exceed in the oscillation surrounding the spike to be be considered
 %     param.useSWRDurationOption = boolean flag to use detected SWR detection for coincidence detection (default = 1)
 %     param.useSWRWindowOption   = boolean flag to use standard swrWindow for coincidence detection (default = 0)
 %     param.swrWindow            = +/- window around SWR peak events (default = 100 ms)
-%     param.parseSpkOption       = currently mandatory boolean flag to parse spikes into standard window (default = 1)
-%     param.calcEvMatrixOption   = currently mandatory boolean flag to calc standard event SWR-Spk event matrix (default = 1)
+%     param.spkPhaseSWROption    = boolean flag to calculate spike-phase coupling within SWR events (default = 1)
+%     param.expSWREvOption       = boolean flag to determine whether to export csv table of SWR events (default = 1)
+%     param.spkPhaseLFPOption    = boolean flag to calculate spike-phase coupling over duration of file (default = 0)
+%     param.spkAmpLFPOption      = boolean flag to calculate spike-amplitude coupling over duration of file (default = 0)
+%     param.sdMultPhase          = for spike-phase coupling, the SD multiple the peak-trough amplitude must exceed in the oscillation surrounding the spike to be be considered
 %     param.calcPhaseStats       = Calculates statistics, WARNING: requires circ_stat toolbox (default = 1)
 %     param.expSpkEvOption       = boolean flag to determine whether to export csv table of Spk events (default = 1)
 %     param.expBstEvOption       = boolean flag to determine whether to export csv table of Bst events (default = 1)
-%     param.expSWREvOption       = boolean flag to determine whether to export csv table of SWR events (default = 1)
-%     param.reAnalyzeOption      = option to re-analyze file (default = 0)
 %     param.expAveOption         = boolean flag to determine whether to export csv table of average statistics
+%     param.reAnalyzeOption      = option to re-analyze file (default = 0)
 %     param.nBins                = For spike histogram, not currently selectable from UI (default = 100)
 %   saveFile    = full path to matlab file to save (if not set, will prompt)
 %   spkFile     = full path to pClamp spike event file to import (if not set, will prompt)
@@ -39,67 +40,66 @@ function [data, hand] = analyzeSpkFile(data, hand, param, saveFile, spkFile, bst
 %   hand       = handle structure for figure
 
 %% Handle input arguments - if not entered
-if (nargin < 10) expAveFile = []; end
-if (nargin < 9) expSWRFile = []; end
-if (nargin < 8) expBstFile = []; end
-if (nargin < 7) expSpkFile = []; end
-if (nargin < 6) bstFile    = []; end
-if (nargin < 5) spkFile    = []; end
-if (nargin < 4) saveFile   = []; end
-if (nargin < 3) param      = struct; end
-if (nargin < 2) hand       = struct; end
-if (nargin < 1) data       = struct; end
+if (nargin < 10); expAveFile = []; end
+if (nargin < 9); expSWRFile = []; end
+if (nargin < 8); expBstFile = []; end
+if (nargin < 7); expSpkFile = []; end
+if (nargin < 6); bstFile    = []; end
+if (nargin < 5); spkFile    = []; end
+if (nargin < 4); saveFile   = []; end
+if (nargin < 3); param      = struct; end
+if (nargin < 2); hand       = struct; end
+if (nargin < 1); data       = struct; end
 
 % Handle case in which empty variables are supplied:
-if isempty(param) param    = struct; end
-if isempty(hand)  hand     = struct; end
-if isempty(data)  data     = struct; end
+if isempty(param); param    = struct; end
+if isempty(hand);  hand     = struct; end
+if isempty(data);  data     = struct; end
 
 % Set default parameters if not specified
-if ~isfield(param,'fileNum')              param.fileNum              = 1;   end
-if ~isfield(param,'importSpkOption')      param.importSpkOption      = 1;   end
-if ~isfield(param,'swrSpkOption')         param.swrSpkOption         = 1;   end
-if ~isfield(param,'swrBstOption')         param.swrBstOption         = 1;   end
-if ~isfield(param,'lfpSpkOption')         param.lfpSpkOption         = 0;   end
-if ~isfield(param,'sdMultPhase')          param.sdMultPhase          = 4;   end
-if ~isfield(param,'useSWRDurationOption') param.useSWRDurationOption = 1;   end
-if ~isfield(param,'useSWRWindowOption')   param.useSWRWindowOption   = 0;   end
-if ~isfield(param,'swrWindow')            param.swrWindow            = 100; end
-if ~isfield(param,'parseSpkOption')       param.parseSpkOption       = 1;   end
-if ~isfield(param,'calcEvMatrixOption')   param.calcEvMatrixOption   = 1;   end
-if ~isfield(param,'calcPhaseStats')       param.calcPhaseStats       = 1;   end
-if ~isfield(param,'expSpkEvOption')       param.expSpkEvOption       = 1;   end
-if ~isfield(param,'expBstEvOption')       param.expBstEvOption       = 1;   end
-if ~isfield(param,'expSWREvOption')       param.expSWREvOption       = 1;   end
-if ~isfield(param,'reAnalyzeOption')      param.reAnalyzeOption      = 0;   end
-if ~isfield(param,'expAveOption')         param.expAveOption         = 1;   end
-if ~isfield(param,'nBins')                param.nBins                = 100; end % Not yet selectable in UI
+if ~isfield(param,'fileNum');              param.fileNum              = 1;   end
+if ~isfield(param,'importSpkOption');      param.importSpkOption      = 1;   end
+if ~isfield(param,'swrSpkOption');         param.swrSpkOption         = 1;   end
+if ~isfield(param,'swrBstOption');         param.swrBstOption         = 1;   end
+if ~isfield(param,'lfpSpkOption');         param.lfpSpkOption         = 0;   end
+if ~isfield(param,'useSWRDurationOption'); param.useSWRDurationOption = 1;   end
+if ~isfield(param,'useSWRWindowOption');   param.useSWRWindowOption   = 0;   end
+if ~isfield(param,'swrWindow');            param.swrWindow            = 100; end
+if ~isfield(param,'spkPhaseSWROption');    param.spkPhaseSWROption    = 1;   end
+if ~isfield(param,'expSWREvOption');       param.expSWREvOption       = 1;   end
+if ~isfield(param,'spkPhaseLFPOption');    param.spkPhaseLFPOption    = 0;   end
+if ~isfield(param,'spkAmpLFPOption');      param.spkAmpLFPOption      = 0;   end
+if ~isfield(param,'sdMultPhase');          param.sdMultPhase          = 2;   end
+if ~isfield(param,'calcPhaseStats');       param.calcPhaseStats       = 1;   end
+if ~isfield(param,'expSpkEvOption');       param.expSpkEvOption       = 1;   end
+if ~isfield(param,'expBstEvOption');       param.expBstEvOption       = 1;   end
+if ~isfield(param,'expAveOption');         param.expAveOption         = 1;   end
+if ~isfield(param,'reAnalyzeOption');      param.reAnalyzeOption      = 0;   end
+if ~isfield(param,'nBins');                param.nBins                = 100; end % Not yet selectable in UI
 
 if ~isfield(data, 'LFP')
   [fileName, filePath] = uigetfile('.mat', 'Select *.mat file of analyzed LFP + imported cell channel');
   dataFile = [filePath fileName];
-  if ~all(dataFile) error('No file data file selected'); end
+  if ~all(dataFile); error('No file data file selected'); end
   data = load(dataFile);
 end
 
 % Check if necessary data structures are present
-if ~isfield(data,'LFP') error('Must import LFP channel to data structure before proceeding'); end
-if ~isfield(data,'C')   error('Must import cell channel to data structure before proceeding'); end
-if ~isfield(data.C,'spike') data.C.spike = struct; end
+if ~isfield(data,'LFP'); error('Must import LFP channel to data structure before proceeding'); end
+if ~isfield(data,'C');   error('Must import cell channel to data structure before proceeding'); end
+if ~isfield(data.C,'spike'); data.C.spike = struct; end
 
 if param.swrSpkOption
-  if ~isfield(data,'SWR') error('Must analyze SWRs before proceeding'); end
-  if ~isfield(data.SWR,'spike') data.SWR.spike = struct; end
-  if ~isfield(data.C,'SWR') data.C.SWR = struct; end
+  if ~isfield(data,'SWR'); error('Must analyze SWRs before proceeding'); end
+  if ~isfield(data.SWR,'spike'); data.SWR.spike = struct; end
+  if ~isfield(data.C,'SWR'); data.C.SWR = struct; end
   
   if param.swrBstOption
-    if ~isfield(data.C,'burst') data.C.burst = struct; end
-    if ~isfield(data.SWR,'burst') data.SWR.burst = struct; end
+    if ~isfield(data.C,'burst'); data.C.burst = struct; end
+    if ~isfield(data.SWR,'burst'); data.SWR.burst = struct; end
   end
-  
-  if param.parseSpkOption
-    if ~isfield(data.C.SWR,'spike') data.C.SWR.spike = struct; end
-  end
+
+  if ~isfield(data.C.SWR,'spike'); data.C.SWR.spike = struct; end
 end
 
 % Parse dataFile to determine default save name
@@ -121,7 +121,7 @@ if param.importSpkOption && ~param.reAnalyzeOption
   if isempty(spkFile)
     [fileName, filePath] = uigetfile('.txt', 'Select spike event *.txt file exported from pClamp', parentPath);
     spkFile = [filePath fileName];
-    if ~all(spkFile) error('No spike file selected'); end
+    if ~all(spkFile); error('No spike file selected'); end
     data.C.spike.evFile = spkFile;
   end
   [parentPath, spkFileName, ~] = parsePath(spkFile);
@@ -130,7 +130,7 @@ if param.importSpkOption && ~param.reAnalyzeOption
     if isempty(bstFile)
       [fileName, filePath] = uigetfile('.txt', 'Select burst event *.txt file exported from pClamp', parentPath);
       bstFile = [filePath fileName];
-      if ~all(bstFile) error('No burst file selected'); end
+      if ~all(bstFile); error('No burst file selected'); end
       data.C.burst.evFile = bstFile;
     end
     [parentPath, bstFileName, ~] = parsePath(bstFile);
@@ -342,10 +342,10 @@ if param.useSWRWindowOption && param.swrSpkOption
   end
 end
 
-%% Align files
+%% Spike-SWR Analysis
 if param.swrSpkOption
   
-  % Align SWR-Spike Arrays:
+  %% Align SWR-Spike Arrays:
   fprintf(['aligning time arrays for SWR-spike coincidence analysis (file ' dataFileName ')... ']);
   if param.useSWRDurationOption
     [data.SWR.spike.evStatusA, data.SWR.spike.evStartA, data.SWR.spike.evEndA, data.C.spike.evStatusA, data.C.spike.evStartA, data.C.spike.evEndA, data.SWR.spike.timingA] = ...
@@ -383,10 +383,9 @@ if param.swrSpkOption
     
   end
   fprintf('done\n');
-end
-
-%% Parse events into SWR blocks (mandatory for SWR analysis)
-if param.parseSpkOption
+  
+  %% Parse events into SWR blocks
+  fprintf(['parsing spikes into SWR events (file ' dataFileName ')... ']);
   data.C.SWR.spike.evStartA  = [];
   data.C.SWR.spike.evPeakA   = [];
   data.C.SWR.spike.evEndA    = [];
@@ -446,12 +445,9 @@ if param.parseSpkOption
     % Normalize histogram to all SWRs to get prob. of spiking per bin
     data.C.SWR.spike.evHist = data.C.SWR.spike.evHist / length(data.C.SWR.spike.evPeakA); 
   end
-end
+  fprintf('done\n');
 
-%% Calculate overlap of SWRs and spikes
-if param.swrSpkOption
-  
-  % Calculate overlap for SWRs and spikes
+  %% Calculate overlap of SWRs and spikes
   fprintf(['detecting spikes coincident with SWRs (file ' dataFileName ')... ']);
   [data.C.spike.evStatusC, data.C.spike.evStartC, data.C.spike.evEndC, data.C.spike.evIndex] = eventOverlap(data.SWR.spike.evStatusA, data.SWR.spike.evStartA, data.SWR.spike.evEndA, ...
     data.C.spike.evStatusA, data.C.spike.evStartA, data.C.spike.evEndA, data.SWR.spike.timingA, 2);
@@ -468,23 +464,21 @@ if param.swrSpkOption
   data.C.spike.nEventsA   = size(data.C.spike.evStartA,1);
   data.C.spike.nEventsC   = size(data.C.spike.evStartC,1);
   
-  % Calculate simplified event matrix (currently mandatory)
-  if param.calcEvMatrixOption
-    data.C.spike.swrMatrix  = zeros(data.C.spike.nEventsA, 1);
-    data.SWR.spike.evMatrix = zeros(data.SWR.spike.nEventsA, 1);
-    
-    evStatusC = data.C.spike.evStatusA .* data.SWR.spike.evStatusA;
-    
-    for spk = 1:data.C.spike.nEventsA
-      if (sum(evStatusC(data.C.spike.evStartA(spk) : data.C.spike.evEndA(spk))) > 0)
-        data.C.spike.swrMatrix(spk) = 1;
-      end
+  % Calculate simplified event matrix
+  data.C.spike.swrMatrix  = zeros(data.C.spike.nEventsA, 1);
+  data.SWR.spike.evMatrix = zeros(data.SWR.spike.nEventsA, 1);
+  
+  evStatusC = data.C.spike.evStatusA .* data.SWR.spike.evStatusA;
+  
+  for spk = 1:data.C.spike.nEventsA
+    if (sum(evStatusC(data.C.spike.evStartA(spk) : data.C.spike.evEndA(spk))) > 0)
+      data.C.spike.swrMatrix(spk) = 1;
     end
-    
-    for swr = 1:data.SWR.spike.nEventsA
-      if (sum(evStatusC(data.SWR.spike.evStartA(swr) : data.SWR.spike.evEndA(swr))) > 0)
-        data.SWR.spike.evMatrix(swr) = 1;
-      end
+  end
+  
+  for swr = 1:data.SWR.spike.nEventsA
+    if (sum(evStatusC(data.SWR.spike.evStartA(swr) : data.SWR.spike.evEndA(swr))) > 0)
+      data.SWR.spike.evMatrix(swr) = 1;
     end
   end
   
@@ -508,33 +502,29 @@ if param.swrSpkOption
     data.C.burst.nEventsA   = size(data.C.burst.evStartA,1);
     data.C.burst.nEventsC   = size(data.C.burst.evStartC,1);
     
-    % Calculate event matrix (currently mandatory)
-    if param.calcEvMatrixOption
-      data.C.burst.swrMatrix  = zeros(data.C.burst.nEventsA, 1);
-      data.SWR.burst.evMatrix = zeros(data.SWR.burst.nEventsA, 1);
-      
-      evStatusC = data.C.burst.evStatusA .* data.SWR.burst.evStatusA;
-      
-      for bst = 1:data.C.burst.nEventsA
-        if (sum(evStatusC(data.C.burst.evStartA(bst) : data.C.burst.evEndA(bst))) > 0)
-          data.C.burst.swrMatrix(bst) = 1;
-        end
+    % Calculate event matrix
+    data.C.burst.swrMatrix  = zeros(data.C.burst.nEventsA, 1);
+    data.SWR.burst.evMatrix = zeros(data.SWR.burst.nEventsA, 1);
+    
+    evStatusC = data.C.burst.evStatusA .* data.SWR.burst.evStatusA;
+    
+    for bst = 1:data.C.burst.nEventsA
+      if (sum(evStatusC(data.C.burst.evStartA(bst) : data.C.burst.evEndA(bst))) > 0)
+        data.C.burst.swrMatrix(bst) = 1;
       end
-      
-      for swr = 1:data.SWR.burst.nEventsA
-        if (sum(evStatusC(data.SWR.burst.evStartA(swr) : data.SWR.burst.evEndA(swr))) > 0)
-          data.SWR.burst.evMatrix(swr) = 1;
-        end
+    end
+    
+    for swr = 1:data.SWR.burst.nEventsA
+      if (sum(evStatusC(data.SWR.burst.evStartA(swr) : data.SWR.burst.evEndA(swr))) > 0)
+        data.SWR.burst.evMatrix(swr) = 1;
       end
     end
   end
   
   %% Calculate spike-phase within SWRs
-  if ~isempty(data.SWR.spike.evStartA) && isfield(data.R.SWR.phase, 'evPhase')
+  if param.spkPhaseSWROption && ~isempty(data.SWR.spike.evStartA) && isfield(data.R.SWR.phase, 'evPhase') 
     fprintf(['detecting oscillation phase of spikes during SWRs (file ' dataFileName ')... ']);
-    
-    % Initialize phase variables:
-    
+
     % Gamma:
     if isfield(data, 'gamma')
       if isfield(data.gamma, 'SWR')
@@ -661,109 +651,141 @@ if param.swrSpkOption
   end
 end
 
-%% Calculate spike-phase coupling of entire file (if option selected)
+
+%% Spike-LFP Analysis
 if param.lfpSpkOption
-  fprintf(['detecting oscillation phase of spikes over entire file (' dataFileName ')... ']);
   
-  % Theta:
-  if isfield(data, 'theta')
-    if isfield(data.theta, 'phase')
-      data.C.spike.theta = struct;
-      data.C.spike.theta.phase  = NaN*ones(length(data.C.spike.evStart), 1);
-      data.C.spike.theta.phaseX = NaN*ones(length(data.C.spike.evStart), 1);
-      data.C.spike.theta.phaseY = NaN*ones(length(data.C.spike.evStart), 1);
-      minAmpT = std(data.theta.tSeries) * param.sdMultPhase;
-    end
-  end
-  
-  % Beta:
-  if isfield(data, 'beta')
-    if isfield(data.beta, 'phase')
-      data.C.spike.beta = struct;
-      data.C.spike.beta.phase  = NaN*ones(length(data.C.spike.evStart), 1);
-      data.C.spike.beta.phaseX = NaN*ones(length(data.C.spike.evStart), 1);
-      data.C.spike.beta.phaseY = NaN*ones(length(data.C.spike.evStart), 1);
-      minAmpB = std(data.beta.tSeries) * param.sdMultPhase;
-    end
-  end
-  
-  % Gamma:
-  if isfield(data, 'gamma')
-    if isfield(data.gamma, 'phase')
-      data.C.spike.gamma = struct;
-      data.C.spike.gamma.phase  = NaN*ones(length(data.C.spike.evStart), 1);
-      data.C.spike.gamma.phaseX = NaN*ones(length(data.C.spike.evStart), 1);
-      data.C.spike.gamma.phaseY = NaN*ones(length(data.C.spike.evStart), 1);
-      minAmpG = std(data.gamma.tSeries) * param.sdMultPhase;
-    end
-  end
-  
-  % High Gamma:
-  if isfield(data, 'hgamma')
-    if isfield(data.hgamma, 'phase')
-      data.C.spike.hgamma = struct;
-      data.C.spike.hgamma.phase  = NaN*ones(length(data.C.spike.evStart), 1);
-      data.C.spike.hgamma.phaseX = NaN*ones(length(data.C.spike.evStart), 1);
-      data.C.spike.hgamma.phaseY = NaN*ones(length(data.C.spike.evStart), 1);
-      minAmpHG = std(data.hgamma.tSeries) * param.sdMultPhase;
-    end
-  end
-  
-  %% Spike by spike, calculate phase if oscillation above threshold
-  for spk = 1:data.C.spike.nEvents
+  %% Calculate spike-phase coupling of entire file (if option selected)
+  if param.spkPhaseLFPOption
+    fprintf(['detecting oscillation phase of spikes over entire file (' dataFileName ')... ']);
     
     % Theta:
-    if isfield(data.C.spike, 'theta')
-      ampT = calcTotPhaseAmp(data.theta.phase, data.C.spike.evPeak(spk));
-      if ampT > minAmpT
-        data.C.spike.theta.phase(spk)  = data.theta.phase.tPhase(data.C.spike.evPeak(spk));
-        data.C.spike.theta.phaseX(spk) = cos(data.C.spike.theta.phase(spk));
-        data.C.spike.theta.phaseY(spk) = sin(data.C.spike.theta.phase(spk));
+    if isfield(data, 'theta')
+      if isfield(data.theta, 'phase')
+        data.C.spike.theta = struct;
+        data.C.spike.theta.phase  = NaN*ones(length(data.C.spike.evStart), 1);
+        data.C.spike.theta.phaseX = NaN*ones(length(data.C.spike.evStart), 1);
+        data.C.spike.theta.phaseY = NaN*ones(length(data.C.spike.evStart), 1);
+        minAmpT = std(data.theta.tSeries) * param.sdMultPhase;
+      end
+    end
+    
+    % Alpha:
+    if isfield(data, 'alpha')
+      if isfield(data.alpha, 'phase')
+        data.C.spike.alpha = struct;
+        data.C.spike.alpha.phase  = NaN*ones(length(data.C.spike.evStart), 1);
+        data.C.spike.alpha.phaseX = NaN*ones(length(data.C.spike.evStart), 1);
+        data.C.spike.alpha.phaseY = NaN*ones(length(data.C.spike.evStart), 1);
+        minAmpA = std(data.alpha.tSeries) * param.sdMultPhase;
       end
     end
     
     % Beta:
-    if isfield(data.C.spike, 'beta')
-      ampB = calcTotPhaseAmp(data.beta.phase, data.C.spike.evPeak(spk));
-      if ampB > minAmpB
-        data.C.spike.beta.phase(spk)  = data.beta.phase.tPhase(data.C.spike.evPeak(spk));
-        data.C.spike.beta.phaseX(spk) = cos(data.C.spike.beta.phase(spk));
-        data.C.spike.beta.phaseY(spk) = sin(data.C.spike.beta.phase(spk));
+    if isfield(data, 'beta')
+      if isfield(data.beta, 'phase')
+        data.C.spike.beta = struct;
+        data.C.spike.beta.phase  = NaN*ones(length(data.C.spike.evStart), 1);
+        data.C.spike.beta.phaseX = NaN*ones(length(data.C.spike.evStart), 1);
+        data.C.spike.beta.phaseY = NaN*ones(length(data.C.spike.evStart), 1);
+        minAmpB = std(data.beta.tSeries) * param.sdMultPhase;
       end
     end
     
     % Gamma:
-    if isfield(data.C.spike, 'gamma')
-      ampG = calcTotPhaseAmp(data.gamma.phase, data.C.spike.evPeak(spk));
-      if ampG > minAmpG
-        data.C.spike.gamma.phase(spk)  = data.gamma.phase.tPhase(data.C.spike.evPeak(spk));
-        data.C.spike.gamma.phaseX(spk) = cos(data.C.spike.gamma.phase(spk));
-        data.C.spike.gamma.phaseY(spk) = sin(data.C.spike.gamma.phase(spk));
+    if isfield(data, 'gamma')
+      if isfield(data.gamma, 'phase')
+        data.C.spike.gamma = struct;
+        data.C.spike.gamma.phase  = NaN*ones(length(data.C.spike.evStart), 1);
+        data.C.spike.gamma.phaseX = NaN*ones(length(data.C.spike.evStart), 1);
+        data.C.spike.gamma.phaseY = NaN*ones(length(data.C.spike.evStart), 1);
+        minAmpG = std(data.gamma.tSeries) * param.sdMultPhase;
       end
     end
     
     % High Gamma:
-    if isfield(data.C.spike, 'hgamma')
-      ampHG = calcTotPhaseAmp(data.hgamma.phase, data.C.spike.evPeak(spk));
-      if ~isnan(ampHG) && ampHG > minAmpHG
-        data.C.spike.hgamma.phase(spk)  = data.hgamma.phase.tPhase(data.C.spike.evPeak(spk));
-        data.C.spike.hgamma.phaseX(spk) = cos(data.C.spike.hgamma.phase(spk));
-        data.C.spike.hgamma.phaseY(spk) = sin(data.C.spike.hgamma.phase(spk));
+    if isfield(data, 'hgamma')
+      if isfield(data.hgamma, 'phase')
+        data.C.spike.hgamma = struct;
+        data.C.spike.hgamma.phase  = NaN*ones(length(data.C.spike.evStart), 1);
+        data.C.spike.hgamma.phaseX = NaN*ones(length(data.C.spike.evStart), 1);
+        data.C.spike.hgamma.phaseY = NaN*ones(length(data.C.spike.evStart), 1);
+        minAmpHG = std(data.hgamma.tSeries) * param.sdMultPhase;
       end
     end
+    
+    %% Spike by spike, calculate phase if oscillation above threshold
+    for spk = 1:data.C.spike.nEvents
+      
+      % Theta:
+      if isfield(data.C.spike, 'theta')
+        ampT = calcTotPhaseAmp(data.theta.phase, data.C.spike.evPeak(spk));
+        if ampT > minAmpT
+          data.C.spike.theta.phase(spk)  = data.theta.phase.tPhase(data.C.spike.evPeak(spk));
+          data.C.spike.theta.phaseX(spk) = cos(data.C.spike.theta.phase(spk));
+          data.C.spike.theta.phaseY(spk) = sin(data.C.spike.theta.phase(spk));
+        end
+      end
+      
+      % Alpha:
+      if isfield(data.C.spike, 'alpha')
+        ampA = calcTotPhaseAmp(data.alpha.phase, data.C.spike.evPeak(spk));
+        if ampA > minAmpA
+          data.C.spike.alpha.phase(spk)  = data.alpha.phase.tPhase(data.C.spike.evPeak(spk));
+          data.C.spike.alpha.phaseX(spk) = cos(data.C.spike.alpha.phase(spk));
+          data.C.spike.alpha.phaseY(spk) = sin(data.C.spike.alpha.phase(spk));
+        end
+      end
+      
+      % Beta:
+      if isfield(data.C.spike, 'beta')
+        ampB = calcTotPhaseAmp(data.beta.phase, data.C.spike.evPeak(spk));
+        if ampB > minAmpB
+          data.C.spike.beta.phase(spk)  = data.beta.phase.tPhase(data.C.spike.evPeak(spk));
+          data.C.spike.beta.phaseX(spk) = cos(data.C.spike.beta.phase(spk));
+          data.C.spike.beta.phaseY(spk) = sin(data.C.spike.beta.phase(spk));
+        end
+      end
+      
+      % Gamma:
+      if isfield(data.C.spike, 'gamma')
+        ampG = calcTotPhaseAmp(data.gamma.phase, data.C.spike.evPeak(spk));
+        if ampG > minAmpG
+          data.C.spike.gamma.phase(spk)  = data.gamma.phase.tPhase(data.C.spike.evPeak(spk));
+          data.C.spike.gamma.phaseX(spk) = cos(data.C.spike.gamma.phase(spk));
+          data.C.spike.gamma.phaseY(spk) = sin(data.C.spike.gamma.phase(spk));
+        end
+      end
+      
+      % High Gamma:
+      if isfield(data.C.spike, 'hgamma')
+        ampHG = calcTotPhaseAmp(data.hgamma.phase, data.C.spike.evPeak(spk));
+        if ~isnan(ampHG) && ampHG > minAmpHG
+          data.C.spike.hgamma.phase(spk)  = data.hgamma.phase.tPhase(data.C.spike.evPeak(spk));
+          data.C.spike.hgamma.phaseX(spk) = cos(data.C.spike.hgamma.phase(spk));
+          data.C.spike.hgamma.phaseY(spk) = sin(data.C.spike.hgamma.phase(spk));
+        end
+      end
+    end
+    fprintf('done\n');
   end
-  fprintf('done\n');
+  
+  %% Calculate spike-amplitude coupling of entire file (if option selected)
+  if param.spkAmpLFPOption
+    
+  end
 end
     
 %% Calculate additional phase stats if option selected (requires circular statistics package)
 if param.calcPhaseStats
   fprintf(['calculating circular phase statistics (file: ' dataFileName ')... ']);
-  if isfield(data.C.spike, 'theta')  data.C.spike.theta  = calcPhaseStats(data.C.spike.theta);  end
-  if isfield(data.C.spike, 'beta')   data.C.spike.beta   = calcPhaseStats(data.C.spike.beta);   end
-  if isfield(data.C.spike, 'gamma')  data.C.spike.gamma  = calcPhaseStats(data.C.spike.gamma);  end
-  if isfield(data.C.spike, 'hgamma') data.C.spike.hgamma = calcPhaseStats(data.C.spike.hgamma); end
-  if isfield(data.C.spike, 'R')      data.C.spike.R      = calcPhaseStats(data.C.spike.R);      end
-  if isfield(data.C.spike, 'fR')     data.C.spike.fR     = calcPhaseStats(data.C.spike.fR);     end
+  if isfield(data.C.spike, 'theta');  data.C.spike.theta  = calcPhaseStats(data.C.spike.theta);  end
+  if isfield(data.C.spike, 'alpha');  data.C.spike.alpha  = calcPhaseStats(data.C.spike.alpha);  end
+  if isfield(data.C.spike, 'beta');   data.C.spike.beta   = calcPhaseStats(data.C.spike.beta);   end
+  if isfield(data.C.spike, 'gamma');  data.C.spike.gamma  = calcPhaseStats(data.C.spike.gamma);  end
+  if isfield(data.C.spike, 'hgamma'); data.C.spike.hgamma = calcPhaseStats(data.C.spike.hgamma); end
+  if isfield(data.C.spike, 'R');      data.C.spike.R      = calcPhaseStats(data.C.spike.R);      end
+  if isfield(data.C.spike, 'fR');     data.C.spike.fR     = calcPhaseStats(data.C.spike.fR);     end
   fprintf('done\n');
 end
 
@@ -773,11 +795,9 @@ data.C.spike   = orderStruct(data.C.spike);
 data.C.param   = orderStruct(data.C.param);
 
 if param.swrSpkOption
-  data.SWR       = orderStruct(data.SWR);
-  data.SWR.spike = orderStruct(data.SWR.spike);
-  if param.parseSpkOption
-    data.C.SWR.spike = orderStruct(data.C.SWR.spike);
-  end
+  data.SWR         = orderStruct(data.SWR);
+  data.SWR.spike   = orderStruct(data.SWR.spike);
+  data.C.SWR.spike = orderStruct(data.C.SWR.spike);
 end
 
 if param.swrBstOption
