@@ -43,7 +43,10 @@ function [data, hand] = analyzeLFPFile(data, hand, param, dataFile, saveFile, ex
 %     param.expSWRDataOption = boolean flag to determine whether to export txt file of episodic SWR events for pClamp analysis
 %     param.thetaOption      = boolean flag to filter and analyze theta signal
 %     param.thetaLim1        = lower theta band-pass lim (default = 4Hz)
-%     param.thetaLim2        = upper theta band-pass lim (default = 12Hz)
+%     param.thetaLim2        = upper theta band-pass lim (default = 8Hz)
+%     param.alphaOption      = boolean flag to filter and analyze alpha signal
+%     param.alphaLim1        = lower alpha band-pass lim (default = 9Hz)
+%     param.alphaLim2        = upper alpha band-pass lim (default = 12Hz)
 %     param.betaOption       = boolean flag to filter and analyze beta signal
 %     param.betaLim1         = lower beta band-pass lim (default = 13Hz)
 %     param.betaLim2         = upper beta band-pass lim (default = 24Hz)
@@ -56,9 +59,15 @@ function [data, hand] = analyzeLFPFile(data, hand, param, dataFile, saveFile, ex
 %     param.fROption         = boolean flag to filter and analyze fast ripple signal
 %     param.fRLim1           = lower fast rippple band-pass lim (default = 250Hz)
 %     param.fRLim2           = lower fast rippple band-pass lim (default = 500Hz)
-%     param.spectOption      = boolean flag to perform spectrogram analysis
+%     param.spectOption      = boolean flag to calculate spectrogram
 %     param.spectLim1        = lower lim of spectrogram (default = 1Hz)
 %     param.spectLim2        = upper lim of spectrogram (default = 500Hz)
+%     param.fftOption        = boolean flag to calculate FFT
+%     param.phaseOption      = boolean flag to calculate piecewise linear interpolated phase (required for many LFP cross frequency, spike-phase, and PSC-LFP correlation analyses
+%     param.xFreqOption      = boolean flag to perform cross-frequency analysis
+%     param.xFreqType        = cell: type of x-freq analysis (only 'Phase-Amplitude' implemented)
+%     param.xFreqLow         = cell: low frequency band for x-freq (Theta, Alpha, Beta, SW)
+%     param.xFreqHigh        = cell: high frequency band for x-freq (Gamma, HGamma, Ripple, FRipple)
 %     param.importStimOption = option to import stim file from pClamp (default = 0)
 %     param.reAnalyzeOption  = option to re-analyze file - will prompt for *.mat instead of raw data file
 %     param.expAveOption     = boolean flag to determine whether to export csv table of average statistics
@@ -74,79 +83,88 @@ function [data, hand] = analyzeLFPFile(data, hand, param, dataFile, saveFile, ex
 %   hand       = handle structure for figure
 
 %% Handle input arguments - if not entered
-if (nargin < 9) stimFile    = []; end
-if (nargin < 8) expDataFile = []; end
-if (nargin < 7) expAveFile  = []; end
-if (nargin < 6) expEvFile   = []; end
-if (nargin < 5) saveFile    = []; end
-if (nargin < 4) dataFile    = []; end
-if (nargin < 3) param       = struct; end
-if (nargin < 2) hand        = struct; end
-if (nargin < 1) data        = struct; end
+if (nargin < 9); stimFile    = []; end
+if (nargin < 8); expDataFile = []; end
+if (nargin < 7); expAveFile  = []; end
+if (nargin < 6); expEvFile   = []; end
+if (nargin < 5); saveFile    = []; end
+if (nargin < 4); dataFile    = []; end
+if (nargin < 3); param       = struct; end
+if (nargin < 2); hand        = struct; end
+if (nargin < 1); data        = struct; end
 
 % Handle case in which empty variables are supplied:
-if isempty(param) param     = struct; end
-if isempty(hand)  hand      = struct; end
-if isempty(data)  data      = struct; end
+if isempty(param); param     = struct; end
+if isempty(hand);  hand      = struct; end
+if isempty(data);  data      = struct; end
 
 % Set default parameters if not specified
-if ~isfield(param,'fileNum')          param.fileNum           = 1; end
-if ~isfield(param,'fileType')         param.fileType          = 2;    end
-if ~isfield(param,'Fs')               param.Fs                = 3000; end
-if ~isfield(param,'dsFactor')         param.dsFactor          = 1;    end
-if ~isfield(param,'lfpChannel')       param.lfpChannel        = 1;    end
-if ~isfield(param,'cellOption')       param.cellOption        = 1;    end
-if ~isfield(param,'cellChannel')      param.cellChannel       = 2;    end
-if ~isfield(param,'notchOption')      param.notchOption       = 0;    end
-if ~isfield(param,'notchFreq')        param.notchFreq         = 60;   end
-if ~isfield(param,'lfpOption')        param.lfpOption         = 1;    end
-if ~isfield(param,'lfpLim1')          param.lfpLim1           = 1;    end
-if ~isfield(param,'lfpLim2')          param.lfpLim2           = 1000; end
-if ~isfield(param,'swrOption')        param.swrOption         = 1;    end
-if ~isfield(param,'swOption')         param.swOption          = 1;    end
-if ~isfield(param,'swLim1')           param.swLim1            = 1;    end
-if ~isfield(param,'swLim2')           param.swLim2            = 30;   end
-if ~isfield(param,'rOption')          param.rOption           = 1;    end
-if ~isfield(param,'rLim1')            param.rLim1             = 120;  end
-if ~isfield(param,'rLim2')            param.rLim2             = 220;  end
-if ~isfield(param,'rmsOption')        param.rmsOption         = 1;    end
-if ~isfield(param,'rmsMinEvDiff')     param.rmsMinEvDiff      = 25;   end
-if ~isfield(param,'rmsPeriod')        param.rmsPeriod         = 5;    end
-if ~isfield(param,'peakDetectOption') param.peakDetectOption  = 1;    end
-if ~isfield(param,'sdMult')           param.sdMult            = 4;    end
-if ~isfield(param,'baseQuant')        param.baseQuant         = 0.95; end
-if ~isfield(param,'swrType')          param.swrType           = 1;    end
-if ~isfield(param,'swrWindow')        param.swrWindow         = 100;  end
-if ~isfield(param,'expSWREvOption')   param.expSWREvOption    = 1;    end
-if ~isfield(param,'expSWRDataOption') param.expSWRDataOption  = 1;    end
-if ~isfield(param,'thetaOption')      param.thetaOption       = 0;    end
-if ~isfield(param,'thetaLim1')        param.thetaLim1         = 4;    end
-if ~isfield(param,'thetaLim2')        param.thetaLim2         = 12;   end
-if ~isfield(param,'betaOption')       param.betaOption        = 0;    end
-if ~isfield(param,'betaLim1')         param.betaLim1          = 13;   end
-if ~isfield(param,'betaLim2')         param.betaLim2          = 24;   end
-if ~isfield(param,'gammaOption')      param.gammaOption       = 1;    end
-if ~isfield(param,'gammaLim1')        param.gammaLim1         = 25;   end
-if ~isfield(param,'gammaLim2')        param.gammaLim2         = 55;   end
-if ~isfield(param,'hgammaOption')     param.hgammaOption      = 0;    end
-if ~isfield(param,'hgammaLim1')       param.hgammaLim1        = 65;   end
-if ~isfield(param,'hgammaLim2')       param.hgammaLim2        = 85;   end
-if ~isfield(param,'fROption')         param.fROption          = 1;    end
-if ~isfield(param,'fRLim1')           param.fRLim1            = 250;  end
-if ~isfield(param,'fRLim2')           param.fRLim2            = 500;  end
-if ~isfield(param,'spectOption')      param.spectOption       = 1;    end
-if ~isfield(param,'spectLim1')        param.spectLim1         = 1;    end
-if ~isfield(param,'spectLim2')        param.spectLim2         = 500;  end
-if ~isfield(param,'importStimOption') param.importStimOption  = 0;    end
-if ~isfield(param,'reAnalyzeOption')  param.reAnalyzeOption   = 0;    end
-if ~isfield(param,'expAveOption')     param.expAveOption      = 1;    end
+if ~isfield(param,'fileNum');          param.fileNum           = 1; end
+if ~isfield(param,'fileType');         param.fileType          = 2;    end
+if ~isfield(param,'Fs');               param.Fs                = 3000; end
+if ~isfield(param,'dsFactor');         param.dsFactor          = 1;    end
+if ~isfield(param,'lfpChannel');       param.lfpChannel        = 1;    end
+if ~isfield(param,'cellOption');       param.cellOption        = 1;    end
+if ~isfield(param,'cellChannel');      param.cellChannel       = 2;    end
+if ~isfield(param,'notchOption');      param.notchOption       = 0;    end
+if ~isfield(param,'notchFreq');        param.notchFreq         = 60;   end
+if ~isfield(param,'lfpOption');        param.lfpOption         = 1;    end
+if ~isfield(param,'lfpLim1');          param.lfpLim1           = 1;    end
+if ~isfield(param,'lfpLim2');          param.lfpLim2           = 1000; end
+if ~isfield(param,'swrOption');        param.swrOption         = 1;    end
+if ~isfield(param,'swOption');         param.swOption          = 1;    end
+if ~isfield(param,'swLim1');           param.swLim1            = 1;    end
+if ~isfield(param,'swLim2');           param.swLim2            = 30;   end
+if ~isfield(param,'rOption');          param.rOption           = 1;    end
+if ~isfield(param,'rLim1');            param.rLim1             = 120;  end
+if ~isfield(param,'rLim2');            param.rLim2             = 220;  end
+if ~isfield(param,'rmsOption');        param.rmsOption         = 1;    end
+if ~isfield(param,'rmsMinEvDiff');     param.rmsMinEvDiff      = 25;   end
+if ~isfield(param,'rmsPeriod');        param.rmsPeriod         = 5;    end
+if ~isfield(param,'peakDetectOption'); param.peakDetectOption  = 1;    end
+if ~isfield(param,'sdMult');           param.sdMult            = 4;    end
+if ~isfield(param,'baseQuant');        param.baseQuant         = 0.95; end
+if ~isfield(param,'swrType');          param.swrType           = 1;    end
+if ~isfield(param,'swrWindow');        param.swrWindow         = 100;  end
+if ~isfield(param,'expSWREvOption');   param.expSWREvOption    = 1;    end
+if ~isfield(param,'expSWRDataOption'); param.expSWRDataOption  = 1;    end
+if ~isfield(param,'thetaOption');      param.thetaOption       = 1;    end
+if ~isfield(param,'thetaLim1');        param.thetaLim1         = 4;    end
+if ~isfield(param,'thetaLim2');        param.thetaLim2         = 8;    end
+if ~isfield(param,'alphaOption');      param.alphaOption       = 0;    end
+if ~isfield(param,'alphaLim1');        param.alphaLim1         = 9;    end
+if ~isfield(param,'alphaLim2');        param.alphaLim2         = 12;   end
+if ~isfield(param,'betaOption');       param.betaOption        = 0;    end
+if ~isfield(param,'betaLim1');         param.betaLim1          = 13;   end
+if ~isfield(param,'betaLim2');         param.betaLim2          = 24;   end
+if ~isfield(param,'gammaOption');      param.gammaOption       = 1;    end
+if ~isfield(param,'gammaLim1');        param.gammaLim1         = 25;   end
+if ~isfield(param,'gammaLim2');        param.gammaLim2         = 55;   end
+if ~isfield(param,'hgammaOption');     param.hgammaOption      = 0;    end
+if ~isfield(param,'hgammaLim1');       param.hgammaLim1        = 65;   end
+if ~isfield(param,'hgammaLim2');       param.hgammaLim2        = 85;   end
+if ~isfield(param,'fROption');         param.fROption          = 1;    end
+if ~isfield(param,'fRLim1');           param.fRLim1            = 250;  end
+if ~isfield(param,'fRLim2');           param.fRLim2            = 500;  end
+if ~isfield(param,'spectOption');      param.spectOption       = 1;    end
+if ~isfield(param,'spectLim1');        param.spectLim1         = 1;    end
+if ~isfield(param,'spectLim2');        param.spectLim2         = 500;  end
+if ~isfield(param,'fftOption');        param.fftOption         = 1;    end
+if ~isfield(param,'phaseOption');      param.phaseOption       = 1;    end
+if ~isfield(param,'xFreqOption');      param.xFreqOption       = 1;    end
+if ~isfield(param,'xFreqType');        param.xFreqType         = 'Phase-Amplitude'; end
+if ~isfield(param,'xFreqLow');         param.xFreqLow          = 'Theta'; end
+if ~isfield(param,'xFreqHigh');        param.xFreqHigh         = 'Gamma'; end
+if ~isfield(param,'importStimOption'); param.importStimOption  = 0;    end
+if ~isfield(param,'reAnalyzeOption');  param.reAnalyzeOption   = 0;    end
+if ~isfield(param,'expAveOption');     param.expAveOption      = 1;    end
 
 % Initialize LFP structure if it doesn't already exist
-if ~isfield(data,'LFP') data.LFP = struct; end
+if ~isfield(data,'LFP'); data.LFP = struct; end
 
 % If cell option is selected, initialize cell structure if it doesn't already exist
 if param.cellOption
-  if ~isfield(data,'C') data.C = struct; end
+  if ~isfield(data,'C'); data.C = struct; end
 end
 
 % If not supplied, prompt for files/folder to analyze
@@ -159,7 +177,7 @@ elseif isempty(dataFile)
   elseif (param.fileType == 2)
     dataFile = uigetdir();
   end
-  if ~all(dataFile) return; end
+  if ~all(dataFile); return; end
 end
 
 % Parse dataFile to determine default save name
@@ -206,7 +224,7 @@ if param.importStimOption
   if isempty(stimFile)
     [stimName, stimPath] = uigetfile('.csv', 'Select stimulation event *.csv file from pClamp', parentPath);
     stimFile = [stimPath stimName];
-    if ~all(stimFile) error('No stimulation file selected'); end
+    if ~all(stimFile); error('No stimulation file selected'); end
   end
   [~, stimFileName, ~] = parsePath(stimFile);
 end
@@ -216,7 +234,7 @@ if isempty(expAveFile) && param.expAveOption
   defaultPath = [parentPath dataFileName '_aveStats.csv'];
   [exportName, exportPath] = uiputfile('.csv','Select *.csv file to export table of average statistics', defaultPath);
   expAveFile = [exportPath exportName];
-  if ~all(expAveFile) warning('No average statistics to be exported - no file selected'); end
+  if ~all(expAveFile); warning('No average statistics to be exported - no file selected'); end
 end
 
 %% Import data
@@ -235,13 +253,13 @@ if ~isfield(data.LFP, 'dataFile')
     end
     
   elseif (param.fileType == 2)
+    
     % Ensure current directory is in path so helper functions work
     curPath = pwd;
     path(path, curPath);
     
     % Extract file names
     cd (dataFile);
-%     dir_temp = dir('2*');
     dir_temp = dir;
     names = {dir_temp.name}; % extract all the names in the struct returned by 'dir': ".", "..", file 1,2....
     files = names([dir_temp.isdir] == 0); % extract the name for all files, but no "." and ".."
@@ -260,7 +278,7 @@ if ~isfield(data.LFP, 'dataFile')
           end
         end
         % extract the number part
-        str_ascii= str2num(int2str(string));
+        str_ascii = str2num(int2str(string));
         index_nums = find(str_ascii <=57 & str_ascii >=48);
         filenum(i) = str2num(string(index_nums));
       end
@@ -379,7 +397,7 @@ end
 if param.swOption
   % Apply Gaussian filter to extract SW signal
   fprintf(['band-pass filtering sharp wave between %4.1f-%4.1fHz (file ' dataFileName ')... '], param.swLim1, param.swLim2);
-  if ~isfield(data,'SW') data.SW = struct; end
+  if ~isfield(data,'SW'); data.SW = struct; end
   data.SW.tSeries = gaussianFilt(data.LFP.tSeries, param.swLim1, param.swLim2, data.LFP.samplingInt, 3);
   data.SW.tPower  = bandpower(data.SW.tSeries);
   data.SW.lim1    = param.swLim1;
@@ -390,7 +408,7 @@ end
 if param.rOption
   % Apply Gaussian filter to extract ripple signal
   fprintf(['band-pass filtering ripple between %4.1f-%4.1fHz (file ' dataFileName ')... '], param.rLim1, param.rLim2);
-  if ~isfield(data,'R') data.R = struct; end
+  if ~isfield(data,'R'); data.R = struct; end
   data.R.tSeries = gaussianFilt(data.LFP.tSeries, param.rLim1, param.rLim2, data.LFP.samplingInt, 1);
   data.R.tPower  = bandpower(data.R.tSeries);
   data.R.lim1    = param.rLim1;
@@ -401,7 +419,7 @@ end
 if param.thetaOption
   % Apply Gaussian filter to extract theta signal
   fprintf(['band-pass filtering theta between %4.1f-%4.1fHz (file ' dataFileName ')... '], param.thetaLim1, param.thetaLim2);
-  if ~isfield(data,'theta') data.theta = struct; end
+  if ~isfield(data,'theta'); data.theta = struct; end
   data.theta.tSeries = gaussianFilt(data.LFP.tSeries, param.thetaLim1, param.thetaLim2, data.LFP.samplingInt, 2);
   data.theta.tPower  = bandpower(data.theta.tSeries);
   data.theta.lim1    = param.thetaLim1;
@@ -409,10 +427,21 @@ if param.thetaOption
   fprintf('done\n');
 end
 
+if param.alphaOption
+  % Apply Gaussian filter to extract alpha signal
+  fprintf(['band-pass filtering alpha between %4.1f-%4.1fHz (file ' dataFileName ')... '], param.alphaLim1, param.alphaLim2);
+  if ~isfield(data,'alpha'); data.alpha = struct; end
+  data.alpha.tSeries = gaussianFilt(data.LFP.tSeries, param.alphaLim1, param.alphaLim2, data.LFP.samplingInt, 2);
+  data.alpha.tPower  = bandpower(data.alpha.tSeries);
+  data.alpha.lim1    = param.alphaLim1;
+  data.alpha.lim2    = param.alphaLim2;
+  fprintf('done\n');
+end
+
 if param.betaOption
   % Apply Gaussian filter to extract beta signal
   fprintf(['band-pass filtering beta between %4.1f-%4.1fHz (file ' dataFileName ')... '], param.betaLim1, param.betaLim2);
-  if ~isfield(data,'beta') data.beta = struct; end
+  if ~isfield(data,'beta'); data.beta = struct; end
   data.beta.tSeries = gaussianFilt(data.LFP.tSeries, param.betaLim1, param.betaLim2, data.LFP.samplingInt, 1);
   data.beta.tPower  = bandpower(data.beta.tSeries);
   data.beta.lim1    = param.betaLim1;
@@ -423,7 +452,7 @@ end
 if param.gammaOption
   % Apply Gaussian filter to extract gamma signal
   fprintf(['band-pass filtering gamma between %4.1f-%4.1fHz (file ' dataFileName ')... '], param.gammaLim1, param.gammaLim2);
-  if ~isfield(data,'gamma') data.gamma = struct; end
+  if ~isfield(data,'gamma'); data.gamma = struct; end
   data.gamma.tSeries = gaussianFilt(data.LFP.tSeries, param.gammaLim1, param.gammaLim2, data.LFP.samplingInt, 1);
   data.gamma.tPower  = bandpower(data.gamma.tSeries);
   data.gamma.lim1    = param.gammaLim1;
@@ -434,7 +463,7 @@ end
 if param.hgammaOption
   % Apply Gaussian filter to extract high gamma signal
   fprintf(['band-pass filtering high gamma between %4.1f-%4.1fHz (file ' dataFileName ')... '], param.hgammaLim1, param.hgammaLim2);
-  if ~isfield(data,'hgamma') data.hgamma = struct; end
+  if ~isfield(data,'hgamma'); data.hgamma = struct; end
   data.hgamma.tSeries = gaussianFilt(data.LFP.tSeries, param.hgammaLim1, param.hgammaLim2, data.LFP.samplingInt, 1);
   data.hgamma.tPower  = bandpower(data.hgamma.tSeries);
   data.hgamma.lim1    = param.hgammaLim1;
@@ -445,7 +474,7 @@ end
 if param.fROption
   % Apply Gaussian filter to extract fast ripple signal
   fprintf(['band-pass filtering fast ripple between %4.1f-%4.1fHz (file ' dataFileName ')... '], param.fRLim1, param.fRLim2);
-  if ~isfield(data,'fR') data.fR = struct; end
+  if ~isfield(data,'fR'); data.fR = struct; end
   data.fR.tSeries = gaussianFilt(data.LFP.tSeries, param.fRLim1, param.fRLim2, data.LFP.samplingInt, 1);
   data.fR.tPower  = bandpower(data.fR.tSeries);
   data.fR.lim1    = param.fRLim1;
@@ -456,7 +485,7 @@ end
 
 %% SWR event detection if both SW and ripple option enabled
 if param.swrOption
-  if ~isfield(data,'SWR') data.SWR = struct; end
+  if ~isfield(data,'SWR'); data.SWR = struct; end
   
   % RMS Signal calculations for SWR detection
   if param.rmsOption
@@ -507,7 +536,7 @@ if param.swrOption
         for i = 1:length(data.SW.evStart)
           data.SW.power(i)    = bandpower(data.SW.tSeries(data.SW.evStart(i) : data.SW.evEnd(i)));
           data.SW.duration(i) = (data.LFP.timing(data.SW.evEnd(i)) - data.LFP.timing(data.SW.evStart(i)));
-          if (i > 1) data.SW.IEI = horzcat(data.SW.IEI, (data.LFP.timing(data.SW.evPeak(i)) - data.LFP.timing(data.SW.evPeak(i-1))) / 1000); end
+          if (i > 1); data.SW.IEI = horzcat(data.SW.IEI, (data.LFP.timing(data.SW.evPeak(i)) - data.LFP.timing(data.SW.evPeak(i-1))) / 1000); end
         end
         data.SW.frequency = length(data.SW.evStart) / ((data.LFP.timing(length(data.LFP.timing)) - data.LFP.timing(1)) / 1000);
         data.SW.power     = data.SW.power';
@@ -540,7 +569,7 @@ if param.swrOption
         for i = 1:length(data.R.evStart)
           data.R.power(i)    = bandpower(data.R.tSeries(data.R.evStart(i) : data.R.evEnd(i)));
           data.R.duration(i) = (data.LFP.timing(data.R.evEnd(i)) - data.LFP.timing(data.R.evStart(i)));
-          if (i > 1) data.R.IEI = horzcat(data.R.IEI, (data.LFP.timing(data.R.evPeak(i)) - data.LFP.timing(data.R.evPeak(i-1))) / 1000); end
+          if (i > 1); data.R.IEI = horzcat(data.R.IEI, (data.LFP.timing(data.R.evPeak(i)) - data.LFP.timing(data.R.evPeak(i-1))) / 1000); end
         end
         data.R.frequency = length(data.R.evStart) / ((data.LFP.timing(length(data.LFP.timing)) - data.LFP.timing(1)) / 1000);
         data.R.power     = data.R.power';
@@ -565,7 +594,7 @@ if param.swrOption
     
     % SW arrays:
     if isfield(data,'SW')
-      if ~isfield(data.SW,'SWR') data.SW.SWR = struct; end
+      if ~isfield(data.SW,'SWR'); data.SW.SWR = struct; end
       data.SW.SWR.event = [];
       data.SW.SWR.power = [];
       data.SW.SWR.area  = [];
@@ -573,28 +602,28 @@ if param.swrOption
     
     % Ripple arrays:
     if isfield(data,'R')
-      if ~isfield(data.R,'SWR') data.R.SWR = struct; end
+      if ~isfield(data.R,'SWR'); data.R.SWR = struct; end
       data.R.SWR.event  = [];
       data.R.SWR.power  = [];
     end
 
     % Gamma arrays:
     if isfield(data,'gamma')
-      if ~isfield(data.gamma,'SWR') data.gamma.SWR = struct; end
+      if ~isfield(data.gamma,'SWR'); data.gamma.SWR = struct; end
       data.gamma.SWR.event = [];
       data.gamma.SWR.power = [];
     end
 
     % High gamma arrays:
     if isfield(data,'hgamma')
-      if ~isfield(data.hgamma,'SWR') data.hgamma.SWR = struct; end
+      if ~isfield(data.hgamma,'SWR'); data.hgamma.SWR = struct; end
       data.hgamma.SWR.event = [];
       data.hgamma.SWR.power = [];
     end
     
     % Fast ripple arrays:
     if isfield(data,'fR')
-      if ~isfield(data.fR,'SWR') data.fR.SWR = struct; end
+      if ~isfield(data.fR,'SWR'); data.fR.SWR = struct; end
       data.fR.SWR.event = [];
       data.fR.SWR.power = [];
     end
@@ -624,11 +653,11 @@ if param.swrOption
       
       % Initialize event locked data window cell arrays
       data.SWR.event{length(data.SWR.evStart)}    = [];
-      if isfield(data,'SW')     data.SW.SWR.event{length(data.SWR.evStart)}     = []; end
-      if isfield(data,'R')      data.R.SWR.event{length(data.SWR.evStart)}      = []; end
-      if isfield(data,'gamma')  data.gamma.SWR.event{length(data.SWR.evStart)}  = []; end
-      if isfield(data,'hgamma') data.hgamma.SWR.event{length(data.SWR.evStart)} = []; end
-      if isfield(data,'fR')     data.fR.SWR.event{length(data.SWR.evStart)}     = []; end
+      if isfield(data,'SW');     data.SW.SWR.event{length(data.SWR.evStart)}     = []; end
+      if isfield(data,'R');      data.R.SWR.event{length(data.SWR.evStart)}      = []; end
+      if isfield(data,'gamma');  data.gamma.SWR.event{length(data.SWR.evStart)}  = []; end
+      if isfield(data,'hgamma'); data.hgamma.SWR.event{length(data.SWR.evStart)} = []; end
+      if isfield(data,'fR');     data.fR.SWR.event{length(data.SWR.evStart)}     = []; end
       
       % Determine baseline for amplitude determination
       if param.swrType == 1 || param.swrType == 2 % use SW signal
@@ -654,7 +683,7 @@ if param.swrOption
           data.SWR.amp(i)    = data.LFP.tSeries(data.SWR.evPeak(i)) - baseAmp; % Use LFP signal, SW filter may not have been performed
         end
 
-        if (i > 1) data.SWR.IEI = horzcat(data.SWR.IEI, (data.LFP.timing(data.SWR.evPeak(i)) - data.LFP.timing(data.SWR.evPeak(i-1))) / 1000); end
+        if (i > 1); data.SWR.IEI = horzcat(data.SWR.IEI, (data.LFP.timing(data.SWR.evPeak(i)) - data.LFP.timing(data.SWR.evPeak(i-1))) / 1000); end
         
         % Calculate SWR-locked event data
         loWin = max(round(data.SWR.evPeak(i) - param.swrWindow / data.LFP.samplingInt), 1);
@@ -744,65 +773,87 @@ if param.swrOption
 end
 
 %% Spectral Analysis
-if param.spectOption
-  fprintf(['spectral analysis of total LFP signal (file ' dataFileName ')... ']);
-  fRange = param.spectLim1 : param.spectLim2;
-  data.LFP = calcTotFFT(data.LFP, data.param);
-  [data.LFP, ~] = calcSpect(data.LFP, [], fRange, data.param.Fs, 30, 0);
 
-  % Compute total FFT and phase for theta, beta, gamma, and high gamma (if selected)
-  if isfield(data,'theta')
-    data.theta = calcTotFFT(data.theta, data.param);
-    data.theta = calcTotPhase(data.theta, data.LFP, data.param);
-  end
-  
-  if isfield(data,'beta')
-    data.beta = calcTotFFT(data.beta, data.param);
-    data.beta = calcTotPhase(data.beta, data.LFP, data.param);
-  end
-  
-  if isfield(data,'gamma')
-    data.gamma = calcTotFFT(data.gamma, data.param);
-    data.gamma = calcTotPhase(data.gamma, data.LFP, data.param);
-  end
-  
-  if isfield(data,'hgamma')
-    data.hgamma = calcTotFFT(data.hgamma, data.param);
-    data.hgamma = calcTotPhase(data.hgamma, data.LFP, data.param);
-  end
-  
+% Calculate Spectrograms:
+if param.spectOption
+  fprintf(['calculating spectrogram of total LFP signal (file ' dataFileName ')... ']);
+  fRange = param.spectLim1 : param.spectLim2;
+  [data.LFP, ~] = calcSpect(data.LFP, [], fRange, data.param.Fs, 30, 0);
   fprintf('done\n');
       
   % If SWR events analyzed, detect spectrogram for event-locked data
   if (param.swrOption)
-    fprintf(['spectral analysis of SWR-locked events (file ' dataFileName ')... ']);
+    fprintf(['calculating spectrograms of SWR-locked events (file ' dataFileName ')... ']);
     [data.SWR, ~] = calcSpect(data.SWR, [], fRange, data.param.Fs, 3, 0);
-    data.SWR = calcEvFFT(data.SWR, data.param, data.param.spectLim1, data.param.spectLim2);
     fprintf('done\n');
-    
-    % Compute SWR event-locked FFT and phase for gamma, high gamma, ripple, and fast ripple (if selected)
-    if isfield(data,'R')
-      data.R.SWR = calcEvFFT(data.R.SWR, data.param, data.R.lim1, data.R.lim2);
-      data.R.SWR = calcEvPhase(data.R.SWR, data.SWR, data.param, data.R.lim1, data.R.lim2);
-    end
-    
-    if isfield(data,'gamma')
-      data.gamma.SWR = calcEvFFT(data.gamma.SWR, data.param, data.gamma.lim1, data.gamma.lim2);
-      data.gamma.SWR = calcEvPhase(data.gamma.SWR, data.SWR, data.param, data.gamma.lim1, data.gamma.lim2);
-    end
+  end
+end
 
-    if isfield(data,'hgamma')
-      data.hgamma.SWR = calcEvFFT(data.hgamma.SWR, data.param, data.hgamma.lim1, data.hgamma.lim2);
-      data.hgamma.SWR = calcEvPhase(data.hgamma.SWR, data.SWR, data.param, data.hgamma.lim1, data.hgamma.lim2);
-    end
+% Calculate FFTs:
+if param.fftOption
+  fprintf(['calculating FFT of total filtered signals (file ' dataFileName ')... ']);
+  data.LFP = calcTotFFT(data.LFP, data.param);
+
+  % Compute total FFTs for any other selected bandwidths
+  if isfield(data,'theta');  data.theta  = calcTotFFT(data.theta, data.param);  end
+  if isfield(data,'alpha');  data.alpha  = calcTotFFT(data.alpha, data.param);  end
+  if isfield(data,'beta');   data.beta   = calcTotFFT(data.beta, data.param);   end
+  if isfield(data,'SW');     data.SW     = calcTotFFT(data.SW, data.param);     end
+  if isfield(data,'gamma');  data.gamma  = calcTotFFT(data.gamma, data.param);  end
+  if isfield(data,'hgamma'); data.hgamma = calcTotFFT(data.hgamma, data.param); end
+  if isfield(data,'R');      data.R      = calcTotFFT(data.R, data.param);      end
+  if isfield(data,'fR');     data.fR     = calcTotFFT(data.fR, data.param);     end
+  
+  fprintf('done\n');
+      
+  % If SWR events analyzed, calculate FFT for event-locked data
+  if (param.swrOption)
+    fprintf(['calculating FFTs of SWR-locked events (file ' dataFileName ')... ']);
+    data.SWR = calcEvFFT(data.SWR, data.param, data.param.spectLim1, data.param.spectLim2);
     
-    if isfield(data,'fR')
-      data.fR.SWR = calcEvFFT(data.fR.SWR, data.param, data.fR.lim1, data.fR.lim2);
-      data.fR.SWR = calcEvPhase(data.fR.SWR, data.SWR, data.param, data.fR.lim1, data.fR.lim2);
-    end
+    % Compute SWR event-locked FFT and for gamma, high gamma, ripple, and fast ripple (if selected)
+    if isfield(data,'gamma');  data.gamma.SWR  = calcEvFFT(data.gamma.SWR, data.param, data.gamma.lim1, data.gamma.lim2);    end
+    if isfield(data,'hgamma'); data.hgamma.SWR = calcEvFFT(data.hgamma.SWR, data.param, data.hgamma.lim1, data.hgamma.lim2); end
+    if isfield(data,'R');      data.R.SWR      = calcEvFFT(data.R.SWR, data.param, data.R.lim1, data.R.lim2);                end
+    if isfield(data,'fR');     data.fR.SWR     = calcEvFFT(data.fR.SWR, data.param, data.fR.lim1, data.fR.lim2);             end
+    
+    fprintf('done\n');
     
   end
 end
+
+% Calculate Phase:
+if param.phaseOption
+  % Compute interpolated piecewise-linear phase of of total filtered signals
+  fprintf(['calculating interpolated piecewise-linear phase of total filtered signals (file ' dataFileName ')... ']);
+  if isfield(data,'theta');  data.theta  = calcTotPhase(data.theta, data.LFP, data.param);  end
+  if isfield(data,'alpha');  data.alpha  = calcTotPhase(data.alpha, data.LFP, data.param);  end
+  if isfield(data,'beta');   data.beta   = calcTotPhase(data.beta, data.LFP, data.param);   end
+  if isfield(data,'SW');     data.SW     = calcTotPhase(data.SW, data.LFP, data.param);     end
+  if isfield(data,'gamma');  data.gamma  = calcTotPhase(data.gamma, data.LFP, data.param);  end
+  if isfield(data,'hgamma'); data.hgamma = calcTotPhase(data.hgamma, data.LFP, data.param); end
+  if isfield(data,'R');      data.R      = calcTotPhase(data.R, data.LFP, data.param);      end
+  if isfield(data,'fR');     data.fR     = calcTotPhase(data.fR, data.LFP, data.param);     end
+  fprintf('done\n');
+      
+  % If SWR events analyzed, interpolated piecewise-linear phase of of SWR-locked signals
+  if (param.swrOption)
+    fprintf(['calculating interpolated piecewise-linear phase of SWR-locked signals (file ' dataFileName ')... ']);
+    if isfield(data,'gamma');  data.gamma.SWR  = calcEvPhase(data.gamma.SWR, data.SWR, data.param, data.gamma.lim1, data.gamma.lim2);    end
+    if isfield(data,'hgamma'); data.hgamma.SWR = calcEvPhase(data.hgamma.SWR, data.SWR, data.param, data.hgamma.lim1, data.hgamma.lim2); end
+    if isfield(data,'R');      data.R.SWR      = calcEvPhase(data.R.SWR, data.SWR, data.param, data.R.lim1, data.R.lim2);                end
+    if isfield(data,'fR');     data.fR.SWR     = calcEvPhase(data.fR.SWR, data.SWR, data.param, data.fR.lim1, data.fR.lim2);             end
+    fprintf('done\n');
+  end
+end
+
+% Cross-Frequency Coupling - Currently only available for Type = 'Phase-Amnplitude'
+if param.xFreqOption
+
+
+
+end
+
 
 %% Import and process stim file (if selected)
 if param.importStimOption
@@ -886,36 +937,37 @@ data.LFP.param = orderStruct(data.LFP.param);
 
 if isfield(data, 'SW')
   data.SW = orderStruct(data.SW);
-  if isfield(data.SW, 'SWR') data.SW.SWR = orderStruct(data.SW.SWR); end
+  if isfield(data.SW, 'SWR'); data.SW.SWR = orderStruct(data.SW.SWR); end
 end
 
 if isfield(data, 'R')
   data.R = orderStruct(data.R);
-  if isfield(data.R, 'SWR') data.R.SWR = orderStruct(data.R.SWR); end
+  if isfield(data.R, 'SWR'); data.R.SWR = orderStruct(data.R.SWR); end
 end
 
-if isfield(data, 'SWR')    data.SWR    = orderStruct(data.SWR); end
-if isfield(data, 'theta')  data.theta  = orderStruct(data.theta); end
-if isfield(data, 'beta')   data.beta   = orderStruct(data.beta); end
+if isfield(data, 'SWR');    data.SWR    = orderStruct(data.SWR); end
+if isfield(data, 'theta');  data.theta  = orderStruct(data.theta); end
+if isfield(data, 'alpha');  data.alpha  = orderStruct(data.alpha); end
+if isfield(data, 'beta');   data.beta   = orderStruct(data.beta); end
 
 if isfield(data, 'gamma')
   data.gamma = orderStruct(data.gamma);
-  if isfield(data.gamma, 'SWR') data.gamma.SWR = orderStruct(data.gamma.SWR); end
+  if isfield(data.gamma, 'SWR'); data.gamma.SWR = orderStruct(data.gamma.SWR); end
 end
 
 if isfield(data, 'hgamma')
   data.hgamma = orderStruct(data.hgamma);
-  if isfield(data.hgamma, 'SWR') data.hgamma.SWR = orderStruct(data.hgamma.SWR); end
+  if isfield(data.hgamma, 'SWR'); data.hgamma.SWR = orderStruct(data.hgamma.SWR); end
 end
 
 if isfield(data, 'fR')
   data.fR = orderStruct(data.fR);
-  if isfield(data.fR, 'SWR') data.fR.SWR = orderStruct(data.fR.SWR); end
+  if isfield(data.fR, 'SWR'); data.fR.SWR = orderStruct(data.fR.SWR); end
 end
 
 if isfield(data, 'C')
   data.C = orderStruct(data.C);
-  if isfield(data.C, 'SWR') data.C.SWR = orderStruct(data.C.SWR); end
+  if isfield(data.C, 'SWR'); data.C.SWR = orderStruct(data.C.SWR); end
 end
 
 if isfield(data, 'stim')
