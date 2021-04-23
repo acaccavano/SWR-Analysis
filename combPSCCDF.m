@@ -4,18 +4,18 @@ function S = combPSCCDF(param, dataFolders)
 %  Function to combine folder of *.mat files with PSC CDFs for amplitude, area, and kinetics
 
 % Handle optional arguments
-if (nargin < 2) dataFolders{2} = []; end
-if (nargin < 1) param          = struct; end
+if (nargin < 2); dataFolders{2} = []; end
+if (nargin < 1); param          = struct; end
 
 % Handle case in which empty variable is supplied:
-if isempty(param) param  = struct; end
+if isempty(param); param  = struct; end
 
 % Set default parameters if not specified
-if ~isfield(param,'nBins')    param.nBins    = 1000; end
-if ~isfield(param,'minRise')  param.minRise  = 0.05; end 
-if ~isfield(param,'maxRise')  param.maxRise  = 5;   end 
-if ~isfield(param,'minDecay') param.minDecay = 1;    end 
-if ~isfield(param,'maxDecay') param.maxDecay = 50;  end 
+if ~isfield(param,'nBins');    param.nBins    = 1000; end
+if ~isfield(param,'minRise');  param.minRise  = 0.05; end 
+if ~isfield(param,'maxRise');  param.maxRise  = 5;   end 
+if ~isfield(param,'minDecay'); param.minDecay = 1;    end 
+if ~isfield(param,'maxDecay'); param.maxDecay = 50;  end 
 
 % Assign OS specific variables:
 if ispc
@@ -24,18 +24,16 @@ else
   slash = '/';
 end
 
-parentPath = [];
-
 % If not supplied, prompt for folders to analyze
 if isempty(dataFolders{1})
   dataFolders{1} = uigetdir(pwd, 'Select folder containing control PSC recordings');
 end
-if (dataFolders{1} == 0) return; end
+if (dataFolders{1} == 0); return; end
 
 if isempty(dataFolders{2})
   dataFolders{2} = uigetdir(pwd, 'Select folder containing 5xFAD PSC recordings');
 end
-if (dataFolders{2} == 0) return; end
+if (dataFolders{2} == 0); return; end
 
 % ensure current dir is in path so we can call helper funcs
 curPath = pwd;

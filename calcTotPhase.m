@@ -6,10 +6,10 @@ function S = calcTotPhase(S, LFP, param)
 %  error handling to ensure abberently high or low results are discarded.
 %  Requires LFP structure for timing
 
-if ~isfield(S,'phase') S.phase = struct; end
-if ~isfield(param,'minPkDiffFrac') param.minPkDiffFrac = 1.5;  end % Fraction of max frequency (lim2) to set min peak difference for exclusion of events. 1 = max frequency of band, is pretty conservative, default = 1.5, so two successive oscillations can be slightly faster than allowed
-if ~isfield(param,'minPkPromFrac') param.minPkPromFrac = 0.0;  end % Fraction of SD of signal to set Min peak prominence (zero to ignore as criteria)
-if ~isfield(param,'samplingInt')   param.samplingInt = LFP.timing(2) - LFP.timing(1); end
+if ~isfield(S,'phase'); S.phase = struct; end
+if ~isfield(param,'minPkDiffFrac'); param.minPkDiffFrac = 1.5;  end % Fraction of max frequency (lim2) to set min peak difference for exclusion of events. 1 = max frequency of band, is pretty conservative, default = 1.5, so two successive oscillations can be slightly faster than allowed
+if ~isfield(param,'minPkPromFrac'); param.minPkPromFrac = 0.0;  end % Fraction of SD of signal to set Min peak prominence (zero to ignore as criteria)
+if ~isfield(param,'samplingInt');   param.samplingInt = LFP.timing(2) - LFP.timing(1); end
 
 % (Re)Initialize data arrays:
 S.phase.maxVal  = [];

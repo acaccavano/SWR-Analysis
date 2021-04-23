@@ -4,15 +4,15 @@ function S = combSpkHist(param, dataFolder, saveFile)
 %  Function to combine folder of spike *.mat files to calculate average peri-SWR spike histogram
 
 % Handle optional arguments
-if (nargin < 3) saveFile   = []; end
-if (nargin < 2) dataFolder = []; end
-if (nargin < 1) param      = struct; end
+if (nargin < 3); saveFile   = []; end
+if (nargin < 2); dataFolder = []; end
+if (nargin < 1); param      = struct; end
 
 % Handle case in which empty variable is supplied:
-if isempty(param) param    = struct; end
+if isempty(param); param    = struct; end
 
 % Set default parameters if not specified
-if ~isfield(param,'nBins') param.nBins = 100; end
+if ~isfield(param,'nBins'); param.nBins = 100; end
 
 % Assign OS specific variables:
 if ispc
@@ -21,13 +21,11 @@ else
   slash = '/';
 end
 
-parentPath = [];
-
 % If not supplied, prompt for folders to analyze
 if isempty(dataFolder)
   dataFolder = uigetdir(pwd, 'Select folder containing analyzed Spike recordings');
 end
-if (dataFolder == 0) return; end
+if (dataFolder == 0); return; end
 
 % Parse dataFolder to determine default save name
 [parentPath, dataFolderName, ~] = parsePath(dataFolder);
@@ -40,7 +38,7 @@ if isempty(saveFile)
   if ~all(saveFile)
     warning('No file to be saved - no file selected');
   else
-    [parentPath, saveFileName, ~] = parsePath(saveFile);
+    [~, saveFileName, ~] = parsePath(saveFile);
   end
 end
 

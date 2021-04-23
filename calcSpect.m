@@ -6,10 +6,10 @@ function [S, BL] = calcSpect(S, BL, fRange, Fs, timeWindow, saveEvSpect)
 %  for comparisons
 
 % Handle input arguments - if not entered
-if (nargin < 6) saveEvSpect = 0;     end % If true and > 1 tSeries will save all event spectra (Caution - large files)
-if (nargin < 5) timeWindow  = 30;    end % ms
-if (nargin < 4) Fs          = 20000; end % Hz
-if (nargin < 3) fRange      = 1:500; end % Hz
+if (nargin < 6); saveEvSpect = 0;     end % If true and > 1 tSeries will save all event spectra (Caution - large files)
+if (nargin < 5); timeWindow  = 30;    end % ms
+if (nargin < 4); Fs          = 20000; end % Hz
+if (nargin < 3); fRange      = 1:500; end % Hz
 
 % Reset spect structure
 S.spect = struct;
@@ -30,7 +30,7 @@ spectSamples = max(cellfun(@length, tSeries));
 
 % Calculate baseline spectrogram (if supplied)
 if ~isempty(BL)
-  if ~isfield(BL,'spect') BL.spect = struct; end
+  if ~isfield(BL,'spect'); BL.spect = struct; end
   
   [~, BL.spect.fRange, BL.spect.tRange, BL.spect.power] = spectrogram(BL.tSeries, nWin, nOv, fRange, Fs, 'yaxis');
   

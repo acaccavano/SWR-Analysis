@@ -6,11 +6,11 @@ function hand = plotSpkLFPAnalysis(data, hand, param, dsPlot)
 nData = length(data);
 
 % Input parameters
-if isempty(param) param     = struct; end
-if ~isfield(param,'thetaOption')      param.thetaOption       = 0;    end
-if ~isfield(param,'betaOption')       param.betaOption        = 0;    end
-if ~isfield(param,'gammaOption')      param.gammaOption       = 1;    end
-if ~isfield(param,'hgammaOption')     param.hgammaOption      = 1;    end
+if isempty(param); param = struct; end
+if ~isfield(param,'thetaOption');      param.thetaOption       = 0;    end
+if ~isfield(param,'betaOption');       param.betaOption        = 0;    end
+if ~isfield(param,'gammaOption');      param.gammaOption       = 1;    end
+if ~isfield(param,'hgammaOption');     param.hgammaOption      = 1;    end
 
 % Initialization
 convFact = 1000; % Convert from mV to uV

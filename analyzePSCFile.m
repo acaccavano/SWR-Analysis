@@ -40,72 +40,72 @@ function [data, hand] = analyzePSCFile(data, hand, param, saveFile, pscFile, exp
 %   hand       = handle structure for figure
 
 %% Handle input arguments - if not entered
-if (nargin < 7) expSWRFile = []; end
-if (nargin < 6) expPSCFile = []; end
-if (nargin < 5) pscFile    = []; end
-if (nargin < 4) saveFile   = []; end
-if (nargin < 3) param      = struct; end
-if (nargin < 2) hand       = struct; end
-if (nargin < 1) data       = struct; end
+if (nargin < 7); expSWRFile = []; end
+if (nargin < 6); expPSCFile = []; end
+if (nargin < 5); pscFile    = []; end
+if (nargin < 4); saveFile   = []; end
+if (nargin < 3); param      = struct; end
+if (nargin < 2); hand       = struct; end
+if (nargin < 1); data       = struct; end
 
 % Handle case in which empty variables are supplied:
-if isempty(param) param    = struct; end
-if isempty(hand)  hand     = struct; end
-if isempty(data)  data     = struct; end
+if isempty(param); param    = struct; end
+if isempty(hand);  hand     = struct; end
+if isempty(data);  data     = struct; end
 
 % Set default parameters if not specified
-if ~isfield(param,'fileNum')              param.fileNum              = 1;    end
-if ~isfield(param,'pscEventPolarity')     param.pscEventPolarity     = 0;    end
-if ~isfield(param,'swrPSQOption')         param.swrPSQOption         = 1;    end
-if ~isfield(param,'importPSCOption')      param.importPSCOption      = 1;    end
-if ~isfield(param,'swrPSCOption')         param.swrPSCOption         = 1;    end
-if ~isfield(param,'useSWRDurationOption') param.useSWRDurationOption = 0;    end
-if ~isfield(param,'useSWRWindowOption')   param.useSWRWindowOption   = 1;    end
-if ~isfield(param,'swrWindow')            param.swrWindow            = 100;  end
-if ~isfield(param,'parsePSCOption')       param.parsePSCOption       = 1;    end
-if ~isfield(param,'calcEvMatrixOption')   param.calcEvMatrixOption   = 1;    end
-if ~isfield(param,'expPSCEvOption')       param.expPSCEvOption       = 1;    end
-if ~isfield(param,'expSWREvOption')       param.expSWREvOption       = 1;    end
-if ~isfield(param,'gammaOption')          param.gammaOption          = 1;    end
-if ~isfield(param,'gammaLim1')            param.gammaLim1            = 20;   end
-if ~isfield(param,'gammaLim2')            param.gammaLim2            = 50;   end
-if ~isfield(param,'rOption')              param.rOption              = 1;    end
-if ~isfield(param,'rLim1')                param.rLim1                = 120;  end
-if ~isfield(param,'rLim2')                param.rLim2                = 220;  end
-if ~isfield(param,'spectOption')          param.spectOption          = 1;    end
-if ~isfield(param,'spectLim1')            param.spectLim1            = 1;    end
-if ~isfield(param,'spectLim2')            param.spectLim2            = 500;  end
-if ~isfield(param,'reAnalyzeOption')      param.reAnalyzeOption      = 0;    end
-if ~isfield(param,'expAveOption')         param.expAveOption         = 1;    end
-if ~isfield(param,'nBins')                param.nBins                = 100;  end % Not yet selectable in UI
-if ~isfield(param,'cdfOption')            param.cdfOption            = 1;    end % Not yet selectable in UI
-if ~isfield(param,'minRise')              param.minRise              = 0.1;  end % Not yet selectable in UI
-if ~isfield(param,'maxRise')              param.maxRise              = 10;   end % Not yet selectable in UI
-if ~isfield(param,'minDecay')             param.minDecay             = 3;    end % Not yet selectable in UI
-if ~isfield(param,'maxDecay')             param.maxDecay             = 100;  end % Not yet selectable in UI
+if ~isfield(param,'fileNum');              param.fileNum              = 1;    end
+if ~isfield(param,'pscEventPolarity');     param.pscEventPolarity     = 0;    end
+if ~isfield(param,'swrPSQOption');         param.swrPSQOption         = 1;    end
+if ~isfield(param,'importPSCOption');      param.importPSCOption      = 1;    end
+if ~isfield(param,'swrPSCOption');         param.swrPSCOption         = 1;    end
+if ~isfield(param,'useSWRDurationOption'); param.useSWRDurationOption = 0;    end
+if ~isfield(param,'useSWRWindowOption');   param.useSWRWindowOption   = 1;    end
+if ~isfield(param,'swrWindow');            param.swrWindow            = 100;  end
+if ~isfield(param,'parsePSCOption');       param.parsePSCOption       = 1;    end
+if ~isfield(param,'calcEvMatrixOption');   param.calcEvMatrixOption   = 1;    end
+if ~isfield(param,'expPSCEvOption');       param.expPSCEvOption       = 1;    end
+if ~isfield(param,'expSWREvOption');       param.expSWREvOption       = 1;    end
+if ~isfield(param,'gammaOption');          param.gammaOption          = 1;    end
+if ~isfield(param,'gammaLim1');            param.gammaLim1            = 20;   end
+if ~isfield(param,'gammaLim2');            param.gammaLim2            = 50;   end
+if ~isfield(param,'rOption');              param.rOption              = 1;    end
+if ~isfield(param,'rLim1');                param.rLim1                = 120;  end
+if ~isfield(param,'rLim2');                param.rLim2                = 220;  end
+if ~isfield(param,'spectOption');          param.spectOption          = 1;    end
+if ~isfield(param,'spectLim1');            param.spectLim1            = 1;    end
+if ~isfield(param,'spectLim2');            param.spectLim2            = 500;  end
+if ~isfield(param,'reAnalyzeOption');      param.reAnalyzeOption      = 0;    end
+if ~isfield(param,'expAveOption');         param.expAveOption         = 1;    end
+if ~isfield(param,'nBins');                param.nBins                = 100;  end % Not yet selectable in UI
+if ~isfield(param,'cdfOption');            param.cdfOption            = 1;    end % Not yet selectable in UI
+if ~isfield(param,'minRise');              param.minRise              = 0.1;  end % Not yet selectable in UI
+if ~isfield(param,'maxRise');              param.maxRise              = 10;   end % Not yet selectable in UI
+if ~isfield(param,'minDecay');             param.minDecay             = 3;    end % Not yet selectable in UI
+if ~isfield(param,'maxDecay');             param.maxDecay             = 100;  end % Not yet selectable in UI
 
 if ~isfield(data, 'LFP')
   [fileName, filePath] = uigetfile('.mat', 'Select *.mat file of analyzed LFP + imported cell channel');
   dataFile = [filePath fileName];
-  if ~all(dataFile) error('No file data file selected'); end
+  if ~all(dataFile); error('No file data file selected'); end
   data = load(dataFile);
 end
 
 % Check if necessary data structures are present
-if ~isfield(data,'LFP') error('Must import LFP channel to data structure before proceeding'); end
-if ~isfield(data,'C')   error('Must import cell channel to data structure before proceeding'); end
-if ~isfield(data.C,'PSC') data.C.spike = struct; end
+if ~isfield(data,'LFP'); error('Must import LFP channel to data structure before proceeding'); end
+if ~isfield(data,'C');   error('Must import cell channel to data structure before proceeding'); end
+if ~isfield(data.C,'PSC'); data.C.spike = struct; end
 
 % Fix in case Fs not calculated correctly:
 data.LFP.param.Fs = round(1000 / data.LFP.samplingInt);
 
 if param.swrPSCOption
-  if ~isfield(data,'SWR') error('Must analyze SWRs before proceeding'); end
-  if ~isfield(data.SWR,'PSC') data.SWR.PSC = struct; end
-  if ~isfield(data.C,'SWR') data.C.SWR = struct; end
+  if ~isfield(data,'SWR'); error('Must analyze SWRs before proceeding'); end
+  if ~isfield(data.SWR,'PSC'); data.SWR.PSC = struct; end
+  if ~isfield(data.C,'SWR'); data.C.SWR = struct; end
   
   if param.parsePSCOption
-    if ~isfield(data.C.SWR,'PSC') data.C.SWR.PSC = struct; end
+    if ~isfield(data.C.SWR,'PSC'); data.C.SWR.PSC = struct; end
   end 
 end
 
@@ -128,7 +128,7 @@ if param.importPSCOption %% && ~param.reAnalyzeOption %% Commented out want to h
   if isempty(pscFile)
     [fileName, filePath] = uigetfile('.txt', 'Select PSC event *.txt file exported from pClamp', parentPath);
     pscFile = [filePath fileName];
-    if ~all(pscFile) error('No PSC file selected'); end
+    if ~all(pscFile); error('No PSC file selected'); end
     data.C.PSC.evFile = pscFile;
   end
   [parentPath, pscFileName, ~] = parsePath(pscFile);
@@ -178,7 +178,7 @@ if param.swrPSQOption
   fprintf(['integrating cell charge over all SWR events (file ' dataFileName ')... ']);
   
   % Initialize data arrays:
-  if ~isfield(data.C,'SWR') data.C.SWR = struct; end
+  if ~isfield(data.C,'SWR'); data.C.SWR = struct; end
   data.C.SWR.event    = [];
   data.C.SWR.evNorm   = [];
   data.C.SWR.evArea   = [];
@@ -537,7 +537,7 @@ if param.swrPSCOption
     
     % Thresholds for phase using previously saved param.sdMult from analyzeLFP
     minAmpR = std(data.R.tSeries) * data.LFP.param.sdMult;
-    if isfield(data.C.SWR.PSC, 'gammaPhase') minAmpG = std(data.gamma.tSeries) * data.LFP.param.sdMult; end
+    if isfield(data.C.SWR.PSC, 'gammaPhase'); minAmpG = std(data.gamma.tSeries) * data.LFP.param.sdMult; end
     
     for psc1 = 1:data.C.PSC.nEventsA
       if (data.C.PSC.swrMatrix(psc1) == 1) % Coincident PSC
@@ -607,7 +607,7 @@ end
 if param.gammaOption
   % Apply Gaussian filter to extract gamma signal
   fprintf(['band-pass filtering gamma between %4.1f-%4.1fHz (file ' dataFileName ')... '], param.gammaLim1, param.gammaLim2);
-  if ~isfield(data,'gammaC') data.gammaC = struct; end
+  if ~isfield(data,'gammaC'); data.gammaC = struct; end
   data.gammaC.tSeries = gaussianFilt(data.C.tSeries, param.gammaLim1, param.gammaLim2, data.C.samplingInt, 1);
   data.gammaC.tPower  = bandpower(data.gammaC.tSeries);
   data.gammaC.lim1    = param.gammaLim1;
@@ -618,7 +618,7 @@ end
 if param.rOption
   % Apply Gaussian filter to extract ripple signal
   fprintf(['band-pass filtering ripple between %4.1f-%4.1fHz (file ' dataFileName ')... '], param.rLim1, param.rLim2);
-  if ~isfield(data,'RC') data.RC = struct; end
+  if ~isfield(data,'RC'); data.RC = struct; end
   data.RC.tSeries = gaussianFilt(data.C.tSeries, param.rLim1, param.rLim2, data.C.samplingInt, 1);
   data.RC.tPower  = bandpower(data.RC.tSeries);
   data.RC.lim1    = param.rLim1;
@@ -630,14 +630,14 @@ end
 if isfield(data,'SWR') && (isfield(data,'gammaC') || isfield(data,'RC') || param.spectOption)
   
   if isfield(data,'gammaC')
-    if ~isfield(data.gammaC,'SWR') data.gammaC.SWR = struct; end
+    if ~isfield(data.gammaC,'SWR'); data.gammaC.SWR = struct; end
     data.gammaC.SWR.event = [];
     data.gammaC.SWR.power = [];
-    if isfield(data,'gamma') data.gammaC.SWR.xCorr = []; end
+    if isfield(data,'gamma'); data.gammaC.SWR.xCorr = []; end
   end
   
   if isfield(data,'RC')
-    if ~isfield(data.RC,'SWR') data.RC.SWR = struct; end
+    if ~isfield(data.RC,'SWR'); data.RC.SWR = struct; end
     data.RC.SWR.event = [];
     data.RC.SWR.power = [];
     data.RC.SWR.xCorr = [];
@@ -714,13 +714,13 @@ if isfield(data,'SWR') && (isfield(data,'gammaC') || isfield(data,'RC') || param
     if isfield(data,'gammaC')
       data.gammaC.SWR.event = data.gammaC.SWR.event';
       data.gammaC.SWR.power = data.gammaC.SWR.power';
-      if isfield(data,'gamma') data.gammaC.SWR.xCorr = data.gammaC.SWR.xCorr'; end
+      if isfield(data,'gamma'); data.gammaC.SWR.xCorr = data.gammaC.SWR.xCorr'; end
     end
     
     if isfield(data,'RC')
       data.RC.SWR.event = data.RC.SWR.event';
       data.RC.SWR.power = data.RC.SWR.power';
-      if isfield(data,'RC') data.RC.SWR.xCorr = data.RC.SWR.xCorr'; end
+      if isfield(data,'RC'); data.RC.SWR.xCorr = data.RC.SWR.xCorr'; end
     end
     
     % Spectral analysis:
@@ -759,7 +759,7 @@ end
 %% Cumulative Distribution Functions
 if param.cdfOption
   
-  if ~isfield(data.C.PSC,'CDF') data.C.PSC.CDF = struct; end
+  if ~isfield(data.C.PSC,'CDF'); data.C.PSC.CDF = struct; end
   
   % Exclude Outliers for rise and decay (pClamp fitting often bad):
   exInd = data.C.PSC.riseTau < param.minRise | data.C.PSC.riseTau > param.maxRise;

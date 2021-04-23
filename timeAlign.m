@@ -4,7 +4,7 @@ function [evStatusA1, evStartA1, evEndA1, evStatusA2, evStartA2, evEndA2, timeAr
 %  Function to align arrays with two different timing, downsampling file
 %  with higher sampling rate and trimming as necessary
 
-if (nargin < 5) alignEndOption = 0; end
+if (nargin < 5); alignEndOption = 0; end
 
 % If aligning from start, assume nonzero start time is meaningful (i.e. skipping beginning of dFoF files)
 % However, if aligning from end, reset to common end-time:

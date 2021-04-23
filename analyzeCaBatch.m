@@ -48,56 +48,56 @@ function analyzeCaBatch(param, dataFolder, saveFolder, CaFolder, timingFile, exp
 %   expStimFolder = full path to stim event csv folder to export (if not set, will prompt)
 
 %% Handle input arguments
-if (nargin < 8) expStimFolder = []; end
-if (nargin < 7) expSWRFolder  = []; end
-if (nargin < 6) expCaFolder   = []; end
-if (nargin < 5) timingFile    = []; end
-if (nargin < 4) CaFolder      = []; end
-if (nargin < 3) saveFolder    = []; end
-if (nargin < 2) dataFolder    = []; end
-if (nargin < 1) param         = struct; end
+if (nargin < 8); expStimFolder = []; end
+if (nargin < 7); expSWRFolder  = []; end
+if (nargin < 6); expCaFolder   = []; end
+if (nargin < 5); timingFile    = []; end
+if (nargin < 4); CaFolder      = []; end
+if (nargin < 3); saveFolder    = []; end
+if (nargin < 2); dataFolder    = []; end
+if (nargin < 1); param         = struct; end
 
 % Handle case in which empty variable is supplied:
-if isempty(param) param      = struct; end
+if isempty(param); param      = struct; end
 
 % Set default parameters if not specified
-if ~isfield(param,'fileNum')              param.fileNum              = 2;    end
-if ~isfield(param,'baseCorrectMethod')    param.baseCorrectMethod    = 2;    end
-if ~isfield(param,'CaFiltLim1')           param.CaFiltLim1           = 0.03; end
-if ~isfield(param,'CaFiltLim2')           param.CaFiltLim2           = 4;    end
-if ~isfield(param,'CaFiltOrder')          param.CaFiltOrder          = 80;   end
-if ~isfield(param,'CaFiltAlpha')          param.CaFiltAlpha          = 2.5;  end
-if ~isfield(param,'smoothFactor')         param.smoothFactor         = 0.25; end
-if ~isfield(param,'interpOption')         param.interpOption         = 1;    end
-if ~isfield(param,'samplingInt')          param.samplingInt          = 0.5;  end
-if ~isfield(param,'cellTypeOption')       param.cellTypeOption       = 0;    end
-if ~isfield(param,'cellType1')            param.cellType1          = 'Deep'; end
-if ~isfield(param,'cellType2')            param.cellType2          = 'Supe'; end
-if ~isfield(param,'peakDetectCa')         param.peakDetectCa         = 1;    end
-if ~isfield(param,'baseDetectMethod')     param.baseDetectMethod     = 2;    end
-if ~isfield(param,'baseQuant')            param.baseQuant            = 0.8;  end
-if ~isfield(param,'pkDiffMin')            param.pkDiffMin            = 0.1;  end 
-if ~isfield(param,'pkSimLim')             param.pkSimLim             = 2;    end
-if ~isfield(param,'kurtosisMin')          param.kurtosisMin          = 0;    end
-if ~isfield(param,'kurtosisMax')          param.kurtosisMax          = 5;    end
-if ~isfield(param,'excludeQuant')         param.excludeQuant         = 0.98; end
-if ~isfield(param,'plotFitHisto')         param.plotFitHisto         = 0;    end
-if ~isfield(param,'sdMult')               param.sdMult               = 4;    end
-if ~isfield(param,'sdBaseFactor')         param.sdBaseFactor         = 0.75; end
-if ~isfield(param,'skipDetectLim')        param.skipDetectLim        = 1;    end
-if ~isfield(param,'consThreshOption')     param.consThreshOption     = 0;    end
-if ~isfield(param,'expCaEvOption')        param.expCaEvOption        = 1;    end
-if ~isfield(param,'swrCaOption')          param.swrCaOption          = 1;    end
-if ~isfield(param,'useSWRDurationOption') param.useSWRDurationOption = 1;    end
-if ~isfield(param,'useSWRWindowOption')   param.useSWRWindowOption   = 0;    end
-if ~isfield(param,'swrWindow')            param.swrWindow            = 100;  end
-if ~isfield(param,'expSWREvOption')       param.expSWREvOption       = 0;    end
-if ~isfield(param,'alignEndOption')       param.alignEndOption       = 0;    end
-if ~isfield(param,'stimCaOption')         param.stimCaOption         = 0;    end
-if ~isfield(param,'stimCaLim1')           param.stimCaLim1           = 0;    end
-if ~isfield(param,'stimCaLim2')           param.stimCaLim2           = 1000; end
-if ~isfield(param,'expStimEvOption')      param.expStimEvOption      = 0;    end
-if ~isfield(param,'reAnalyzeOption')      param.reAnalyzeOption      = 0;    end
+if ~isfield(param,'fileNum');              param.fileNum              = 2;    end
+if ~isfield(param,'baseCorrectMethod');    param.baseCorrectMethod    = 2;    end
+if ~isfield(param,'CaFiltLim1');           param.CaFiltLim1           = 0.03; end
+if ~isfield(param,'CaFiltLim2');           param.CaFiltLim2           = 4;    end
+if ~isfield(param,'CaFiltOrder');          param.CaFiltOrder          = 80;   end
+if ~isfield(param,'CaFiltAlpha');          param.CaFiltAlpha          = 2.5;  end
+if ~isfield(param,'smoothFactor');         param.smoothFactor         = 0.25; end
+if ~isfield(param,'interpOption');         param.interpOption         = 1;    end
+if ~isfield(param,'samplingInt');          param.samplingInt          = 0.5;  end
+if ~isfield(param,'cellTypeOption');       param.cellTypeOption       = 0;    end
+if ~isfield(param,'cellType1');            param.cellType1          = 'Deep'; end
+if ~isfield(param,'cellType2');            param.cellType2          = 'Supe'; end
+if ~isfield(param,'peakDetectCa');         param.peakDetectCa         = 1;    end
+if ~isfield(param,'baseDetectMethod');     param.baseDetectMethod     = 2;    end
+if ~isfield(param,'baseQuant');            param.baseQuant            = 0.8;  end
+if ~isfield(param,'pkDiffMin');            param.pkDiffMin            = 0.1;  end 
+if ~isfield(param,'pkSimLim');             param.pkSimLim             = 2;    end
+if ~isfield(param,'kurtosisMin');          param.kurtosisMin          = 0;    end
+if ~isfield(param,'kurtosisMax');          param.kurtosisMax          = 5;    end
+if ~isfield(param,'excludeQuant');         param.excludeQuant         = 0.98; end
+if ~isfield(param,'plotFitHisto');         param.plotFitHisto         = 0;    end
+if ~isfield(param,'sdMult');               param.sdMult               = 4;    end
+if ~isfield(param,'sdBaseFactor');         param.sdBaseFactor         = 0.75; end
+if ~isfield(param,'skipDetectLim');        param.skipDetectLim        = 1;    end
+if ~isfield(param,'consThreshOption');     param.consThreshOption     = 0;    end
+if ~isfield(param,'expCaEvOption');        param.expCaEvOption        = 1;    end
+if ~isfield(param,'swrCaOption');          param.swrCaOption          = 1;    end
+if ~isfield(param,'useSWRDurationOption'); param.useSWRDurationOption = 1;    end
+if ~isfield(param,'useSWRWindowOption');   param.useSWRWindowOption   = 0;    end
+if ~isfield(param,'swrWindow');            param.swrWindow            = 100;  end
+if ~isfield(param,'expSWREvOption');       param.expSWREvOption       = 0;    end
+if ~isfield(param,'alignEndOption');       param.alignEndOption       = 0;    end
+if ~isfield(param,'stimCaOption');         param.stimCaOption         = 0;    end
+if ~isfield(param,'stimCaLim1');           param.stimCaLim1           = 0;    end
+if ~isfield(param,'stimCaLim2');           param.stimCaLim2           = 1000; end
+if ~isfield(param,'expStimEvOption');      param.expStimEvOption      = 0;    end
+if ~isfield(param,'reAnalyzeOption');      param.reAnalyzeOption      = 0;    end
     
 % Assign OS specific variables:
 if ispc
@@ -106,17 +106,15 @@ else
   slash = '/';
 end
 
-parentPath = [];
-
 % Prompt first for matlab data folder of analyzed files, if options require:
 if isempty(dataFolder)
   if param.reAnalyzeOption
     dataFolder = uigetdir(pwd, 'Select folder containing analyzed dFoF *.mat files');
-    if (dataFolder == 0) return; end
+    if (dataFolder == 0); return; end
     [parentPath, ~, ~] = parsePath(dataFolder);
   elseif (param.swrCaOption || param.stimCaOption)
     dataFolder = uigetdir(pwd, 'Select folder containing analyzed LFP and/or cell *.mat files');
-    if (dataFolder == 0) return; end
+    if (dataFolder == 0); return; end
     [parentPath, ~, ~] = parsePath(dataFolder);
   else
     parentPath = pwd;
@@ -138,7 +136,7 @@ end
 % Select folder of Calcium dFoF exported from ImageJ
 if isempty(CaFolder) && ~param.reAnalyzeOption
   CaFolder = uigetdir(parentPath, 'Select folder of dFoF *.csv files exported from ImageJ');
-  if (CaFolder == 0) return; end
+  if (CaFolder == 0); return; end
   [parentPath, ~, ~] = parsePath(CaFolder);
 end
 
@@ -146,27 +144,27 @@ end
 if isempty(timingFile) && ~param.reAnalyzeOption
   [fileName, filePath] = uigetfile('.csv', 'Select the corresponding timing.csv file', parentPath);
   timingFile = strcat(filePath,fileName);
-  if ~all(timingFile) return; end
+  if ~all(timingFile); return; end
 end
 
 % Select export folder of Ca events (if selected)
 if isempty(expCaFolder) && param.expCaEvOption
   expCaFolder = uigetdir(parentPath, 'Select folder to export Ca event *.csv files');
-  if (expCaFolder == 0) warning('No Ca event files to be exported - folder not selected'); end
+  if (expCaFolder == 0); warning('No Ca event files to be exported - folder not selected'); end
   [parentPath, ~, ~] = parsePath(expCaFolder);
 end
 
 % Select export folder of SWR events (if selected)
 if isempty(expSWRFolder) && param.expSWREvOption
   expSWRFolder = uigetdir(parentPath, 'Select folder to export updated SWR event *.csv files');
-  if (expSWRFolder == 0) warning('No updated SWR event files to be exported - folder not selected'); end
+  if (expSWRFolder == 0); warning('No updated SWR event files to be exported - folder not selected'); end
   [parentPath, ~, ~] = parsePath(expSWRFolder);
 end
 
 % Select export folder of stim events (if selected)
 if isempty(expStimFolder) && param.expStimEvOption
   expStimFolder = uigetdir(parentPath, 'Select folder to export stimulation event *.csv files');
-  if (expStimFolder == 0) warning('No stimulation event files to be exported - folder not selected'); end
+  if (expStimFolder == 0); warning('No stimulation event files to be exported - folder not selected'); end
 end
 
 % ensure current dir is in path so we can call helper funcs
@@ -224,7 +222,7 @@ for i = 1:nFiles
   % Determine CaFile (if options require)
   if ~param.reAnalyzeOption
     CaFile{i} = [CaFolder slash CaFiles{i}];
-    if ~param.swrCaOption && ~param.stimCaOption [~, dataFileName, ~] = parsePath(CaFile{i}); end
+    if (~param.swrCaOption && ~param.stimCaOption); [~, dataFileName, ~] = parsePath(CaFile{i}); end
   end
   
   % Determine individual output *.mat file names

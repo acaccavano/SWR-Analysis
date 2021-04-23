@@ -15,10 +15,10 @@ function [baseMean, baseSD, baseThresh, peakThresh] = calcCaThresh(tSeries, para
 %   baseThresh   = threshold array for event start/end times
 %   peakThresh   = threshold array for event peak detection
 
-if (nargin < 2) param = struct; end
+if (nargin < 2); param = struct; end
 
-if ~isfield(param,'sdMult')        param.sdMult        = 4;    end
-if ~isfield(param,'sdBaseFactor')  param.sdBaseFactor  = 0.75; end
+if ~isfield(param,'sdMult');        param.sdMult        = 4;    end
+if ~isfield(param,'sdBaseFactor');  param.sdBaseFactor  = 0.75; end
 
 % Test if tSeries is cell array, if so it is array of files with consistent baselines
 if iscell(tSeries)

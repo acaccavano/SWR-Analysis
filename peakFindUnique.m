@@ -5,7 +5,7 @@ function [evStatus, evStart, evPeak, evEnd] = peakFindUnique(dataIn, timeArray, 
 %  detection and a second optionally lower one for start and end times.
 %  peakPolarity = +1 for maxima, -1 for minima
 
-if (nargin < 6) minEvDiff   = 0;   end
+if (nargin < 6); minEvDiff   = 0;   end
 
 % Initialize array for raster plots:
 evStatus = zeros(size(timeArray,1),1);

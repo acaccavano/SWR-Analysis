@@ -4,9 +4,9 @@ function exportBstEvents(data, saveFile, exportFile)
 %  Function to export csv file of all burst event stats
 
 % Handle input arguments - if not entered
-if (nargin < 3) exportFile = []; end
-if (nargin < 2) saveFile   = []; end
-if (nargin < 1) data       = []; end
+if (nargin < 3); exportFile = []; end
+if (nargin < 2); saveFile   = []; end
+if (nargin < 1); data       = []; end
 
 if isempty(data) || isempty(saveFile)
   error('Enter sufficient inputs to use function exportSpkEvents');
@@ -17,7 +17,7 @@ if isempty(exportFile)
   defaultName = [parentPath saveFileName '_bstEvents.csv'];
   [exportName, exportPath] = uiputfile('.csv','Select *.csv file to export table of burst events', defaultName);
   exportFile = [exportPath exportName];
-  if ~all(exportFile) error('No burst events to be exported - no file selected'); end
+  if ~all(exportFile); error('No burst events to be exported - no file selected'); end
 end
 
 varNames = {'evStart', 'evEnd', 'swrCoinc', 'nSpikesInBurst', 'intraBurstInterval_ms'};

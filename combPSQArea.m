@@ -1,14 +1,12 @@
-function S = combPSQArea(epscFolder, ipscFolder, epscIndex, ipscIndex, saveFile)
-%% S = combPSQArea(epscFolder, ipscFolder, epscIndex, ipscIndex, saveFile)
+function S = combPSQArea(epscFolder, ipscFolder, saveFile)
+%% S = combPSQArea(epscFolder, ipscFolder, saveFile)
 %
 %  Function to combine folder of EPSC and IPSC *.mat files to calculate average EPSQ and IPSQ curves
 
 % Handle optional arguments
-if (nargin < 5) saveFile   = []; end
-if (nargin < 4) ipscIndex  = []; end
-if (nargin < 3) epscIndex  = []; end
-if (nargin < 2) ipscFolder = []; end
-if (nargin < 1) epscFolder = []; end
+if (nargin < 3); saveFile   = []; end
+if (nargin < 2); ipscFolder = []; end
+if (nargin < 1); epscFolder = []; end
 
 % Optional additional place to specify file indeces - comment out if not needed
 
@@ -59,13 +57,11 @@ else
   slash = '/';
 end
 
-parentPath = [];
-
 % If not supplied, prompt for EPSC folder to analyze
 if isempty(epscFolder)
   epscFolder = uigetdir(pwd, 'Select folder containing analyzed EPSC recordings');
 end
-if (epscFolder == 0) return; end
+if (epscFolder == 0); return; end
 
 % Parse epscFolder to determine default save name
 [parentPath, epscFolderName, ~] = parsePath(epscFolder);
@@ -74,7 +70,7 @@ if (epscFolder == 0) return; end
 if isempty(ipscFolder)
   ipscFolder = uigetdir(parentPath, 'Select folder containing analyzed IPSC recordings');
 end
-if (ipscFolder == 0) return; end
+if (ipscFolder == 0); return; end
 
 % Select folders to save analyzed matlab files
 if isempty(saveFile)
@@ -84,7 +80,7 @@ if isempty(saveFile)
   if ~all(saveFile)
     warning('No file to be saved - no file selected');
   else
-    [parentPath, saveFileName, ~] = parsePath(saveFile);
+    [~, saveFileName, ~] = parsePath(saveFile);
   end
 end
 

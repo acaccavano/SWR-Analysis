@@ -4,12 +4,12 @@ function [evStatus, evStart, evEnd, evIndex] = eventOverlap(evStatus1, evStart1,
 %  Function takes two different event statuses and outputs the status of overlapping events
 %  overlapType = 0 (or(evStatus1,evStatus2), 1 (evStatus1), 2 (evStatus2)
 
-if (nargin < 8) overlapType = 0; end
+if (nargin < 8); overlapType = 0; end
 
 evConj = evStatus1 .* evStatus2;
 evDisj = or(evStatus1, evStatus2);
 
-[evConjStart, evConjEnd] = eventParse(evConj);
+[evConjStart, ~] = eventParse(evConj);
 [evDisjStart, evDisjEnd] = eventParse(evDisj);
 
 evStatus = zeros(size(timeArray,1),1);

@@ -51,78 +51,78 @@ function [data, hand] = analyzeCaFile(data, hand, param, saveFile, expCaFile, ex
 %   hand       = handle structure for figure
 
 %% Handle input arguments - if not entered
-if (nargin < 7) expStimFile = []; end
-if (nargin < 6) expSWRFile  = []; end
-if (nargin < 5) expCaFile   = []; end
-if (nargin < 4) saveFile    = []; end
-if (nargin < 3) param       = struct; end
-if (nargin < 2) hand        = struct; end
-if (nargin < 1) data        = struct; end
+if (nargin < 7); expStimFile = []; end
+if (nargin < 6); expSWRFile  = []; end
+if (nargin < 5); expCaFile   = []; end
+if (nargin < 4); saveFile    = []; end
+if (nargin < 3); param       = struct; end
+if (nargin < 2); hand        = struct; end
+if (nargin < 1); data        = struct; end
 
 % Handle case in which empty variables are supplied:
-if isempty(param) param    = struct; end
-if isempty(hand)  hand     = struct; end
-if isempty(data)  data     = struct; end
+if isempty(param); param    = struct; end
+if isempty(hand);  hand     = struct; end
+if isempty(data);  data     = struct; end
 
 % Set default parameters if not specified
-if ~isfield(param,'fileNum')              param.fileNum              = 1;    end
-if ~isfield(param,'baseCorrectMethod')    param.baseCorrectMethod    = 2;    end
-if ~isfield(param,'CaFiltLim1')           param.CaFiltLim1           = 0.03; end
-if ~isfield(param,'CaFiltLim2')           param.CaFiltLim2           = 4;    end
-if ~isfield(param,'CaFiltOrder')          param.CaFiltOrder          = 80;   end
-if ~isfield(param,'CaFiltAlpha')          param.CaFiltAlpha          = 2.5;  end
-if ~isfield(param,'smoothFactor')         param.smoothFactor         = 0.25; end
-if ~isfield(param,'interpOption')         param.interpOption         = 1;    end
-if ~isfield(param,'samplingInt')          param.samplingInt          = 0.5;  end
-if ~isfield(param,'cellTypeOption')       param.cellTypeOption       = 0;    end
-if ~isfield(param,'cellType1')            param.cellType1          = 'Deep'; end
-if ~isfield(param,'cellType2')            param.cellType2          = 'Supe'; end
-if ~isfield(param,'peakDetectCa')         param.peakDetectCa         = 1;    end
-if ~isfield(param,'baseDetectMethod')     param.baseDetectMethod     = 2;    end
-if ~isfield(param,'baseQuant')            param.baseQuant            = 0.8;  end
-if ~isfield(param,'pkDiffMin')            param.pkDiffMin            = 0.1;  end 
-if ~isfield(param,'pkSimLim')             param.pkSimLim             = 2;    end
-if ~isfield(param,'kurtosisMin')          param.kurtosisMin          = 0;    end
-if ~isfield(param,'kurtosisMax')          param.kurtosisMax          = 5;    end
-if ~isfield(param,'excludeQuant')         param.excludeQuant         = 0.98; end
-if ~isfield(param,'plotFitHisto')         param.plotFitHisto         = 0;    end
-if ~isfield(param,'sdMult')               param.sdMult               = 4;    end
-if ~isfield(param,'sdBaseFactor')         param.sdBaseFactor         = 0.75; end
-if ~isfield(param,'skipDetectLim')        param.skipDetectLim        = 1;    end
-if ~isfield(param,'consThreshOption')     param.consThreshOption     = 0;    end
-if ~isfield(param,'expCaEvOption')        param.expCaEvOption        = 1;    end
-if ~isfield(param,'swrCaOption')          param.swrCaOption          = 1;    end
-if ~isfield(param,'useSWRDurationOption') param.useSWRDurationOption = 1;    end
-if ~isfield(param,'useSWRWindowOption')   param.useSWRWindowOption   = 0;    end
-if ~isfield(param,'swrWindow')            param.swrWindow            = 100;  end
-if ~isfield(param,'expSWREvOption')       param.expSWREvOption       = 0;    end
-if ~isfield(param,'alignEndOption')       param.alignEndOption       = 0;    end
-if ~isfield(param,'stimCaOption')         param.stimCaOption         = 0;    end
-if ~isfield(param,'stimCaLim1')           param.stimCaLim1           = 0;    end
-if ~isfield(param,'stimCaLim2')           param.stimCaLim2           = 1000; end
-if ~isfield(param,'expStimEvOption')      param.expStimEvOption      = 0;    end
-if ~isfield(param,'reAnalyzeOption')      param.reAnalyzeOption      = 0;    end
+if ~isfield(param,'fileNum');              param.fileNum              = 1;    end
+if ~isfield(param,'baseCorrectMethod');    param.baseCorrectMethod    = 2;    end
+if ~isfield(param,'CaFiltLim1');           param.CaFiltLim1           = 0.03; end
+if ~isfield(param,'CaFiltLim2');           param.CaFiltLim2           = 4;    end
+if ~isfield(param,'CaFiltOrder');          param.CaFiltOrder          = 80;   end
+if ~isfield(param,'CaFiltAlpha');          param.CaFiltAlpha          = 2.5;  end
+if ~isfield(param,'smoothFactor');         param.smoothFactor         = 0.25; end
+if ~isfield(param,'interpOption');         param.interpOption         = 1;    end
+if ~isfield(param,'samplingInt');          param.samplingInt          = 0.5;  end
+if ~isfield(param,'cellTypeOption');       param.cellTypeOption       = 0;    end
+if ~isfield(param,'cellType1');            param.cellType1          = 'Deep'; end
+if ~isfield(param,'cellType2');            param.cellType2          = 'Supe'; end
+if ~isfield(param,'peakDetectCa');         param.peakDetectCa         = 1;    end
+if ~isfield(param,'baseDetectMethod');     param.baseDetectMethod     = 2;    end
+if ~isfield(param,'baseQuant');            param.baseQuant            = 0.8;  end
+if ~isfield(param,'pkDiffMin');            param.pkDiffMin            = 0.1;  end 
+if ~isfield(param,'pkSimLim');             param.pkSimLim             = 2;    end
+if ~isfield(param,'kurtosisMin');          param.kurtosisMin          = 0;    end
+if ~isfield(param,'kurtosisMax');          param.kurtosisMax          = 5;    end
+if ~isfield(param,'excludeQuant');         param.excludeQuant         = 0.98; end
+if ~isfield(param,'plotFitHisto');         param.plotFitHisto         = 0;    end
+if ~isfield(param,'sdMult');               param.sdMult               = 4;    end
+if ~isfield(param,'sdBaseFactor');         param.sdBaseFactor         = 0.75; end
+if ~isfield(param,'skipDetectLim');        param.skipDetectLim        = 1;    end
+if ~isfield(param,'consThreshOption');     param.consThreshOption     = 0;    end
+if ~isfield(param,'expCaEvOption');        param.expCaEvOption        = 1;    end
+if ~isfield(param,'swrCaOption');          param.swrCaOption          = 1;    end
+if ~isfield(param,'useSWRDurationOption'); param.useSWRDurationOption = 1;    end
+if ~isfield(param,'useSWRWindowOption');   param.useSWRWindowOption   = 0;    end
+if ~isfield(param,'swrWindow');            param.swrWindow            = 100;  end
+if ~isfield(param,'expSWREvOption');       param.expSWREvOption       = 0;    end
+if ~isfield(param,'alignEndOption');       param.alignEndOption       = 0;    end
+if ~isfield(param,'stimCaOption');         param.stimCaOption         = 0;    end
+if ~isfield(param,'stimCaLim1');           param.stimCaLim1           = 0;    end
+if ~isfield(param,'stimCaLim2');           param.stimCaLim2           = 1000; end
+if ~isfield(param,'expStimEvOption');      param.expStimEvOption      = 0;    end
+if ~isfield(param,'reAnalyzeOption');      param.reAnalyzeOption      = 0;    end
 
 % Check if necessary data structures are present
 if ~isfield(data,'Ca')
   [fileName, filePath] = uigetfile('.mat', 'Select *.mat file with imported Ca data');
   dataFile = [filePath fileName];
-  if ~all(dataFile) error('No previously analyzed *.mat file selected'); end
+  if ~all(dataFile); error('No previously analyzed *.mat file selected'); end
   data = load(dataFile);
 end
 
-if ~isfield(data,'Ca') error('missing Calcium data, run processCaFile.m first'); end
+if ~isfield(data,'Ca'); error('missing Calcium data, run processCaFile.m first'); end
 
 if param.swrCaOption || param.stimCaOption
-  if ~isfield(data,'LFP') error('Must analyze LFP before proceeding'); end
+  if ~isfield(data,'LFP'); error('Must analyze LFP before proceeding'); end
 end
 
 if param.swrCaOption
-  if ~isfield(data,'SWR') error('Must analyze LFP channel for SWR events before proceeding'); end
+  if ~isfield(data,'SWR'); error('Must analyze LFP channel for SWR events before proceeding'); end
 end
 
 if param.stimCaOption
-  if ~isfield(data,'stim') error('Must analyze LFP and import stim events before proceeding'); end
+  if ~isfield(data,'stim'); error('Must analyze LFP and import stim events before proceeding'); end
 end
 
 % If not supplied, prompt for save file
@@ -213,7 +213,7 @@ if param.peakDetectCa
       for i = 1:length(data.Ca.evStart{ch})
         data.Ca.duration{ch}(i) = (timingWin(data.Ca.evEnd{ch}(i)) - timingWin(data.Ca.evStart{ch}(i)));
         data.Ca.amp{ch}(i)      = tSeriesWin(data.Ca.evPeak{ch}(i)) - data.Ca.baseMean(ch);
-        if (i > 1) data.Ca.IEI{ch} = horzcat(data.Ca.IEI{ch}, (timingWin(data.Ca.evPeak{ch}(i)) - timingWin(data.Ca.evPeak{ch}(i-1))) / 1000); end
+        if (i > 1); data.Ca.IEI{ch} = horzcat(data.Ca.IEI{ch}, (timingWin(data.Ca.evPeak{ch}(i)) - timingWin(data.Ca.evPeak{ch}(i-1))) / 1000); end
       end
       data.Ca.nEvents(ch)   = length(data.Ca.evStart{ch});
       data.Ca.frequency(ch) = length(data.Ca.evStart{ch}) / ((timingWin(length(timingWin)) - timingWin(1)) / 1000);
@@ -243,8 +243,8 @@ end
 if param.swrCaOption
   
   % Create new data structures if not already present
-  if ~isfield(data.Ca,'SWR') data.Ca.SWR = struct; end
-  if ~isfield(data.SWR,'Ca') data.SWR.Ca = struct; end
+  if ~isfield(data.Ca,'SWR'); data.Ca.SWR = struct; end
+  if ~isfield(data.SWR,'Ca'); data.SWR.Ca = struct; end
   
   % Initialize cell arrays:
   data.Ca.SWR.evStatusA = [];
@@ -517,8 +517,8 @@ end
 if param.stimCaOption
   
   % Create new data structures if not already present
-  if ~isfield(data.Ca,'stim') data.Ca.stim = struct; end
-  if ~isfield(data.stim,'Ca') data.stim.Ca = struct; end
+  if ~isfield(data.Ca,'stim'); data.Ca.stim = struct; end
+  if ~isfield(data.stim,'Ca'); data.stim.Ca = struct; end
   
   % Initialize cell arrays:
   data.Ca.stim.evStatusA = [];
@@ -551,7 +551,7 @@ if param.stimCaOption
     % Re-calculate Ca peaks - truncating if necessary:
     data.Ca.stim.evPeakA{ch} = data.Ca.evPeak{ch}(1:length(data.Ca.stim.evStartA{ch}));
     if ~isempty(data.Ca.stim.evPeakA{ch})
-      if data.Ca.stim.evPeakA{ch}(end) > length(data.stim.Ca.timingA) data.Ca.stim.evPeakA{ch}(end) = length(data.stim.Ca.timingA); end
+      if data.Ca.stim.evPeakA{ch}(end) > length(data.stim.Ca.timingA); data.Ca.stim.evPeakA{ch}(end) = length(data.stim.Ca.timingA); end
     end
   end
   fprintf('done\n');

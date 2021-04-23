@@ -16,14 +16,14 @@ function processPSCBatch(param, pscFolder, expFolder, statFolder, duration)
 
 %% Handle input arguments
 
-if (nargin < 5) duration   = []; end
-if (nargin < 4) statFolder = []; end
-if (nargin < 3) expFolder  = []; end
-if (nargin < 2) pscFolder  = []; end
-if (nargin < 1) param      = struct; end
+if (nargin < 5); duration   = []; end
+if (nargin < 4); statFolder = []; end
+if (nargin < 3); expFolder  = []; end
+if (nargin < 2); pscFolder  = []; end
+if (nargin < 1); param      = struct; end
 
 % Handle case in which empty variable is supplied:
-if isempty(param) param      = struct; end
+if isempty(param); param      = struct; end
 
 % % Set default parameters if not specified - PLACEHOLDER: CURRENTLY NO PARAMS
 % if ~isfield(param,'fileNum')              param.fileNum              = 2;   end
@@ -39,21 +39,21 @@ end
 % Select folder of PSC events exported from pClamp
 if isempty(pscFolder)
   pscFolder = uigetdir(pwd, 'Select folder of PSC event *.csv files exported from pClamp');
-  if (pscFolder == 0) error('No PSC event folder selected'); end
+  if (pscFolder == 0); error('No PSC event folder selected'); end
   [parentPath, ~, ~] = parsePath(pscFolder);
 end
 
 % Select folder to save processed PSC events
 if isempty(expFolder)
   expFolder = uigetdir(parentPath, 'Select same or alternate folder to save processed *.csv files');
-  if (expFolder == 0) error('No export folder selected'); end
+  if (expFolder == 0); error('No export folder selected'); end
   [parentPath, ~, ~] = parsePath(expFolder);
 end
 
 % Select folder to export processed PSC stats
 if isempty(statFolder)
   statFolder = uigetdir(parentPath, 'Select folder to save processed PSC stats *.csv files');
-  if (statFolder == 0) warning('No average stats will be exported - folder not selected'); end
+  if (statFolder == 0); warning('No average stats will be exported - folder not selected'); end
 end
 
 % Define duration

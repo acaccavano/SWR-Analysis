@@ -4,15 +4,15 @@ function [S, hand] = analyzePhase(T, param)
 %  Function to combine table of individual cell circular stats and perform
 %  stats on two groups (CT and AD), and plot with different markers for males and females
 
-if (nargin < 2) param = struct; end
+if (nargin < 2); param = struct; end
 
 hand  = struct;
 
-if ~isfield(param,'sz')     param.sz     = 60;  end
-if ~isfield(param,'al')     param.al     = 0.6; end
-if ~isfield(param,'lwm')    param.lwm    = 2;   end
-if ~isfield(param,'lwl')    param.lwl    = 5;   end
-if ~isfield(param,'fontSz') param.fontSz = 14;  end
+if ~isfield(param,'sz');     param.sz     = 60;  end
+if ~isfield(param,'al');     param.al     = 0.6; end
+if ~isfield(param,'lwm');    param.lwm    = 2;   end
+if ~isfield(param,'lwl');    param.lwl    = 5;   end
+if ~isfield(param,'fontSz'); param.fontSz = 14;  end
 
 % PC-sup
 % cMark_CT = [128   0 128]/255;
@@ -86,13 +86,13 @@ hand.gPl_AD_F = polarscatter(hand.gAx, S.G.Ph(S.gen=="AD" & S.sex=="F"), S.G.Len
 hand.gPl_AD_F = editPolarPlot(hand.gPl_AD_F, param);
 
 gAvePh_CT_Plot = S.G.avePhCT * ones(1,100);
-gAvePhLL_CT_Plot = S.G.avePhLoCT * ones(1,100);
-gAvePhUL_CT_Plot = S.G.avePhHiCT * ones(1,100);
+% gAvePhLL_CT_Plot = S.G.avePhLoCT * ones(1,100);
+% gAvePhUL_CT_Plot = S.G.avePhHiCT * ones(1,100);
 gAveLen_CT_Plot = linspace(0, S.G.aveLenCT, 100);
 
 gAvePh_AD_Plot = S.G.avePhAD * ones(1,100);
-gAvePhLL_AD_Plot = S.G.avePhLoAD * ones(1,100);
-gAvePhUL_AD_Plot = S.G.avePhHiAD * ones(1,100);
+% gAvePhLL_AD_Plot = S.G.avePhLoAD * ones(1,100);
+% gAvePhUL_AD_Plot = S.G.avePhHiAD * ones(1,100);
 gAveLen_AD_Plot = linspace(0, S.G.aveLenAD, 100);
 
 polarplot(hand.gAx, gAvePh_CT_Plot, gAveLen_CT_Plot, 'Color', cLine_CT, 'LineWidth', param.lwl);
@@ -135,13 +135,13 @@ hand.rPl_AD_F = polarscatter(hand.rAx, S.R.Ph(S.gen=="AD" & S.sex=="F"), S.R.Len
 hand.rPl_AD_F = editPolarPlot(hand.rPl_AD_F, param);
 
 rAvePh_CT_Plot = S.R.avePhCT * ones(1,100);
-rAvePhLL_CT_Plot = S.R.avePhLoCT * ones(1,100);
-rAvePhUL_CT_Plot = S.R.avePhHiCT * ones(1,100);
+% rAvePhLL_CT_Plot = S.R.avePhLoCT * ones(1,100);
+% rAvePhUL_CT_Plot = S.R.avePhHiCT * ones(1,100);
 rAveLen_CT_Plot = linspace(0, S.R.aveLenCT, 100);
 
 rAvePh_AD_Plot = S.R.avePhAD * ones(1,100);
-rAvePhLL_AD_Plot = S.R.avePhLoAD * ones(1,100);
-rAvePhUL_AD_Plot = S.R.avePhHiAD * ones(1,100);
+% rAvePhLL_AD_Plot = S.R.avePhLoAD * ones(1,100);
+% rAvePhUL_AD_Plot = S.R.avePhHiAD * ones(1,100);
 rAveLen_AD_Plot = linspace(0, S.R.aveLenAD, 100);
 
 polarplot(hand.rAx, rAvePh_CT_Plot, rAveLen_CT_Plot, 'Color', cLine_CT, 'LineWidth', param.lwl);
@@ -168,7 +168,7 @@ thetaticklabels(hand.rAx,{});
 end
 
 
-function [avePh, avePhLL, avePhUL, aveVar, aveLen] = calcPhaseStats(ph, len)
+function [avePh, avePhLL, avePhUL, aveVar, aveLen] = calcPhaseStats(ph)
 
 [avePh, avePhUL, avePhLL] = circ_mean(ph);
 if (avePh < 0) 

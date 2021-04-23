@@ -35,42 +35,42 @@ function analyzePSCBatch(param, dataFolder, saveFolder, pscFolder, expPSCFolder,
 %   expSWRFolder  = full path to SWR event csv folder to export (if not set, will prompt)
 
 %% Handle input arguments
-if (nargin < 6) expSWRFolder = []; end
-if (nargin < 5) expPSCFolder = []; end
-if (nargin < 4) pscFolder    = []; end
-if (nargin < 3) saveFolder   = []; end
-if (nargin < 2) dataFolder   = []; end
-if (nargin < 1) param        = struct; end
+if (nargin < 6); expSWRFolder = []; end
+if (nargin < 5); expPSCFolder = []; end
+if (nargin < 4); pscFolder    = []; end
+if (nargin < 3); saveFolder   = []; end
+if (nargin < 2); dataFolder   = []; end
+if (nargin < 1); param        = struct; end
 
 % Handle case in which empty variable is supplied:
-if isempty(param) param      = struct; end
+if isempty(param); param      = struct; end
 
 % Set default parameters if not specified
-if ~isfield(param,'fileNum')              param.fileNum              = 2;   end
-if ~isfield(param,'pscEventPolarity')     param.pscEventPolarity     = 0;   end
-if ~isfield(param,'swrPSQOption')         param.swrPSQOption         = 1;   end
-if ~isfield(param,'importPSCOption')      param.importPSCOption      = 1;   end
-if ~isfield(param,'swrPSCOption')         param.swrPSCOption         = 1;   end
-if ~isfield(param,'useSWRDurationOption') param.useSWRDurationOption = 0;   end
-if ~isfield(param,'useSWRWindowOption')   param.useSWRWindowOption   = 1;   end
-if ~isfield(param,'swrWindow')            param.swrWindow            = 100; end
-if ~isfield(param,'parsePSCOption')       param.parsePSCOption       = 1;   end
-if ~isfield(param,'calcEvMatrixOption')   param.calcEvMatrixOption   = 1;   end
-if ~isfield(param,'expPSCEvOption')       param.expPSCEvOption       = 1;   end
-if ~isfield(param,'expSWREvOption')       param.expSWREvOption       = 1;   end
-if ~isfield(param,'gammaOption')          param.gammaOption          = 1;   end
-if ~isfield(param,'gammaLim1')            param.gammaLim1            = 20;  end
-if ~isfield(param,'gammaLim2')            param.gammaLim2            = 50;  end
-if ~isfield(param,'rOption')              param.rOption              = 1;   end
-if ~isfield(param,'rLim1')                param.rLim1                = 120; end
-if ~isfield(param,'rLim2')                param.rLim2                = 220; end
-if ~isfield(param,'spectOption')          param.spectOption          = 1;   end
-if ~isfield(param,'spectLim1')            param.spectLim1            = 1;   end
-if ~isfield(param,'spectLim2')            param.spectLim2            = 500; end
-if ~isfield(param,'reAnalyzeOption')      param.reAnalyzeOption      = 0;   end
-if ~isfield(param,'expAveOption')         param.expAveOption         = 1;   end
-if ~isfield(param,'nBins')                param.nBins                = 100; end % Not yet selectable in UI
-if ~isfield(param,'cdfOption')            param.cdfOption            = 1;   end % Not yet selectable in UI
+if ~isfield(param,'fileNum');              param.fileNum              = 2;   end
+if ~isfield(param,'pscEventPolarity');     param.pscEventPolarity     = 0;   end
+if ~isfield(param,'swrPSQOption');         param.swrPSQOption         = 1;   end
+if ~isfield(param,'importPSCOption');      param.importPSCOption      = 1;   end
+if ~isfield(param,'swrPSCOption');         param.swrPSCOption         = 1;   end
+if ~isfield(param,'useSWRDurationOption'); param.useSWRDurationOption = 0;   end
+if ~isfield(param,'useSWRWindowOption');   param.useSWRWindowOption   = 1;   end
+if ~isfield(param,'swrWindow');            param.swrWindow            = 100; end
+if ~isfield(param,'parsePSCOption');       param.parsePSCOption       = 1;   end
+if ~isfield(param,'calcEvMatrixOption');   param.calcEvMatrixOption   = 1;   end
+if ~isfield(param,'expPSCEvOption');       param.expPSCEvOption       = 1;   end
+if ~isfield(param,'expSWREvOption');       param.expSWREvOption       = 1;   end
+if ~isfield(param,'gammaOption');          param.gammaOption          = 1;   end
+if ~isfield(param,'gammaLim1');            param.gammaLim1            = 20;  end
+if ~isfield(param,'gammaLim2');            param.gammaLim2            = 50;  end
+if ~isfield(param,'rOption');              param.rOption              = 1;   end
+if ~isfield(param,'rLim1');                param.rLim1                = 120; end
+if ~isfield(param,'rLim2');                param.rLim2                = 220; end
+if ~isfield(param,'spectOption');          param.spectOption          = 1;   end
+if ~isfield(param,'spectLim1');            param.spectLim1            = 1;   end
+if ~isfield(param,'spectLim2');            param.spectLim2            = 500; end
+if ~isfield(param,'reAnalyzeOption');      param.reAnalyzeOption      = 0;   end
+if ~isfield(param,'expAveOption');         param.expAveOption         = 1;   end
+if ~isfield(param,'nBins');                param.nBins                = 100; end % Not yet selectable in UI
+if ~isfield(param,'cdfOption');            param.cdfOption            = 1;   end % Not yet selectable in UI
 
 % Assign OS specific variables:
 if ispc
@@ -86,21 +86,21 @@ if isempty(dataFolder)
   else
     dataFolder = uigetdir(pwd, 'Select folder containing *.mat files of analyzed LFP + imported cell channel');
   end
-  if (dataFolder == 0) return; end
+  if (dataFolder == 0); return; end
 end
 [parentPath, ~, ~] = parsePath(dataFolder);
 
 % Select folder to save analyzed matlab files
 if isempty(saveFolder)
   saveFolder = uigetdir(parentPath, 'Select same or alternate folder to save *.mat files');
-  if (saveFolder == 0) error('No save folder selected'); end
+  if (saveFolder == 0); error('No save folder selected'); end
   [parentPath, ~, ~] = parsePath(saveFolder);
 end
 
 % Select folder of PSC events exported from pClamp
 if isempty(pscFolder) && param.importPSCOption %% && ~param.reAnalyzeOption %% Commented out wanted to have option to re-import events but may have unintended consequences
   pscFolder = uigetdir(parentPath, 'Select folder of PSC event *.txt files exported from pClamp');
-  if (pscFolder == 0) error('No PSC event folder selected'); end
+  if (pscFolder == 0); error('No PSC event folder selected'); end
   [parentPath, ~, ~] = parsePath(pscFolder);
 end
 
@@ -117,7 +117,7 @@ end
 % Select export folder of SWR events (if selected)
 if isempty(expSWRFolder) && param.expSWREvOption
   expSWRFolder = uigetdir(parentPath, 'Select folder to export updated SWR event *.csv files');
-  if (expSWRFolder == 0) warning('No updated SWR event files to be exported - folder not selected'); end
+  if (expSWRFolder == 0); warning('No updated SWR event files to be exported - folder not selected'); end
 end
 
 % ensure current dir is in path so we can call helper funcs

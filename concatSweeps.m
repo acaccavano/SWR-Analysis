@@ -4,18 +4,18 @@ function dataOut = concatSweeps(inFile, outFile, param)
 %  Function to concatenate episodic ephys data into continuous format
 
 %% Handle input arguments - if not entered
-if (nargin < 3) param   = struct; end
-if (nargin < 2) outFile = []; end
-if (nargin < 1) inFile  = []; end
+if (nargin < 3); param   = struct; end
+if (nargin < 2); outFile = []; end
+if (nargin < 1); inFile  = []; end
 
 % Handle case in which empty variables are supplied
-if isempty(param) param = struct; end
+if isempty(param); param = struct; end
 
 % Set default parameters if not specified
-if ~isfield(param,'fileType')      param.fileType     = 1;    end
-if ~isfield(param,'Fs')            param.Fs           = 3000; end
-if ~isfield(param,'dsFactor')      param.dsFactor     = 1;    end
-if ~isfield(param,'channel')       param.channel      = [1 3 5]; end
+if ~isfield(param,'fileType');      param.fileType     = 1;    end
+if ~isfield(param,'Fs');            param.Fs           = 3000; end
+if ~isfield(param,'dsFactor');      param.dsFactor     = 1;    end
+if ~isfield(param,'channel');       param.channel      = [1 3 5]; end
 
 nChannels = length(param.channel);
 
@@ -27,7 +27,7 @@ if isempty(inFile)
   elseif (param.fileType == 2)
     inFile = uigetdir();
   end
-  if ~all(inFile) return; end
+  if ~all(inFile); return; end
 end
 
 % Parse inFile to determine default outFile name
@@ -38,7 +38,7 @@ if isempty(outFile)
   defaultPath = [parentPath inFileName '.txt'];
   [outFileName, outFilePath] = uiputfile('.txt','Select file to save processed *.txt file', defaultPath);
   outFile = [outFilePath outFileName];
-  if ~all(outFile) warning('No file to be saved - no file selected'); end
+  if ~all(outFile); warning('No file to be saved - no file selected'); end
 end
 
 fprintf('importing data... ');

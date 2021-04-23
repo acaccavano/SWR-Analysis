@@ -4,11 +4,11 @@ function h_scale = createScaleBar(h_ax, h_scale, XOption, YOption, fontSz, XUnit
 %  Function to automate scale bar creation. Requires scalebar.m @Chenxinfeng, 2016-9-10
 
 % Set default values of parameters
-if (nargin < 7) YUnit = '\muV'; end
-if (nargin < 6) XUnit = 's'; end
-if (nargin < 5) fontSz = 16; end
-if (nargin < 4) YOption = 1; end
-if (nargin < 3) XOption = 1; end
+if (nargin < 7); YUnit = '\muV'; end
+if (nargin < 6); XUnit = 's'; end
+if (nargin < 5); fontSz = 16; end
+if (nargin < 4); YOption = 1; end
+if (nargin < 3); XOption = 1; end
 
 xSBFactor = 15;
 ySBFactor = 10;

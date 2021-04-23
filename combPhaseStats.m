@@ -4,8 +4,8 @@ function T = combPhaseStats(dataFolder, exportFile)
 %  Function to combine phase stats from folder of *.mat files and output csv table
 
 % Handle optional arguments
-if (nargin < 2) exportFile = []; end
-if (nargin < 1) dataFolder = []; end
+if (nargin < 2); exportFile = []; end
+if (nargin < 1); dataFolder = []; end
 
 % Assign OS specific variables:
 if ispc
@@ -14,13 +14,11 @@ else
   slash = '/';
 end
 
-parentPath = [];
-
 % If not supplied, prompt for data folder to analyze
 if isempty(dataFolder)
   dataFolder = uigetdir(pwd, 'Select folder containing analyzed Spike recordings');
 end
-if (dataFolder == 0) return; end
+if (dataFolder == 0); return; end
 
 % Parse dataFolder to determine default save name
 [parentPath, dataFolderName, ~] = parsePath(dataFolder);
@@ -30,15 +28,12 @@ if isempty(exportFile)
   defaultPath = [parentPath 'phStats_' dataFolderName '.csv'];
   [exportName, exportPath] = uiputfile('.csv','Select *.csv file to export table of phase stats', defaultPath);
   exportFile = [exportPath exportName];
-  if ~all(exportFile) error('No file to be exported - no file selected'); end
+  if ~all(exportFile); error('No file to be exported - no file selected'); end
 end
 
 % ensure current dir is in path so we can call helper funcs
 curPath = pwd;
 path(path, curPath);
-
-% Initialize output data structure:
-T = struct;
 
 %% Import phase data
 % Extract file names
@@ -72,7 +67,7 @@ for i = 1:nDataFiles
   
   if isfield(data.C.spike.gamma, 'phaseAve') 
     gPhaseAve(i) = data.C.spike.gamma.phaseAve;
-    if (gPhaseAve(i) < 0) gPhaseAve(i) = gPhaseAve(i) + 2*pi; end
+    if (gPhaseAve(i) < 0); gPhaseAve(i) = gPhaseAve(i) + 2*pi; end
     gPhaseR(i) = data.C.spike.gamma.phaseR;
   end
   
@@ -83,7 +78,7 @@ for i = 1:nDataFiles
   
   if isfield(data.C.spike.R, 'phaseAve')
     rPhaseAve(i) = data.C.spike.R.phaseAve;
-    if (rPhaseAve(i) < 0) rPhaseAve(i) = rPhaseAve(i) + 2*pi; end
+    if (rPhaseAve(i) < 0); rPhaseAve(i) = rPhaseAve(i) + 2*pi; end
     rPhaseR(i) = data.C.spike.R.phaseR;
   end
   

@@ -4,18 +4,18 @@ function S = combCaCorr(param, dataFolder, saveFile)
 %  Function to combine folder of *.mat files with SWR-SWR and Cell-Cell correlations produced from analyzeCaFile
 
 % Handle optional arguments
-if (nargin < 3) saveFile   = []; end
-if (nargin < 2) dataFolder = []; end
-if (nargin < 1) param      = struct; end
+if (nargin < 3); saveFile   = []; end
+if (nargin < 2); dataFolder = []; end
+if (nargin < 1); param      = struct; end
 
 % Handle case in which empty variable is supplied:
-if isempty(param) param    = struct; end
+if isempty(param); param    = struct; end
 
 % Set default parameters if not specified
-if ~isfield(param,'nBins')          param.nBins          = 1000;   end
-if ~isfield(param,'cellTypeOption') param.cellTypeOption = 1;      end
-if ~isfield(param,'cellType1')      param.cellType1      = 'Deep'; end
-if ~isfield(param,'cellType2')      param.cellType2      = 'Supe'; end
+if ~isfield(param,'nBins');          param.nBins          = 1000;   end
+if ~isfield(param,'cellTypeOption'); param.cellTypeOption = 1;      end
+if ~isfield(param,'cellType1');      param.cellType1      = 'Deep'; end
+if ~isfield(param,'cellType2');      param.cellType2      = 'Supe'; end
 
 % Assign OS specific variables:
 if ispc
@@ -24,13 +24,11 @@ else
   slash = '/';
 end
 
-parentPath = [];
-
 % If not supplied, prompt for folders to analyze
 if isempty(dataFolder)
   dataFolder = uigetdir(pwd, 'Select folder containing analyzed Calcium recordings');
 end
-if (dataFolder == 0) return; end
+if (dataFolder == 0); return; end
 
 % Parse dataFolder to determine default save name
 [parentPath, dataFolderName, ~] = parsePath(dataFolder);
@@ -43,7 +41,7 @@ if isempty(saveFile)
   if ~all(saveFile)
     warning('No file to be saved - no file selected');
   else
-    [parentPath, saveFileName, ~] = parsePath(saveFile);
+    [~, saveFileName, ~] = parsePath(saveFile);
   end
 end
 

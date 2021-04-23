@@ -5,10 +5,10 @@ function S = calcEvPhase(S, SWR, param, lim1, lim2)
 %  piece-wise linear fit to maxima and minima of filtered signal, with some
 %  error handling to ensure abberently high or low results are discarded. 
 
-if ~isfield(S,'phase') S.phase = struct; end
-if ~isfield(param,'minPkDiffFrac') param.minPkDiffFrac = 1.5;  end % Fraction of max frequency (lim2) to set min peak difference for exclusion of events. 1 = max frequency of band, is pretty conservative, default = 1.5, so two successive oscillations can be slightly faster than allowed
-if ~isfield(param,'minPkPromFrac') param.minPkPromFrac = 0.0;  end % Fraction of SD of signal to set Min peak prominence (zero to ignore as criteria)
-if ~isfield(param,'samplingInt')   param.samplingInt = SWR.evTiming(2) - SWR.evTiming(1); end
+if ~isfield(S,'phase'); S.phase = struct; end
+if ~isfield(param,'minPkDiffFrac'); param.minPkDiffFrac = 1.5;  end % Fraction of max frequency (lim2) to set min peak difference for exclusion of events. 1 = max frequency of band, is pretty conservative, default = 1.5, so two successive oscillations can be slightly faster than allowed
+if ~isfield(param,'minPkPromFrac'); param.minPkPromFrac = 0.0;  end % Fraction of SD of signal to set Min peak prominence (zero to ignore as criteria)
+if ~isfield(param,'samplingInt');   param.samplingInt = SWR.evTiming(2) - SWR.evTiming(1); end
 
 % (Re)Initialize data arrays:
 S.phase.maxVal   = [];
@@ -60,8 +60,8 @@ for ev = 1:length(S.event)
     
     %% Calculate number of cycles and frequency
     
-    if isempty(S.phase.maxLoc{ev}(1)) S.phase.maxLoc{ev}(1) = 1; end
-    if isempty(S.phase.maxLoc{ev}(end)) S.phase.maxLoc{ev}(end) = length(SWR.evTiming); end
+    if isempty(S.phase.maxLoc{ev}(1)); S.phase.maxLoc{ev}(1) = 1; end
+    if isempty(S.phase.maxLoc{ev}(end)); S.phase.maxLoc{ev}(end) = length(SWR.evTiming); end
     
     midPoint = floor(length(SWR.evTiming)/2) + 1;
     evStartStand = max(midPoint - (SWR.evPeak(ev) - SWR.evStart(ev)), S.phase.maxLoc{ev}(1));
@@ -71,7 +71,7 @@ for ev = 1:length(S.event)
     nCycle = 0;
     
     for i = 1:length(contPhase)
-      if (contPhase(i) == 0) nCycle = nCycle + 1; end
+      if (contPhase(i) == 0); nCycle = nCycle + 1; end
       contPhase(i) = contPhase(i) + pi*2*nCycle;
     end
     

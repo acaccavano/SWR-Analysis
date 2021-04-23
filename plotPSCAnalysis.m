@@ -6,8 +6,8 @@ function hand = plotPSCAnalysis(data, hand, param, dsPlot)
 nData = length(data);
 
 % Set default parameters if not specified
-if ~isfield(param,'useSWRDurationOption') param.useSWRDurationOption = 0; end
-if ~isfield(param,'useSWRWindowOption')   param.useSWRWindowOption = 1; end
+if ~isfield(param,'useSWRDurationOption'); param.useSWRDurationOption = 0; end
+if ~isfield(param,'useSWRWindowOption');   param.useSWRWindowOption = 1; end
 
 % Plot dimension parameters
 convFact = 1000;

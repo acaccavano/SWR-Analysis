@@ -4,9 +4,9 @@ function exportSpkEvents(data, saveFile, exportFile)
 %  Function to export csv file of all spike event stats that are available
 
 % Handle input arguments - if not entered
-if (nargin < 3) exportFile = []; end
-if (nargin < 2) saveFile   = []; end
-if (nargin < 1) data       = []; end
+if (nargin < 3); exportFile = []; end
+if (nargin < 2); saveFile   = []; end
+if (nargin < 1); data       = []; end
 
 if isempty(data) || isempty(saveFile)
   error('Enter sufficient inputs to use function exportSpkEvents');
@@ -17,7 +17,7 @@ if isempty(exportFile)
   defaultName = [parentPath saveFileName '_spkEvents.csv'];
   [exportName, exportPath] = uiputfile('.csv','Select *.csv file to export table of spike events', defaultName);
   exportFile = [exportPath exportName];
-  if ~all(exportFile) error('No spike events to be exported - no file selected'); end
+  if ~all(exportFile); error('No spike events to be exported - no file selected'); end
 end
 
 varNames = {'evStart', 'evPeak', 'evEnd'};

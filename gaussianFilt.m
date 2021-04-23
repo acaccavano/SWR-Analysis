@@ -3,11 +3,11 @@ function dataOut = gaussianFilt(dataIn, Fc1, Fc2, samplingInt, Order, Alpha)
 % 
 % Gaussian FIR filter with constant and corrected phase delay
 
-if (nargin < 6) Alpha = 2.5; end
-if (nargin < 5) Order = 1; end
+if (nargin < 6); Alpha = 2.5; end
+if (nargin < 5); Order = 1; end
 
 Fs = 2 * round(1000 / (2 * samplingInt));
-if ~isempty(Fc2) Fc2 = min(Fs/2 - 1, Fc2); end % Filter will fail if upper limit is >= half the sampling frequency
+if ~isempty(Fc2); Fc2 = min(Fs/2 - 1, Fc2); end % Filter will fail if upper limit is >= half the sampling frequency
 
 N = round(Order * Fs);  % Order
 flag = 'scale';   % Sampling Flag

@@ -19,15 +19,15 @@ function [baseMean, baseSD] = calcCaBaseline(tSeries, param)
 %   baseMean     = baseline mean
 %   baseSD       = baseline SD
 
-if (nargin < 2) param = struct; end
-if ~isfield(param,'baseDetectMethod') param.baseDetectMethod = 2;    end
-if ~isfield(param,'baseQuant')        param.baseQuant        = 0.8;  end
-if ~isfield(param,'pkDiffMin')        param.pkDiffMin        = 0.1;  end
-if ~isfield(param,'pkSimLim')         param.pkSimLim         = 2;    end
-if ~isfield(param,'kurtosisMin')      param.kurtosisMin      = 0;    end
-if ~isfield(param,'kurtosisMax')      param.kurtosisMax      = 5;    end
-if ~isfield(param,'excludeQuant')     param.excludeQuant     = 0.98; end
-if ~isfield(param,'plotFitHisto')     param.plotFitHisto     = 0;    end
+if (nargin < 2); param = struct; end
+if ~isfield(param,'baseDetectMethod'); param.baseDetectMethod = 2;    end
+if ~isfield(param,'baseQuant');        param.baseQuant        = 0.8;  end
+if ~isfield(param,'pkDiffMin');        param.pkDiffMin        = 0.1;  end
+if ~isfield(param,'pkSimLim');         param.pkSimLim         = 2;    end
+if ~isfield(param,'kurtosisMin');      param.kurtosisMin      = 0;    end
+if ~isfield(param,'kurtosisMax');      param.kurtosisMax      = 5;    end
+if ~isfield(param,'excludeQuant');     param.excludeQuant     = 0.98; end
+if ~isfield(param,'plotFitHisto');     param.plotFitHisto     = 0;    end
 
 if (param.baseDetectMethod == 1)
   tSeries(tSeries > quantile(tSeries, param.baseQuant)) = [];

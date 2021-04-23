@@ -6,7 +6,7 @@ function hand = plotSpkSWRAnalysis(data, hand, param, dsPlot)
 nData = length(data);
 
 % Set default parameters if not specified
-if ~isfield(param,'procBstOption') param.procBstOption = 1; end
+if ~isfield(param,'procBstOption'); param.procBstOption = 1; end
 
 % Plot dimension parameters
 convFact = 1000;

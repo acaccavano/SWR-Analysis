@@ -2,25 +2,25 @@ function hand = plotCaAnalysis(data, hand, param, dsPlot)
 %% hand = plotCaAnalysis(data, hand, param, dsPlot)
 %  Function to plot output of analyzeCaFile
 
-if (nargin < 4) dsPlot    = 1; end
-if (nargin < 3) param     = struct; end
-if (nargin < 2) hand      = struct; end
-if (nargin < 1) data      = struct; end
+if (nargin < 4); dsPlot    = 1; end
+if (nargin < 3); param     = struct; end
+if (nargin < 2); hand      = struct; end
+if (nargin < 1); data      = struct; end
 
 nData = length(data);
 
 % Set default parameters if not specified
-if ~isfield(param,'skipDetectLim')  param.skipDetectLim  =  2; end
-if ~isfield(param,'swrCaOption')    param.swrCaOption    =  0; end
-if ~isfield(param,'spkCaOption')    param.spkCaOption    =  0; end
-if ~isfield(param,'colOption')      param.colOption      =  0; end % If enabled plots keeps all traces same colors, reserves below defined colors for different datasets
-if ~isfield(param,'threshOption')   param.threshOption   =  0; end
-if ~isfield(param,'peakOption')     param.peakOption     =  0; end
-if ~isfield(param,'stimCaOption')   param.swrCaOption    =  0; end
-if ~isfield(param,'cellLimOption')  param.cellLimOption  =  0; end % Limits number of Ca cells plotted - useful for comparisons where equal number of traces preferable
-if ~isfield(param,'cellLim')        param.cellLim        = 50; end 
-if ~isfield(param,'cellTypeOption') param.cellTypeOption =  0; end
-if ~isfield(param,'alignEndOption') param.alignEndOption =  0; end
+if ~isfield(param,'skipDetectLim');  param.skipDetectLim  =  2; end
+if ~isfield(param,'swrCaOption');    param.swrCaOption    =  0; end
+if ~isfield(param,'spkCaOption');    param.spkCaOption    =  0; end
+if ~isfield(param,'colOption');      param.colOption      =  0; end % If enabled plots keeps all traces same colors, reserves below defined colors for different datasets
+if ~isfield(param,'threshOption');   param.threshOption   =  0; end
+if ~isfield(param,'peakOption');     param.peakOption     =  0; end
+if ~isfield(param,'stimCaOption');   param.swrCaOption    =  0; end
+if ~isfield(param,'cellLimOption');  param.cellLimOption  =  0; end % Limits number of Ca cells plotted - useful for comparisons where equal number of traces preferable
+if ~isfield(param,'cellLim');        param.cellLim        = 50; end 
+if ~isfield(param,'cellTypeOption'); param.cellTypeOption =  0; end
+if ~isfield(param,'alignEndOption'); param.alignEndOption =  0; end
 
 % Plot dimension parameters
 convFact     = 1000;

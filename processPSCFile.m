@@ -16,30 +16,23 @@ function processPSCFile(param, pscFile, expFile, statFile, duration)
 %   duration    = duration of trace in s
 
 %% Handle input arguments - if not entered
-if (nargin < 5) duration = []; end
-if (nargin < 4) statFile = []; end
-if (nargin < 3) expFile  = []; end
-if (nargin < 2) pscFile  = []; end
-if (nargin < 1) param    = struct; end
+if (nargin < 5); duration = []; end
+if (nargin < 4); statFile = []; end
+if (nargin < 3); expFile  = []; end
+if (nargin < 2); pscFile  = []; end
+if (nargin < 1); param    = struct; end
 
 % Handle case in which empty variable is supplied:
-if isempty(param) param  = struct; end
+if isempty(param); param  = struct; end
 
 % % Set default parameters if not specified - PLACEHOLDER: CURRENTLY NO PARAMS
-% if ~isfield(param,'fileNum')              param.fileNum              = 2;   end
-% if ~isfield(param,'pscEventPolarity')     param.pscEventPolarity     = 0;   end
-
-% Assign OS specific variables:
-if ispc
-  slash = '\';
-else
-  slash = '/';
-end
+% if ~isfield(param,'fileNum');              param.fileNum              = 2;   end
+% if ~isfield(param,'pscEventPolarity');     param.pscEventPolarity     = 0;   end
 
 if isempty(pscFile)
   [pscName, pscPath] = uigetfile('.csv', 'Select *.csv file of exported PSC events from Clampfit');
   pscFile = [pscPath pscName];
-  if ~all(pscFile) error('No PSC file selected'); end
+  if ~all(pscFile); error('No PSC file selected'); end
 end
 
 % Parse pscFile to determine default save name
@@ -61,7 +54,7 @@ if isempty(statFile)
   defaultPath = [parentPath pscFileName '_Stats.csv'];
   [statName, statPath] = uiputfile('.csv','Select *.csv file to save averaged stats', defaultPath);
   statFile = [statPath statName];
-  if ~all(statFile) warning('No stat file to be saved - no file selected'); end
+  if ~all(statFile); warning('No stat file to be saved - no file selected'); end
 end
 
 pscTable = readtable(pscFile);
