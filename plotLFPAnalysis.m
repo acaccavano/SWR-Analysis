@@ -3,14 +3,42 @@ function hand = plotLFPAnalysis(data, hand, param, dsPlot)
 % 
 %  Function to plot output of analyzeLFPFile
 
+%% Handle input arguments - if not entered
+if (nargin < 4); dsPlot = 2;       end
+if (nargin < 3); param  = struct;  end
+if (nargin < 2); hand   = struct;  end
+if (nargin < 1); data   = struct;  end
+
+% Handle case in which empty variables are supplied:
+if isempty(param); param = struct; end
+if isempty(hand);  hand  = struct; end
+if isempty(data);  data  = struct; end
+
+% Set default parameters if not specified
+if ~isfield(param,'swrOption');    param.swrOption    = 1;     end
+if ~isfield(param,'swOption');     param.swOption     = 1;     end
+if ~isfield(param,'rOption');      param.rOption      = 1;     end
+if ~isfield(param,'rmsOption');    param.rmsOption    = 1;     end
+if ~isfield(param,'swrType');      param.swrType      = 1;     end
+if ~isfield(param,'thetaOption');  param.thetaOption  = 0;     end
+if ~isfield(param,'betaOption');   param.betaOption   = 0;     end
+if ~isfield(param,'gammaOption');  param.gammaOption  = 1;     end
+if ~isfield(param,'hgammaOption'); param.hgammaOption = 0;     end
+if ~isfield(param,'fROption');     param.fROption     = 1;     end
+if ~isfield(param,'spectOption');  param.spectOption  = 1;     end
+if ~isfield(param,'spectLim1');    param.spectLim1    = 1;     end
+if ~isfield(param,'spectLim2');    param.spectLim2    = 500;   end
+if ~isfield(param,'spectZOption'); param.spectZOption = false; end
+if ~isfield(param,'limSpectCol');  param.limSpectCol  = true;  end
+if ~isfield(param,'maxPZScore');   param.maxPZScore   = 10;    end
+if ~isfield(param,'colOption');    param.colOption    = false; end % If true will plot all traces of one data structure the same below defined colors, otherwise uses default ColorOrder
+
 % Initialization 
-convFact = 1000; % Convert from mV to uV
-nData    = length(data);
-nTrace   = 1;
-nRaster  = 0;
-limSpectCol = true;
-maxPZScore = 10;
-colOption  = false; % If true will plot all traces of one data structure the same below defined colors, otherwise uses default ColorOrder
+convFact   = 1000; % Convert from mV to uV
+nData      = length(data);
+nTrace     = 1;
+nRaster    = 0;
+
 dataCol{1} = [48 70 160]/255;
 dataCol{2} = [50 50  50]/255;
 
@@ -91,6 +119,15 @@ if param.thetaOption
   end
 end
 
+% Alpha plot
+if param.alphaOption
+  nTrace = nTrace + 1;
+  for i = 1:nData
+    dataPlot{i, nTrace} = downsampleMean(convFact * data(i).alpha.tSeries, dsPlot);
+    dataName{i, nTrace} = ['Alpha (' int2str(data(i).alpha.lim1) '-' int2str(data(i).alpha.lim2) 'Hz)'];
+  end
+end
+
 % Beta plot
 if param.betaOption
   nTrace = nTrace + 1;
@@ -146,22 +183,32 @@ if param.spectOption
   maxC =  -999999;
   
   for i = 1:nData
-    if limSpectCol % Option to remove outliers to get better dynamic range
-      data(i).LFP.spect.pZScore(data(i).LFP.spect.pZScore > maxPZScore) = maxPZScore;
-    end
     
+    if param.spectZOption
+      dataSpect{i} = data(i).LFP.spect.pZScore;
+      if param.limSpectCol % Option to remove Z-score outliers to get better dynamic range
+        dataSpect{i}(dataSpect{i} > param.maxPZScore) = param.maxPZScore;
+      end
+    else
+      dataSpect{i} = convFact * convFact * data(i).LFP.spect.power;
+    end
+
     hand.axSp(i) = subplot('Position',[xPos yPos plotWidth spectSz]);
-    imagesc(hand.axSp(i),'XData', data(i).LFP.spect.tRange,'YData', param.spectLim1:param.spectLim2, 'CData', data(i).LFP.spect.pZScore(param.spectLim1:param.spectLim2,:));
+    imagesc(hand.axSp(i),'XData', data(i).LFP.spect.tRange,'YData', param.spectLim1:param.spectLim2, 'CData', dataSpect{i}(param.spectLim1:param.spectLim2,:));
     axis(hand.axSp(i), [data(i).LFP.spect.tRange(1) data(i).LFP.spect.tRange(length(data(i).LFP.spect.tRange)) param.spectLim1 param.spectLim2]);
     set(hand.axSp(i),'FontSize',fontSz);
     
-    minC = min(minC, min(min(data(i).LFP.spect.pZScore)));
-    maxC = max(maxC, max(max(data(i).LFP.spect.pZScore)));
+    minC = min(minC, min(min(dataSpect{i}(param.spectLim1:param.spectLim2,:))));
+    maxC = max(maxC, max(max(dataSpect{i}(param.spectLim1:param.spectLim2,:))));
     xPos = xPos + plotWidth + marginSz;
   end
   
   colormap hot
-  hand.lblSp  = text(hand.axSp(1), hand.axSp(1).XLim(1), hand.axSp(1).YLim(2) - tFact * (hand.axSp(1).YLim(2) - hand.axSp(1).YLim(1)), 'Spectrogram Z-Score', 'FontSize', fontSz, 'Color', [1 1 1]);
+  if param.spectZOption
+    hand.lblSp  = text(hand.axSp(1), hand.axSp(1).XLim(1), hand.axSp(1).YLim(2) - tFact * (hand.axSp(1).YLim(2) - hand.axSp(1).YLim(1)), 'Spectrogram Z-Score', 'FontSize', fontSz, 'Color', [1 1 1]);
+  else
+    hand.lblSp  = text(hand.axSp(1), hand.axSp(1).XLim(1), hand.axSp(1).YLim(2) - tFact * (hand.axSp(1).YLim(2) - hand.axSp(1).YLim(1)), 'Spectrogram PSD (\muV^2/Hz) ', 'FontSize', fontSz, 'Color', [1 1 1]);
+  end
   hand.colbar = colorbar(hand.axSp(nData), 'Position', [1.01-marginSz marginSz 0.01 spectSz]);
   
   % Adjust color scale for all spectrogams to same:
@@ -186,7 +233,7 @@ for tr = nTrace : -1 : 1
       
       hand.axRs(i, rs) = subplot('Position',[xPos yPos plotWidth rasterSz]);
       hand.axRs(i, rs).ColorOrderIndex = colInd;
-      if colOption
+      if param.colOption
         rasterCol = dataCol{i};
       else
         rasterCol = hand.axRs(i, rs).ColorOrder(hand.axRs(i, rs).ColorOrderIndex,:);
@@ -223,7 +270,7 @@ for tr = nTrace : -1 : 1
     hand.axTr(i, tr) = subplot('Position',[xPos yPos plotWidth plotSz]);
     hold(hand.axTr(i, tr), 'on');
     hand.axTr(i, tr).ColorOrderIndex = colInd;
-    if colOption
+    if param.colOption
       hand.plot = plot(hand.axTr(i, tr), timingPlot{i}, dataPlot{i, tr}, 'LineWidth', lnWidth, 'Color', dataCol{i});
     else
       hand.plot = plot(hand.axTr(i, tr), timingPlot{i}, dataPlot{i, tr}, 'LineWidth', lnWidth);
