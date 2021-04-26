@@ -7,7 +7,8 @@ nData = length(data);
 
 % Input parameters
 if isempty(param); param = struct; end
-if ~isfield(param,'thetaOption');      param.thetaOption       = 0;    end
+if ~isfield(param,'thetaOption');      param.thetaOption       = 1;    end
+if ~isfield(param,'alphaOption');      param.thetaOption       = 0;    end
 if ~isfield(param,'betaOption');       param.betaOption        = 0;    end
 if ~isfield(param,'gammaOption');      param.gammaOption       = 1;    end
 if ~isfield(param,'hgammaOption');     param.hgammaOption      = 1;    end
@@ -16,13 +17,14 @@ if ~isfield(param,'hgammaOption');     param.hgammaOption      = 1;    end
 convFact = 1000; % Convert from mV to uV
 nTrace   = 1;
 colOption  = false; % If true will plot all traces of one data structure the same below defined colors, otherwise uses default ColorOrder
-dataCol{1} = [48 70 160]/255;
-dataCol{2} = [50 50  50]/255;
+% dataCol{1} = [48 70 160]/255;
+% dataCol{2} = [50 50  50]/255;
 
 % Timing and Cell arrays - always necessary
 for i = 1:nData
   timingPlot{i}          = downsampleMean(data(i).C.timing/1000, dsPlot);
-  peakTime{i}            = downsampleMean(data(i).C.timing(data.C.spike.evPeak)/1000, dsPlot);
+%   peakTime{i}            = downsampleMean(data(i).C.timing(data.C.spike.evPeak)/1000, dsPlot);
+  peakTime{i}            = data(i).C.timing(data.C.spike.evPeak)/1000;
   dataPlot{i, nTrace}    = downsampleMean(data(i).C.tSeries, dsPlot);
   dataPhase{i, nTrace}   = NaN * ones(length(data(i).C.timing),1); % Empty Placeholder
   dataName{i, nTrace}    = 'Cell-Attached';
@@ -35,6 +37,16 @@ if isfield(data(1).C.spike, 'theta') && param.thetaOption
     dataPlot{i, nTrace}  = downsampleMean(convFact * data(i).theta.tSeries, dsPlot);
     dataPhase{i, nTrace} = downsampleMean(data(i).theta.phase.tPhase, dsPlot);
     dataName{i, nTrace}  = ['Theta (' int2str(data(i).theta.lim1) '-' int2str(data(i).theta.lim2) 'Hz)'];
+  end
+end
+
+% Alpha plots
+if isfield(data(1).C.spike, 'alpha') && param.alphaOption
+  nTrace  = nTrace + 1;
+  for i = 1:nData
+    dataPlot{i, nTrace}  = downsampleMean(convFact * data(i).alpha.tSeries, dsPlot);
+    dataPhase{i, nTrace} = downsampleMean(data(i).alpha.phase.tPhase, dsPlot);
+    dataName{i, nTrace}  = ['Alpha (' int2str(data(i).alpha.lim1) '-' int2str(data(i).alpha.lim2) 'Hz)'];
   end
 end
 
@@ -115,9 +127,10 @@ for tr = nTrace : -1 : 1
       hand.plot = plot(hand.axTr(i, tr), timingPlot{i}, dataPlot{i, tr}, 'LineWidth', lnWidth, 'Color', traceColor);
     end
     
-    for spk = 1:length(peakTime{i})
-      hand.plot = xline(hand.axTr(i, tr), peakTime{i}(spk), 'LineStyle', ':', 'LineWidth', 0.5*lnWidth, 'Color', colMatrix(1, :));
-    end
+%     Plot viertical lines for spiked commented out - too slow   
+%     for spk = 1:length(peakTime{i})
+%       hand.plot = xline(hand.axTr(i, tr), peakTime{i}(spk), 'LineStyle', ':', 'LineWidth', 0.5*lnWidth, 'Color', colMatrix(1, :));
+%     end
 
     hold(hand.axTr(i, tr), 'off');
     
