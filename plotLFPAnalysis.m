@@ -31,6 +31,7 @@ if ~isfield(param,'spectLim2');    param.spectLim2    = 500;   end
 if ~isfield(param,'spectZOption'); param.spectZOption = false; end
 if ~isfield(param,'limSpectCol');  param.limSpectCol  = true;  end
 if ~isfield(param,'maxPZScore');   param.maxPZScore   = 10;    end
+if ~isfield(param,'xFreqOption');  param.xFreqOption  = 1;     end
 if ~isfield(param,'colOption');    param.colOption    = false; end % If true will plot all traces of one data structure the same below defined colors, otherwise uses default ColorOrder
 
 % Initialization 

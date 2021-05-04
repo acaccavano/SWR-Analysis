@@ -849,81 +849,101 @@ if param.phaseOption
   end
 end
 
-% Cross-Frequency Phase-Amplitude Coupling
+
+%% Cross-Frequency Phase-Amplitude Coupling (PAC)
 if param.xFreqOption
+  % Below is an adaptation/simplification of code written by Author: Angela Onslow, May 2010
   
-  % Determine lower phase-modulating frequency selected:
-  if param.xFreqLow 
-    data.(param.xFreqLow)
-  
-    % Lower range:
-  data.(param.xFreqLow)
-  
-  % Determine higher phase-modulated frequency(ies) 
-  i = 0;
-  if isfield(data,'gamma')
-    i = i + 1;
-    xFreqHi{i} = 'gamma';
-  end
-  if isfield(data,'hgamma')
-    i = i + 1;
-    xFreqHi{i} = 'hgamma';
-  end
-  if isfield(data,'R')
-    i = i + 1;
-    xFreqHi{i} = 'R';
-  end
-  if isfield(data,'fR')
-    i = i + 1;
-    xFreqHi{i} = 'fR';
-  end
-  
-  % Assign a temp LFP tSeries as it will be trimmed
-  tSeries   = LFP.tSeries;
+  %% Total PAC Analysis
+  % Assign a temp LFP tSeries (it will be trimmed later)
+  tSeries = data.LFP.tSeries;
+  nSample = length(data.LFP.tSeries);
   
   % Calculate modulating phase (lower frequency) via Morlet wavelet:
-  morlFreqP = data.(param.xFreqLow).lim1 + floor((data.(param.xFreqLow).lim2 - data.(param.xFreqLow).lim1)/2);
-  modPhase  = morletPhase(morlFreqP, tSeries, param.Fs, param.morlWidth);
-  
-  
-  
-  param.morlWidth  = 7;
-  param.winLength  = 0.5; % [s]
-  param.winOverlap = 0.2; % [s]
-  
-  % Shorten signals to get integer number of time windows
-  nSample  = length(data.LFP.tSeries);
-  nWin     = ceil(param.winLength * param.Fs);
-  nOverlap = ceil(param.winOverlap * param.Fs);
-  tSeries  = data.LFP.tSeries(1 : nSample - mod(nSample, nWin));
-  
-  % Update nSample
-  nSample = length(tSeries);
-  idx     = bsxfun(@plus, (1:nWin)', 1+(0:(fix((nSample - nOverlap)/(nWin - nOverlap)) - 1))*(nWin - nOverlap)) - 1;
-%   xbins   = size(idx, 2);
-%   alpha = alpha/(xbins*ybins); % Uncomment to use Bonferonni Correction
-  
-  % Calculate modulating phase (lower frequency) via Morlet wavelet:
-  morlFreqP = data.theta.lim1 + floor((data.theta.lim2 - data.theta.lim1)/2);
-  modPhase  = morletPhase(morlFreqP, tSeries, param.Fs, param.morlWidth);
-  
-  % Calculate amplitude (higher frequency) via Morlet wavelet:
-  morlFreqA = data.gamma.lim1 + floor((data.gamma.lim2 - data.gamma.lim1)/2);
-  pacAmp    = morletAmp(morlFreqA, tSeries, param.Fs, param.morlWidth);
-  
-  % Calculate total PAC measure:
-  z = pacAmp .* exp(1i * modPhase); % Create composite signal
-  miRaw = mean(z);  % Compute the mean length of composite signal
-  miPAC = abs(miRaw);
-  
-  % Calculate windowed time-series PAC:
-  miPACWin = zeros(size(idx,2), 1);
-  for i = 1:size(idx, 2)
+  if isfield(data, param.xFreqLow)
+    morlFreqP = data.(param.xFreqLow).lim1 + floor((data.(param.xFreqLow).lim2 - data.(param.xFreqLow).lim1)/2);
+    modPhase  = morletPhase(morlFreqP, tSeries, param.Fs, param.morlWidth);
+    
+    % Determine available higher phase-modulated frequency(ies) available:
+    nHi = 0;
+    if isfield(data,'gamma')
+      nHi = nHi + 1;
+      xFreqHi{nHi} = 'gamma';
+    end
+    if isfield(data,'hgamma')
+      nHi = nHi + 1;
+      xFreqHi{nHi} = 'hgamma';
+    end
+    if isfield(data,'R')
+      nHi = nHi + 1;
+      xFreqHi{nHi} = 'R';
+    end
+    if isfield(data,'fR')
+      nHi = nHi + 1;
+      xFreqHi{nHi} = 'fR';
+    end
+    
+    if nHi > 0
+      
+      % Initialize higher frequency arrays:
+      morlFreqA = zeros(1, nHi);
+      pacAmp    = zeros(nSample, nHi);
+      
+      for i = 1:nHi
+        % Calculate amplitude of higher frequency(ies) via Morlet wavelet:
+        morlFreqA(i) = data.(xFreqHi{i}).lim1 + floor((data.(xFreqHi{i}).lim2 - data.(xFreqHi{i}).lim1)/2);
+        pacAmp(:,i)  = morletAmp(morlFreqA(i), tSeries, param.Fs, param.morlWidth);
+        
+        % Calculate total PAC measure:
+        z = pacAmp(:,i) .* exp(1i * modPhase); % Create composite signal
+        pacRaw = mean(z);  % Compute the mean length of composite signal
+        pacMI  = abs(pacRaw); 
+        
+        % Update data structure:
+        if ~isfield(data.(xFreqHi{i}),'xFreq'); data.(xFreqHi{i}).xFreq = struct; end
+        data.(xFreqHi{i}).xFreq.xFreqLow  = param.xFreqLow;
+        data.(xFreqHi{i}).xFreq.xFreqHi   = xFreqHi{i};
+        data.(xFreqHi{i}).xFreq.morlFreqP = morlFreqP;
+        data.(xFreqHi{i}).xFreq.morlFreqA = morlFreqA(i);
+        data.(xFreqHi{i}).xFreq.modPhase  = modPhase;
+        data.(xFreqHi{i}).xFreq.pacAmp    = pacAmp(:,i);
+        data.(xFreqHi{i}).xFreq.pacMI     = pacMI;
+      end
+      
+      %% Time PAC Analysis
+      % Truncate signals to get integer number of time windows
+      nSampWn   = ceil(param.winLength * param.Fs);
+      nSampOl   = ceil(param.winOverlap * param.Fs);
+      remSample = mod(nSample, nSampWn);
+      modPhase  = modPhase(1 : nSample - remSample);
+      pacAmp    = pacAmp(1 : nSample - remSample, :);
+      
+      % Update nSample
+      nSample = length(modPhase);
+      idx     = bsxfun(@plus, (1:nSampWn)', 1+(0:(fix((nSample - nSampOl)/(nSampWn - nSampOl)) - 1))*(nSampWn - nSampOl)) - 1;
+      nWin    = size(idx,2);
+      
+      % Determine average time of windows:
+      timingWin = zeros(nWin, 1);
+      for j = 1:size(idx, 2)
+        timingWin(j) = mean(data.LFP.timing(idx(:, j)));
+      end
 
-    z = pacAmp(idx(:,i)) .* exp(1i * modPhase(idx(:,1))); % Create composite signal
-    miRaw = mean(z);  % Compute the mean length of composite signal
-    miPACWin(k) = abs(miRaw);
+      % Calculate windowed time-series PAC:
+      pacMIWin  = zeros(nWin, 1);
+      for i = 1:nHi
+        for j = 1:size(idx, 2)
+          
+          z = pacAmp(idx(:,j), i) .* exp(1i * modPhase(idx(:,j))); % Create composite signal
+          pacRaw = mean(z);  % Compute the mean length of composite signal
+          pacMIWin(j) = abs(pacRaw);
 
+          % Update data structure:
+          data.(xFreqHi{i}).xFreq.pacMIWin  = pacMIWin;
+          data.(xFreqHi{i}).xFreq.timingWin = timingWin;
+        end
+      end
+    end
   end
 end
 
