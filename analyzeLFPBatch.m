@@ -57,9 +57,10 @@ function analyzeLFPBatch(param, dataFolder, saveFolder, expEvFolder, expDataFold
 %     param.fftOption        = boolean flag to calculate FFT
 %     param.phaseOption      = boolean flag to calculate piecewise linear interpolated phase (required for many LFP cross frequency, spike-phase, and PSC-LFP correlation analyses
 %     param.xFreqOption      = boolean flag to perform cross-frequency analysis
-%     param.xFreqType        = cell: type of x-freq analysis (only 'Phase-Amplitude' implemented)
 %     param.xFreqLow         = cell: low frequency band for x-freq (Theta, Alpha, Beta, SW)
-%     param.xFreqHigh        = cell: high frequency band for x-freq (Gamma, HGamma, Ripple, FRipple)
+%     param.morlWidth        = width/number of cycles of the morlet wavelet filter, default = 7
+%     param.winLength        = time binning for phase-amplitude analysis (s). Dictates min low freq (=1/winLength), so default = 0.5s results in min freq. of 2Hz
+%     param.winOverlap       = Amount to overlap time bins (default = 0.2s)
 %     param.importStimOption = option to import stim file from pClamp (default = 0)
 %     param.reAnalyzeOption  = option to re-analyze file - will prompt for *.mat instead of raw data file
 %     param.expAveOption     = boolean flag to determine whether to export csv table of average statistics
@@ -135,9 +136,10 @@ if ~isfield(param,'spectLim2');        param.spectLim2         = 500;  end
 if ~isfield(param,'fftOption');        param.fftOption         = 1;    end
 if ~isfield(param,'phaseOption');      param.phaseOption       = 1;    end
 if ~isfield(param,'xFreqOption');      param.xFreqOption       = 1;    end
-if ~isfield(param,'xFreqType');        param.xFreqType         = 'Phase-Amplitude'; end
 if ~isfield(param,'xFreqLow');         param.xFreqLow          = 'Theta'; end
-if ~isfield(param,'xFreqHigh');        param.xFreqHigh         = 'Gamma'; end
+if ~isfield(param,'morlWidth');        param.morlWidth         = 7;    end
+if ~isfield(param,'winLength');        param.winLength         = 0.5;  end
+if ~isfield(param,'winOverlap');       param.winOverlap        = 0.2;  end
 if ~isfield(param,'importStimOption'); param.importStimOption  = 0;    end
 if ~isfield(param,'reAnalyzeOption');  param.reAnalyzeOption   = 0;    end
 if ~isfield(param,'expAveOption');     param.expAveOption      = 1;    end

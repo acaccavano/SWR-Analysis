@@ -65,9 +65,10 @@ function [data, hand] = analyzeLFPFile(data, hand, param, dataFile, saveFile, ex
 %     param.fftOption        = boolean flag to calculate FFT
 %     param.phaseOption      = boolean flag to calculate piecewise linear interpolated phase (required for many LFP cross frequency, spike-phase, and PSC-LFP correlation analyses
 %     param.xFreqOption      = boolean flag to perform cross-frequency analysis
-%     param.xFreqType        = cell: type of x-freq analysis (only 'Phase-Amplitude' implemented)
 %     param.xFreqLow         = cell: low frequency band for x-freq (Theta, Alpha, Beta, SW)
-%     param.xFreqHigh        = cell: high frequency band for x-freq (Gamma, HGamma, Ripple, FRipple)
+%     param.morlWidth        = width/number of cycles of the morlet wavelet filter, default = 7
+%     param.winLength        = time binning for phase-amplitude analysis (s). Dictates min low freq (=1/winLength), so default = 0.5s results in min freq. of 2Hz
+%     param.winOverlap       = Amount to overlap time bins (default = 0.2s)
 %     param.importStimOption = option to import stim file from pClamp (default = 0)
 %     param.reAnalyzeOption  = option to re-analyze file - will prompt for *.mat instead of raw data file
 %     param.expAveOption     = boolean flag to determine whether to export csv table of average statistics
@@ -99,25 +100,25 @@ if isempty(hand);  hand      = struct; end
 if isempty(data);  data      = struct; end
 
 % Set default parameters if not specified
-if ~isfield(param,'fileNum');          param.fileNum           = 1; end
+if ~isfield(param,'fileNum');          param.fileNum           = 1;    end
 if ~isfield(param,'fileType');         param.fileType          = 2;    end
-if ~isfield(param,'Fs');               param.Fs                = 3000; end
+if ~isfield(param,'Fs');               param.Fs                = 3000; end  % [Hz]
 if ~isfield(param,'dsFactor');         param.dsFactor          = 1;    end
 if ~isfield(param,'lfpChannel');       param.lfpChannel        = 1;    end
 if ~isfield(param,'cellOption');       param.cellOption        = 1;    end
 if ~isfield(param,'cellChannel');      param.cellChannel       = 2;    end
 if ~isfield(param,'notchOption');      param.notchOption       = 0;    end
-if ~isfield(param,'notchFreq');        param.notchFreq         = 60;   end
+if ~isfield(param,'notchFreq');        param.notchFreq         = 60;   end  % [Hz]
 if ~isfield(param,'lfpOption');        param.lfpOption         = 1;    end
-if ~isfield(param,'lfpLim1');          param.lfpLim1           = 1;    end
-if ~isfield(param,'lfpLim2');          param.lfpLim2           = 1000; end
+if ~isfield(param,'lfpLim1');          param.lfpLim1           = 1;    end  % [Hz]
+if ~isfield(param,'lfpLim2');          param.lfpLim2           = 1000; end  % [Hz]
 if ~isfield(param,'swrOption');        param.swrOption         = 1;    end
 if ~isfield(param,'swOption');         param.swOption          = 1;    end
-if ~isfield(param,'swLim1');           param.swLim1            = 1;    end
-if ~isfield(param,'swLim2');           param.swLim2            = 30;   end
+if ~isfield(param,'swLim1');           param.swLim1            = 1;    end  % [Hz]
+if ~isfield(param,'swLim2');           param.swLim2            = 30;   end  % [Hz]
 if ~isfield(param,'rOption');          param.rOption           = 1;    end
-if ~isfield(param,'rLim1');            param.rLim1             = 120;  end
-if ~isfield(param,'rLim2');            param.rLim2             = 220;  end
+if ~isfield(param,'rLim1');            param.rLim1             = 120;  end  % [Hz]
+if ~isfield(param,'rLim2');            param.rLim2             = 220;  end  % [Hz]
 if ~isfield(param,'rmsOption');        param.rmsOption         = 1;    end
 if ~isfield(param,'rmsMinEvDiff');     param.rmsMinEvDiff      = 25;   end
 if ~isfield(param,'rmsPeriod');        param.rmsPeriod         = 5;    end
@@ -129,32 +130,33 @@ if ~isfield(param,'swrWindow');        param.swrWindow         = 100;  end
 if ~isfield(param,'expSWREvOption');   param.expSWREvOption    = 1;    end
 if ~isfield(param,'expSWRDataOption'); param.expSWRDataOption  = 1;    end
 if ~isfield(param,'thetaOption');      param.thetaOption       = 1;    end
-if ~isfield(param,'thetaLim1');        param.thetaLim1         = 4;    end
-if ~isfield(param,'thetaLim2');        param.thetaLim2         = 8;    end
+if ~isfield(param,'thetaLim1');        param.thetaLim1         = 4;    end  % [Hz]
+if ~isfield(param,'thetaLim2');        param.thetaLim2         = 8;    end  % [Hz]
 if ~isfield(param,'alphaOption');      param.alphaOption       = 0;    end
-if ~isfield(param,'alphaLim1');        param.alphaLim1         = 9;    end
-if ~isfield(param,'alphaLim2');        param.alphaLim2         = 12;   end
+if ~isfield(param,'alphaLim1');        param.alphaLim1         = 9;    end  % [Hz]
+if ~isfield(param,'alphaLim2');        param.alphaLim2         = 12;   end  % [Hz]
 if ~isfield(param,'betaOption');       param.betaOption        = 0;    end
-if ~isfield(param,'betaLim1');         param.betaLim1          = 13;   end
-if ~isfield(param,'betaLim2');         param.betaLim2          = 24;   end
+if ~isfield(param,'betaLim1');         param.betaLim1          = 13;   end  % [Hz]
+if ~isfield(param,'betaLim2');         param.betaLim2          = 24;   end  % [Hz]
 if ~isfield(param,'gammaOption');      param.gammaOption       = 1;    end
-if ~isfield(param,'gammaLim1');        param.gammaLim1         = 25;   end
-if ~isfield(param,'gammaLim2');        param.gammaLim2         = 55;   end
+if ~isfield(param,'gammaLim1');        param.gammaLim1         = 25;   end  % [Hz]
+if ~isfield(param,'gammaLim2');        param.gammaLim2         = 55;   end  % [Hz]
 if ~isfield(param,'hgammaOption');     param.hgammaOption      = 0;    end
-if ~isfield(param,'hgammaLim1');       param.hgammaLim1        = 65;   end
-if ~isfield(param,'hgammaLim2');       param.hgammaLim2        = 85;   end
+if ~isfield(param,'hgammaLim1');       param.hgammaLim1        = 65;   end  % [Hz]
+if ~isfield(param,'hgammaLim2');       param.hgammaLim2        = 85;   end  % [Hz]
 if ~isfield(param,'fROption');         param.fROption          = 1;    end
-if ~isfield(param,'fRLim1');           param.fRLim1            = 250;  end
-if ~isfield(param,'fRLim2');           param.fRLim2            = 500;  end
+if ~isfield(param,'fRLim1');           param.fRLim1            = 250;  end  % [Hz]
+if ~isfield(param,'fRLim2');           param.fRLim2            = 500;  end  % [Hz]
 if ~isfield(param,'spectOption');      param.spectOption       = 1;    end
-if ~isfield(param,'spectLim1');        param.spectLim1         = 1;    end
-if ~isfield(param,'spectLim2');        param.spectLim2         = 500;  end
+if ~isfield(param,'spectLim1');        param.spectLim1         = 1;    end  % [Hz]
+if ~isfield(param,'spectLim2');        param.spectLim2         = 500;  end  % [Hz]
 if ~isfield(param,'fftOption');        param.fftOption         = 1;    end
 if ~isfield(param,'phaseOption');      param.phaseOption       = 1;    end
 if ~isfield(param,'xFreqOption');      param.xFreqOption       = 1;    end
-if ~isfield(param,'xFreqType');        param.xFreqType         = 'Phase-Amplitude'; end
 if ~isfield(param,'xFreqLow');         param.xFreqLow          = 'Theta'; end
-if ~isfield(param,'xFreqHigh');        param.xFreqHigh         = 'Gamma'; end
+if ~isfield(param,'morlWidth');        param.morlWidth         = 7;    end
+if ~isfield(param,'winLength');        param.winLength         = 0.5;  end  % [s]
+if ~isfield(param,'winOverlap');       param.winOverlap        = 0.2;  end  % [s]
 if ~isfield(param,'importStimOption'); param.importStimOption  = 0;    end
 if ~isfield(param,'reAnalyzeOption');  param.reAnalyzeOption   = 0;    end
 if ~isfield(param,'expAveOption');     param.expAveOption      = 1;    end
@@ -847,11 +849,43 @@ if param.phaseOption
   end
 end
 
-% Cross-Frequency Coupling - Currently only available for Type = 'Phase-Amnplitude'
+% Cross-Frequency Phase-Amplitude Coupling
 if param.xFreqOption
   
-  % Below is simplification of code written by Author: Angela Onslow, May
-  % 2010, to handle scalar instead of vector analysis.
+  % Determine lower phase-modulating frequency selected:
+  if param.xFreqLow 
+    data.(param.xFreqLow)
+  
+    % Lower range:
+  data.(param.xFreqLow)
+  
+  % Determine higher phase-modulated frequency(ies) 
+  i = 0;
+  if isfield(data,'gamma')
+    i = i + 1;
+    xFreqHi{i} = 'gamma';
+  end
+  if isfield(data,'hgamma')
+    i = i + 1;
+    xFreqHi{i} = 'hgamma';
+  end
+  if isfield(data,'R')
+    i = i + 1;
+    xFreqHi{i} = 'R';
+  end
+  if isfield(data,'fR')
+    i = i + 1;
+    xFreqHi{i} = 'fR';
+  end
+  
+  % Assign a temp LFP tSeries as it will be trimmed
+  tSeries   = LFP.tSeries;
+  
+  % Calculate modulating phase (lower frequency) via Morlet wavelet:
+  morlFreqP = data.(param.xFreqLow).lim1 + floor((data.(param.xFreqLow).lim2 - data.(param.xFreqLow).lim1)/2);
+  modPhase  = morletPhase(morlFreqP, tSeries, param.Fs, param.morlWidth);
+  
+  
   
   param.morlWidth  = 7;
   param.winLength  = 0.5; % [s]
