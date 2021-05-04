@@ -2,6 +2,7 @@ function [miPAC, miPACWin, morlFreqP, morlFreqA, modPhase, pacAmp] = calcPAC(dat
 
 % Below is simplification of code written by Author: Angela Onslow, May
 % 2010, to handle scalar instead of vector analysis.
+% Test 
 
 param.morlWidth  = 7;
 param.winLength  = 0.5; % [s]
