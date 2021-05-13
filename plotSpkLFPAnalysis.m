@@ -7,36 +7,35 @@ nData = length(data);
 
 % Input parameters
 if isempty(param); param = struct; end
-if ~isfield(param,'thetaOption');      param.thetaOption       = 1;    end
-if ~isfield(param,'alphaOption');      param.thetaOption       = 0;    end
-if ~isfield(param,'betaOption');       param.betaOption        = 0;    end
-if ~isfield(param,'gammaOption');      param.gammaOption       = 1;    end
-if ~isfield(param,'hgammaOption');     param.hgammaOption      = 1;    end
+if ~isfield(param,'thetaOption');  param.thetaOption  = 1;     end
+if ~isfield(param,'alphaOption');  param.thetaOption  = 0;     end
+if ~isfield(param,'betaOption');   param.betaOption   = 0;     end
+if ~isfield(param,'gammaOption');  param.gammaOption  = 1;     end
+if ~isfield(param,'hgammaOption'); param.hgammaOption = 1;     end
+if ~isfield(param,'colOption');    param.colOption    = false; end % If true will plot all traces of one data structure the same below defined colors, otherwise uses default ColorOrder
 
 % Initialization
-convFact = 1000; % Convert from mV to uV
-nTrace   = 1;
-colOption  = false; % If true will plot all traces of one data structure the same below defined colors, otherwise uses default ColorOrder
-% dataCol{1} = [48 70 160]/255;
-% dataCol{2} = [50 50  50]/255;
+convFact  = 1000; % Convert from mV to uV
+nTrace    = 1;
+dataCol{1} = [48 70 160]/255; % Only used if colOption = true
+dataCol{2} = [50 50  50]/255; % Only used if colOption = true
 
 % Timing and Cell arrays - always necessary
 for i = 1:nData
-  timingPlot{i}          = downsampleMean(data(i).C.timing/1000, dsPlot);
-%   peakTime{i}            = downsampleMean(data(i).C.timing(data.C.spike.evPeak)/1000, dsPlot);
-  peakTime{i}            = data(i).C.timing(data.C.spike.evPeak)/1000;
-  dataPlot{i, nTrace}    = downsampleMean(data(i).C.tSeries, dsPlot);
-  dataPhase{i, nTrace}   = NaN * ones(length(data(i).C.timing),1); % Empty Placeholder
-  dataName{i, nTrace}    = 'Cell-Attached';
+  timingPlot{i}        = downsampleMean(data(i).C.timing/1000, dsPlot);
+  dataPlot{i, nTrace}  = downsampleMean(data(i).C.tSeries, dsPlot);
+  dataPhase{i, nTrace} = NaN * ones(length(data(i).C.timing),1); % Empty Placeholder
+  dataName{i, nTrace}  = 'Cell-Attached';
+  dataRaster{i}        = downsampleMax(data(i).C.spike.evStatusPeak, dsPlot);
 end
 
 % Theta plots
 if isfield(data(1).C.spike, 'theta') && param.thetaOption
   nTrace  = nTrace + 1;
   for i = 1:nData
-    dataPlot{i, nTrace}  = downsampleMean(convFact * data(i).theta.tSeries, dsPlot);
-    dataPhase{i, nTrace} = downsampleMean(data(i).theta.phase.tPhase, dsPlot);
-    dataName{i, nTrace}  = ['Theta (' int2str(data(i).theta.lim1) '-' int2str(data(i).theta.lim2) 'Hz)'];
+    dataPlot{i, nTrace}    = downsampleMean(convFact * data(i).theta.tSeries, dsPlot);
+    dataPhase{i, nTrace}   = downsampleMean(data(i).theta.phase.tPhase, dsPlot);
+    dataName{i, nTrace}    = ['Theta (' int2str(data(i).theta.lim1) '-' int2str(data(i).theta.lim2) 'Hz)'];
   end
 end
 
@@ -44,9 +43,9 @@ end
 if isfield(data(1).C.spike, 'alpha') && param.alphaOption
   nTrace  = nTrace + 1;
   for i = 1:nData
-    dataPlot{i, nTrace}  = downsampleMean(convFact * data(i).alpha.tSeries, dsPlot);
-    dataPhase{i, nTrace} = downsampleMean(data(i).alpha.phase.tPhase, dsPlot);
-    dataName{i, nTrace}  = ['Alpha (' int2str(data(i).alpha.lim1) '-' int2str(data(i).alpha.lim2) 'Hz)'];
+    dataPlot{i, nTrace}    = downsampleMean(convFact * data(i).alpha.tSeries, dsPlot);
+    dataPhase{i, nTrace}   = downsampleMean(data(i).alpha.phase.tPhase, dsPlot);
+    dataName{i, nTrace}    = ['Alpha (' int2str(data(i).alpha.lim1) '-' int2str(data(i).alpha.lim2) 'Hz)'];
   end
 end
 
@@ -54,9 +53,9 @@ end
 if isfield(data(1).C.spike, 'beta') && param.betaOption
   nTrace  = nTrace + 1;
   for i = 1:nData
-    dataPlot{i, nTrace}  = downsampleMean(convFact * data(i).beta.tSeries, dsPlot);
-    dataPhase{i, nTrace} = downsampleMean(data(i).beta.phase.tPhase, dsPlot);
-    dataName{i, nTrace}  = ['Beta (' int2str(data(i).beta.lim1) '-' int2str(data(i).beta.lim2) 'Hz)'];
+    dataPlot{i, nTrace}    = downsampleMean(convFact * data(i).beta.tSeries, dsPlot);
+    dataPhase{i, nTrace}   = downsampleMean(data(i).beta.phase.tPhase, dsPlot);
+    dataName{i, nTrace}    = ['Beta (' int2str(data(i).beta.lim1) '-' int2str(data(i).beta.lim2) 'Hz)'];
   end
 end
 
@@ -64,9 +63,9 @@ end
 if isfield(data(1).C.spike, 'gamma') && param.gammaOption
   nTrace  = nTrace + 1;
   for i = 1:nData
-    dataPlot{i, nTrace}  = downsampleMean(convFact * data(i).gamma.tSeries, dsPlot);
-    dataPhase{i, nTrace} = downsampleMean(data(i).gamma.phase.tPhase, dsPlot);
-    dataName{i, nTrace}  = ['Gamma (' int2str(data(i).gamma.lim1) '-' int2str(data(i).gamma.lim2) 'Hz)'];
+    dataPlot{i, nTrace}    = downsampleMean(convFact * data(i).gamma.tSeries, dsPlot);
+    dataPhase{i, nTrace}   = downsampleMean(data(i).gamma.phase.tPhase, dsPlot);
+    dataName{i, nTrace}    = ['Gamma (' int2str(data(i).gamma.lim1) '-' int2str(data(i).gamma.lim2) 'Hz)'];
   end
 end
 
@@ -74,9 +73,9 @@ end
 if isfield(data(1).C.spike, 'hgamma') && param.hgammaOption
   nTrace  = nTrace + 1;
   for i = 1:nData
-    dataPlot{i, nTrace}  = downsampleMean(convFact * data(i).hgamma.tSeries, dsPlot);
-    dataPhase{i, nTrace} = downsampleMean(data(i).hgamma.phase.tPhase, dsPlot);
-    dataName{i, nTrace}  = ['High Gamma (' int2str(data(i).hgamma.lim1) '-' int2str(data(i).hgamma.lim2) 'Hz)'];
+    dataPlot{i, nTrace}    = downsampleMean(convFact * data(i).hgamma.tSeries, dsPlot);
+    dataPhase{i, nTrace}   = downsampleMean(data(i).hgamma.phase.tPhase, dsPlot);
+    dataName{i, nTrace}    = ['High Gamma (' int2str(data(i).hgamma.lim1) '-' int2str(data(i).hgamma.lim2) 'Hz)'];
   end
 end
 
@@ -110,28 +109,40 @@ for tr = nTrace : -1 : 1
     hand.axTr(i, tr) = subplot('Position',[xPos yPos plotWidth plotSz]);
     hold(hand.axTr(i, tr), 'on');
     
-    if colOption
-      traceColor = dataCol{i};
+    % Assign colors:
+    if param.colOption
+      traceColor  = dataCol{i};
+      rasterColor = dataCol{i};
     else
-      traceColor = colMatrix(colInd, :);
+      traceColor  = colMatrix(colInd, :);
+      rasterColor = colMatrix(1, :);
     end
     
-    if tr > 1
-      yyaxis(hand.axTr(i, tr), 'left')
-      hand.plot = plot(hand.axTr(i, tr), timingPlot{i}, dataPlot{i, tr}, 'LineWidth', lnWidth, 'Color', traceColor);
-      yyaxis(hand.axTr(i, tr), 'right')
-      hand.plot = plot(hand.axTr(i, tr), timingPlot{i}, dataPhase{i, tr}, 'LineWidth', 0.5*lnWidth, 'Color', traceColor);
-      ylim(hand.axTr(i, tr), [0 20*pi])
-      yyaxis(hand.axTr(i, tr), 'left')
+    % Assign points to spike raster:
+    nChannel = 200;
+    if (sum(dataRaster{i}) == 0)
+      rsPoints  = timingPlot{i};
+      rsChannel = NaN * linspace(0, 20*pi, nChannel);
     else
-      hand.plot = plot(hand.axTr(i, tr), timingPlot{i}, dataPlot{i, tr}, 'LineWidth', lnWidth, 'Color', traceColor);
+      rsPoints  = timingPlot{i}(logical(dataRaster{i}));
+      rsChannel = linspace(0, 20*pi, nChannel);
+    end
+    rsChannel = rsChannel(ones(1,length(rsPoints)), :);
+    
+    % Plot spike raster on left y-axis:
+    yyaxis(hand.axTr(i, tr), 'left')
+    hand.plot = plot(hand.axTr(i, tr), rsPoints, rsChannel, '.', 'MarkerSize', 1, 'Color', rasterColor);
+    ylim(hand.axTr(i, tr), [0 20*pi])
+    
+    % If LFP plot, also plot phase plot on left y-axis:
+    if tr > 1 % LFP traces:
+      hand.plot = plot(hand.axTr(i, tr), timingPlot{i}, dataPhase{i, tr}, '-', 'LineWidth', 0.5*lnWidth, 'Color', traceColor);
     end
     
-%     Plot viertical lines for spiked commented out - too slow   
-%     for spk = 1:length(peakTime{i})
-%       hand.plot = xline(hand.axTr(i, tr), peakTime{i}(spk), 'LineStyle', ':', 'LineWidth', 0.5*lnWidth, 'Color', colMatrix(1, :));
-%     end
-
+    % Plot trace on right y-axis:
+    yyaxis(hand.axTr(i, tr), 'right')
+    hand.plot = plot(hand.axTr(i, tr), timingPlot{i}, dataPlot{i, tr}, 'LineWidth', lnWidth, 'Color', traceColor);
+    
     hold(hand.axTr(i, tr), 'off');
     
     minY = min(minY, min(dataPlot{i, tr}));
@@ -169,7 +180,7 @@ set(zoom(hand.spkFig), 'ActionPostCallback', {@redrawPZCallback, hand, fontSz, t
 
 % Link data axes
 for i = 1:nData
-  linkaxes([hand.axTr(i,:)], 'x');
+  linkaxes(hand.axTr(i,:), 'x');
 end
 % linkaxes(hand.axTr(:,:), 'y'); % Comment out - usually don't want this behavior (helpful for making figures)
 
