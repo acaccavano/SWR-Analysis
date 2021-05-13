@@ -362,10 +362,10 @@ if param.importPSCOption %% && ~param.reAnalyzeOption %% Commented out want to h
   
   for ev = 1:length(data.C.PSC.evStart)
     
-    % Will range between 0 and 1 at time of PSC peak
+    % Integer ranging from 0 to 1 at time of PSC peak
     data.C.PSC.evStatusPeak(data.C.PSC.evPeak(ev)) = 1;
     
-    % Will range from 0 to # concurrent PSCs
+    % Integer ranging from 0 to # concurrent PSCs
     for i = data.C.PSC.evStart(ev) : data.C.PSC.evEnd(ev)
       data.C.PSC.evStatusSum(i) = data.C.PSC.evStatusSum(i) + 1;
     end
