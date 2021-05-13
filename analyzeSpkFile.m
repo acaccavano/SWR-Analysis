@@ -41,15 +41,15 @@ function [data, hand] = analyzeSpkFile(data, hand, param, saveFile, spkFile, bst
 
 %% Handle input arguments - if not entered
 if (nargin < 10); expAveFile = []; end
-if (nargin < 9); expSWRFile = []; end
-if (nargin < 8); expBstFile = []; end
-if (nargin < 7); expSpkFile = []; end
-if (nargin < 6); bstFile    = []; end
-if (nargin < 5); spkFile    = []; end
-if (nargin < 4); saveFile   = []; end
-if (nargin < 3); param      = struct; end
-if (nargin < 2); hand       = struct; end
-if (nargin < 1); data       = struct; end
+if (nargin < 9);  expSWRFile = []; end
+if (nargin < 8);  expBstFile = []; end
+if (nargin < 7);  expSpkFile = []; end
+if (nargin < 6);  bstFile    = []; end
+if (nargin < 5);  spkFile    = []; end
+if (nargin < 4);  saveFile   = []; end
+if (nargin < 3);  param      = struct; end
+if (nargin < 2);  hand       = struct; end
+if (nargin < 1);  data       = struct; end
 
 % Handle case in which empty variables are supplied:
 if isempty(param); param    = struct; end
@@ -209,65 +209,74 @@ data.param    = param;
 data.C.param  = param; % Save to Cell structure, as subsequent analysis may alter data.param
 
 %% Import and process event file(s)
-if param.importSpkOption && ~param.reAnalyzeOption
-  
-  % Import event files into matlab tables
-  warning('off')
-  fprintf(['importing spike event file ' spkFileName '... ']);
-  spikeTable = readtable(spkFile,'Delimiter','\t','ReadRowNames', 1, 'TreatAsEmpty', 'Not found');
-  fprintf('done\n');
-  if param.swrBstOption
-    fprintf(['importing burst event file ' bstFileName '... ']);
-    burstTable = readtable(bstFile,'Delimiter','\t','ReadRowNames', 1, 'TreatAsEmpty', 'Not found');
+if param.importSpkOption 
+  if ~param.reAnalyzeOption
+    
+    % Import event files into matlab tables
+    warning('off')
+    fprintf(['importing spike event file ' spkFileName '... ']);
+    spikeTable = readtable(spkFile,'Delimiter','\t','ReadRowNames', 1, 'TreatAsEmpty', 'Not found');
     fprintf('done\n');
-  end
-  warning('on')
-  
-  % Re-initialize spike data structures
-  data.C.spike.evStatus = [];
-  data.C.spike.evStart  = [];
-  data.C.spike.evPeak   = [];
-  data.C.spike.evEnd    = [];
-  
-  fprintf(['processing spike events (file ' dataFileName ')... ']);
-  for i = 1:size(spikeTable,2)
-    if ~isempty(strfind(spikeTable.Properties.VariableNames{i},"EventStartTime"))
-      spikeStartTime = spikeTable{:,i};
-      for ev = 1:length(spikeStartTime)
-        if ~isempty(find(data.C.timing >= spikeStartTime(ev), 1))
-          data.C.spike.evStart(ev) = find(data.C.timing >= spikeStartTime(ev), 1);
-        end
-      end
-      data.C.spike.evStart = data.C.spike.evStart';
+    if param.swrBstOption
+      fprintf(['importing burst event file ' bstFileName '... ']);
+      burstTable = readtable(bstFile,'Delimiter','\t','ReadRowNames', 1, 'TreatAsEmpty', 'Not found');
+      fprintf('done\n');
     end
+    warning('on')
     
-    if ~isempty(strfind(spikeTable.Properties.VariableNames{i},"EventEndTime"))
-      spikeEndTime = spikeTable{:,i};
-      for ev = 1:length(spikeEndTime)
-        if ~isempty(find(data.C.timing <= spikeEndTime(ev), 1, 'last'))
-          data.C.spike.evEnd(ev) = find(data.C.timing <= spikeEndTime(ev), 1, 'last');
-        end
-      end
-      data.C.spike.evEnd = data.C.spike.evEnd';
-    end
+    % Re-initialize spike data structures
+    data.C.spike.evStatus     = [];
+    data.C.spike.evStatusPeak = [];
+    data.C.spike.evStart      = [];
+    data.C.spike.evPeak       = [];
+    data.C.spike.evEnd        = [];
     
-    if ~isempty(strfind(spikeTable.Properties.VariableNames{i},"TimeOfPeak"))
-      spikePeakTime = spikeTable{:,i};
-      for ev = 1:length(spikePeakTime)
-        if ~isempty(find(data.C.timing >= spikePeakTime(ev), 1, 'last'))
-          data.C.spike.evPeak(ev) = find(data.C.timing >= spikePeakTime(ev), 1);
+    fprintf(['processing spike events (file ' dataFileName ')... ']);
+    for i = 1:size(spikeTable,2)
+      if ~isempty(strfind(spikeTable.Properties.VariableNames{i},"EventStartTime"))
+        spikeStartTime = spikeTable{:,i};
+        for ev = 1:length(spikeStartTime)
+          if ~isempty(find(data.C.timing >= spikeStartTime(ev), 1))
+            data.C.spike.evStart(ev) = find(data.C.timing >= spikeStartTime(ev), 1);
+          end
         end
+        data.C.spike.evStart = data.C.spike.evStart';
       end
-      data.C.spike.evPeak = data.C.spike.evPeak';
+      
+      if ~isempty(strfind(spikeTable.Properties.VariableNames{i},"EventEndTime"))
+        spikeEndTime = spikeTable{:,i};
+        for ev = 1:length(spikeEndTime)
+          if ~isempty(find(data.C.timing <= spikeEndTime(ev), 1, 'last'))
+            data.C.spike.evEnd(ev) = find(data.C.timing <= spikeEndTime(ev), 1, 'last');
+          end
+        end
+        data.C.spike.evEnd = data.C.spike.evEnd';
+      end
+      
+      if ~isempty(strfind(spikeTable.Properties.VariableNames{i},"TimeOfPeak"))
+        spikePeakTime = spikeTable{:,i};
+        for ev = 1:length(spikePeakTime)
+          if ~isempty(find(data.C.timing >= spikePeakTime(ev), 1, 'last'))
+            data.C.spike.evPeak(ev) = find(data.C.timing >= spikePeakTime(ev), 1);
+          end
+        end
+        data.C.spike.evPeak = data.C.spike.evPeak';
+      end
     end
+    fprintf('done\n');
   end
   data.C.spike.nEvents = length(data.C.spike.evStart);
   data.C.spike.frequency = data.C.spike.nEvents / ((data.C.timing(end) - data.C.timing(1)) / 1000);
-  fprintf('done\n');
   
   % compute spike status array
-  data.C.spike.evStatus = zeros(length(data.C.timing),1);
+  data.C.spike.evStatus     = zeros(length(data.C.timing),1);
+  data.C.spike.evStatusPeak = zeros(length(data.C.timing),1);
   for ev = 1:length(data.C.spike.evStart)
+    
+    % Integer ranging from 0 to 1 just at time of spike peak
+    data.C.spike.evStatusPeak(data.C.spike.evPeak(ev)) = 1;
+    
+    % Integer ranging from 0 to 1 from start to finish of spike
     for i = data.C.spike.evStart(ev) : data.C.spike.evEnd(ev)
       data.C.spike.evStatus(i) = 1;
     end
@@ -276,47 +285,49 @@ if param.importSpkOption && ~param.reAnalyzeOption
 
   %% Import burst file (if selected)
   if param.swrBstOption
-    
-    % Re-initialize data structures
-    data.C.burst.nSpike   = [];
-    data.C.burst.evStart  = [];
-    data.C.burst.evEnd    = [];
-    data.C.burst.intraBI  = [];
-    data.C.burst.evStatus = [];
-    
-    fprintf(['processing burst events (file ' dataFileName ')... ']);
-    for i = 1:size(burstTable,2)
-      if ~isempty(strfind(burstTable.Properties.VariableNames{i},"EventsInBurst"))
-        data.C.burst.nSpike = burstTable{:,i};
-      end
+    if ~param.reAnalyzeOption
       
-      if ~isempty(strfind(burstTable.Properties.VariableNames{i},"StartTime"))
-        burstStartTime = burstTable{:,i};
-        for ev = 1:length(burstStartTime)
-          if ~isempty(find(data.C.timing >= burstStartTime(ev), 1))
-            data.C.burst.evStart(ev) = find(data.C.timing >= burstStartTime(ev), 1);
-          end
+      % Re-initialize data structures
+      data.C.burst.nSpike   = [];
+      data.C.burst.evStart  = [];
+      data.C.burst.evEnd    = [];
+      data.C.burst.intraBI  = [];
+      data.C.burst.evStatus = [];
+      
+      fprintf(['processing burst events (file ' dataFileName ')... ']);
+      for i = 1:size(burstTable,2)
+        if ~isempty(strfind(burstTable.Properties.VariableNames{i},"EventsInBurst"))
+          data.C.burst.nSpike = burstTable{:,i};
         end
-        data.C.burst.evStart = data.C.burst.evStart';
-      end
-      
-      if ~isempty(strfind(burstTable.Properties.VariableNames{i},"EndTime"))
-        burstEndTime = burstTable{:,i};
-        for ev = 1:length(burstEndTime)
-          if ~isempty(find(data.C.timing <= burstEndTime(ev), 1, 'last'))
-            data.C.burst.evEnd(ev) = find(data.C.timing <= burstEndTime(ev), 1, 'last');
+        
+        if ~isempty(strfind(burstTable.Properties.VariableNames{i},"StartTime"))
+          burstStartTime = burstTable{:,i};
+          for ev = 1:length(burstStartTime)
+            if ~isempty(find(data.C.timing >= burstStartTime(ev), 1))
+              data.C.burst.evStart(ev) = find(data.C.timing >= burstStartTime(ev), 1);
+            end
           end
+          data.C.burst.evStart = data.C.burst.evStart';
         end
-        data.C.burst.evEnd = data.C.burst.evEnd';
+        
+        if ~isempty(strfind(burstTable.Properties.VariableNames{i},"EndTime"))
+          burstEndTime = burstTable{:,i};
+          for ev = 1:length(burstEndTime)
+            if ~isempty(find(data.C.timing <= burstEndTime(ev), 1, 'last'))
+              data.C.burst.evEnd(ev) = find(data.C.timing <= burstEndTime(ev), 1, 'last');
+            end
+          end
+          data.C.burst.evEnd = data.C.burst.evEnd';
+        end
+        
+        if ~isempty(strfind(burstTable.Properties.VariableNames{i},"MeanIntraburstInterval"))
+          data.C.burst.intraBI = burstTable{:,i};
+        end
       end
-      
-      if ~isempty(strfind(burstTable.Properties.VariableNames{i},"MeanIntraburstInterval"))
-        data.C.burst.intraBI = burstTable{:,i};
-      end
+      fprintf('done\n');
     end
     data.C.burst.nEvents   = length(data.C.burst.evStart);
     data.C.burst.frequency = data.C.burst.nEvents / ((data.C.timing(end) - data.C.timing(1)) / 1000);
-    fprintf('done\n');
     
     % compute burst status array
     data.C.burst.evStatus = zeros(length(data.C.timing),1);
