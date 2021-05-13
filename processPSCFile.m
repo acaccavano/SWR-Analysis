@@ -57,6 +57,12 @@ if isempty(statFile)
   if ~all(statFile); warning('No stat file to be saved - no file selected'); end
 end
 
+% Define duration
+if isempty(duration)
+  answer = inputdlg({'Enter trace duration in s'}, 'Input', [1 35], {'60.000'});
+  duration = str2double(answer{1});
+end
+
 pscTable = readtable(pscFile);
 
 % Remove duplicates with same time of peak:
