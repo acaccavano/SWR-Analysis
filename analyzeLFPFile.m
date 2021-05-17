@@ -853,12 +853,48 @@ end
 %% Cross-Frequency Phase-Amplitude Coupling (PAC)
 if param.xFreqOption
   % Below is an adaptation/simplification of code written by Author: Angela Onslow, May 2010
+  fprintf(['calculating phase-amplitude coupling for file ' dataFileName '... ']);
   
-  %% Total PAC Analysis
+  %% Total PAC Analysis for n x n matrix:
   % Assign a temp LFP tSeries (it will be trimmed later)
   tSeries = data.LFP.tSeries;
   nSample = length(data.LFP.tSeries);
   
+  if isfield(param, 'spectLim1') && isfield(param, 'spectLim2')
+    
+    % Initialize data structures:
+    if ~isfield(data.LFP,'xFreq'); data.LFP.xFreq = struct; end
+    
+    % Determine frequency vectors:
+    freqWidth = 5; % Hz - should bring this to UI
+    nDig1 = numel(num2str(param.spectLim1));
+    nDig2 = numel(num2str(param.spectLim2));
+    data.LFP.xFreq.freqRange = round5sd(param.spectLim1, nDig1) : freqWidth : round5sd(param.spectLim2, nDig2); % Array in units of freqWidth
+    data.LFP.xFreq.morlFreq  = data.LFP.xFreq.freqRange(1 : end-1) + (0.5 * freqWidth); % Final frequency values are mid-points
+    nFreq = length(data.LFP.xFreq.morlFreq);
+    
+    % Initialize phase, amplitude, and PAC arrays
+    data.LFP.xFreq.modPhase = zeros(nSample, nFreq);
+    data.LFP.xFreq.pacAmp   = zeros(nSample, nFreq);
+    data.LFP.xFreq.pacMI    = zeros(nFreq, nFreq);
+    
+    % Determine phase and amplitude via Morlet wavelet:
+    for i = 1 : nFreq
+      data.LFP.xFreq.modPhase(:, i) = morletPhase(data.LFP.xFreq.morlFreq(i), tSeries, param.Fs, param.morlWidth);
+      data.LFP.xFreq.pacAmp(:, i)   = morletAmp(data.LFP.xFreq.morlFreq(i), tSeries, param.Fs, param.morlWidth);
+    end
+    
+    % Calculate PAC:
+    for i = 1 : nFreq
+      for j = 1 : nFreq
+        z = data.LFP.xFreq.pacAmp(:,i) .* exp(1i * data.LFP.xFreq.modPhase(:,j)); % Create composite signal
+        pacRaw = mean(z);  % Compute the mean length of composite signal
+        data.LFP.xFreq.pacMI(i, j) = abs(pacRaw); 
+      end
+    end
+  end
+  
+  %% Total PAC Analysis for each higher frequency band:
   % Calculate modulating phase (lower frequency) via Morlet wavelet:
   if isfield(data, param.xFreqLow)
     morlFreqP = data.(param.xFreqLow).lim1 + floor((data.(param.xFreqLow).lim2 - data.(param.xFreqLow).lim1)/2);
@@ -945,6 +981,7 @@ if param.xFreqOption
       end
     end
   end
+  fprintf('done\n');
 end
 
 
