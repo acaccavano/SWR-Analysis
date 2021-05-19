@@ -15,8 +15,8 @@ if ~isfield(param,'hgammaOption'); param.hgammaOption = 1;     end
 if ~isfield(param,'colOption');    param.colOption    = false; end % If true will plot all traces of one data structure the same below defined colors, otherwise uses default ColorOrder
 
 % Initialization
-convFact  = 1000; % Convert from mV to uV
-nTrace    = 1;
+convFact   = 1000; % Convert from mV to uV
+nTrace     = 1;
 dataCol{1} = [48 70 160]/255; % Only used if colOption = true
 dataCol{2} = [50 50  50]/255; % Only used if colOption = true
 

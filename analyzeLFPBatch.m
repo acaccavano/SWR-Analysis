@@ -57,6 +57,7 @@ function analyzeLFPBatch(param, dataFolder, saveFolder, expEvFolder, expDataFold
 %     param.fftOption        = boolean flag to calculate FFT
 %     param.phaseOption      = boolean flag to calculate piecewise linear interpolated phase (required for many LFP cross frequency, spike-phase, and PSC-LFP correlation analyses
 %     param.xFreqOption      = boolean flag to perform cross-frequency analysis
+%     param.xFreqBin         = Frequency bin size for n x n PAC analysis (Default = 5 Hz)
 %     param.xFreqLow         = cell: low frequency band for x-freq (Theta, Alpha, Beta, SW)
 %     param.morlWidth        = width/number of cycles of the morlet wavelet filter, default = 7
 %     param.winLength        = time binning for phase-amplitude analysis (s). Dictates min low freq (=1/winLength), so default = 0.5s results in min freq. of 2Hz
@@ -136,6 +137,7 @@ if ~isfield(param,'spectLim2');        param.spectLim2         = 500;  end
 if ~isfield(param,'fftOption');        param.fftOption         = 1;    end
 if ~isfield(param,'phaseOption');      param.phaseOption       = 1;    end
 if ~isfield(param,'xFreqOption');      param.xFreqOption       = 1;    end
+if ~isfield(param,'xFreqBin');         param.xFreqBin          = 5;    end  % [Hz]
 if ~isfield(param,'xFreqLow');         param.xFreqLow          = 'Theta'; end
 if ~isfield(param,'morlWidth');        param.morlWidth         = 7;    end
 if ~isfield(param,'winLength');        param.winLength         = 0.5;  end

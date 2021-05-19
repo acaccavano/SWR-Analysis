@@ -39,6 +39,7 @@ convFact   = 1000; % Convert from mV to uV
 nData      = length(data);
 nTrace     = 1;
 nRaster    = 0;
+nXFreq     = 0;
 
 dataCol{1} = [48 70 160]/255;
 dataCol{2} = [50 50  50]/255;
@@ -109,6 +110,14 @@ if param.rOption
       dataName{i, nTrace} = 'R RMS';
     end
   end
+  
+  if param.xFreqOption
+    nXFreq = nXFreq + 1;
+    for i = 1:nData
+      timingXFreq{i, nXFreq} = data(i).R.xFreq.timingWin/1000;
+      dataXFreq{i, nXFreq}   = data(i).R.xFreq.pacMIWin;
+    end
+  end
 end
 
 % Theta plot
@@ -145,6 +154,14 @@ if param.gammaOption
     dataPlot{i, nTrace} = downsampleMean(convFact * data(i).gamma.tSeries, dsPlot);
     dataName{i, nTrace} = ['Low Gamma (' int2str(data(i).gamma.lim1) '-' int2str(data(i).gamma.lim2) 'Hz)'];
   end
+  
+  if param.xFreqOption
+    nXFreq = nXFreq + 1;
+    for i = 1:nData
+      timingXFreq{i, nXFreq} = data(i).gamma.xFreq.timingWin/1000;
+      dataXFreq{i, nXFreq}   = data(i).gamma.xFreq.pacMIWin;
+    end
+  end
 end
 
 % High gamma plot
@@ -153,6 +170,31 @@ if param.hgammaOption
   for i = 1:nData
     dataPlot{i, nTrace} = downsampleMean(convFact * data(i).hgamma.tSeries, dsPlot);
     dataName{i, nTrace} = ['High Gamma (' int2str(data(i).hgamma.lim1) '-' int2str(data(i).hgamma.lim2) 'Hz)'];
+  end
+  
+  if param.xFreqOption
+    nXFreq = nXFreq + 1;
+    for i = 1:nData
+      timingXFreq{i, nXFreq} = data(i).hgamma.xFreq.timingWin/1000;
+      dataXFreq{i, nXFreq}   = data(i).hgamma.xFreq.pacMIWin;
+    end
+  end
+end
+
+% Fast ripple plot
+if param.fROption
+  nTrace = nTrace + 1;
+  for i = 1:nData
+    dataPlot{i, nTrace} = downsampleMean(convFact * data(i).fR.tSeries, dsPlot);
+    dataName{i, nTrace} = ['Fast Ripple (' int2str(data(i).fR.lim1) '-' int2str(data(i).fR.lim2) 'Hz)'];
+  end
+  
+  if param.xFreqOption
+    nXFreq = nXFreq + 1;
+    for i = 1:nData
+      timingXFreq{i, nXFreq} = data(i).fR.xFreq.timingWin/1000;
+      dataXFreq{i, nXFreq}   = data(i).fR.xFreq.pacMIWin;
+    end
   end
 end
 
@@ -223,6 +265,8 @@ plotSz = (1 - marginSz - spacerSz - yPos - nRaster*rasterSz - nTrace*spacerSz)/n
 
 %% In reverse y order, initialize and plot trace and raster data:
 rs = nRaster;
+xf = nXFreq;
+
 for tr = nTrace : -1 : 1
   
   %% In forward x order, plot raster data (if applicable):
@@ -285,6 +329,16 @@ for tr = nTrace : -1 : 1
       plot(hand.axTr(i, tr), [data(i).LFP.timing(1) data(i).LFP.timing(length(data(i).LFP.timing))/1000], convFact * [data(i).R.peakThresh data(i).R.peakThresh], 'Color', hand.plot.Color, 'LineWidth', 1.0, 'LineStyle', '--');
       plot(hand.axTr(i, tr), [data(i).LFP.timing(1) data(i).LFP.timing(length(data(i).LFP.timing))/1000], convFact * [data(i).R.baseThresh data(i).R.baseThresh], 'Color', hand.plot.Color, 'LineWidth', 0.6, 'LineStyle', '--');
     end
+    
+    % If x-freq coupling, then plot modulation index on second y-axis:
+    if param.xFreqOption && (strcmp(dataName{1, tr}(1:3),'R (') || strcmp(dataName{1, tr}(1:4),'Low ') || strcmp(dataName{1, tr}(1:4),'High') || strcmp(dataName{1, tr}(1:4),'Fast'))
+      yyaxis(hand.axTr(i, tr), 'right')
+      ylim(hand.axTr(i, tr), [0 1])
+      hand.plot = plot(hand.axTr(i, tr), timingXFreq{i, xf}, dataXFreq{i, xf}, 'LineWidth', 0.5*lnWidth, 'Color', 'k');
+      yyaxis(hand.axTr(i, tr), 'left')
+      if (i == nData); rs = rs - 1; end
+    end
+    
     hold(hand.axTr(i, tr), 'off');
     
     minY = min(minY, min(dataPlot{i, tr}));

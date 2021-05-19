@@ -1,8 +1,7 @@
-function hand = plotLFPTotAnalysis(data, hand, param)
-%% hand = plotLFPTotAnalysis(data, hand, param, dsPlot)
+function hand = plotSpecAnalysis(data, hand, param)
+%% hand = plotSpecAnalysis(data, hand, param, dsPlot)
 % 
-%  Function to plot simple total output of analyzeLFPFile (primarily
-%  spectral info such as FFT and PAC)
+%  Function to plot spectral output of analyzeLFPFile (FFT and PAC)
 
 %% Handle input arguments - if not entered
 if (nargin < 3); param  = struct;  end
