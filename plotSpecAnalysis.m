@@ -1,6 +1,6 @@
 function hand = plotSpecAnalysis(data, hand, param)
 %% hand = plotSpecAnalysis(data, hand, param, dsPlot)
-% 
+%
 %  Function to plot spectral output of analyzeLFPFile (FFT and PAC)
 
 %% Handle input arguments - if not entered
@@ -45,6 +45,24 @@ for i = 1:nData
   hold on
   
   % Overlay gaussian fits (if present)
+  if isfield(data(i), 'theta')
+    xTheta     = data(i).theta.FFT.fftRange(data(i).theta.FFT.subRange);
+    yThetaFit  = data(i).theta.FFT.fitGauss(xTheta);
+    plot(hand.axFFT(i), xTheta, yThetaFit, '-', 'Color', fitColor, 'LineWidth', lnWidth);
+  end
+  
+  if isfield(data(i), 'alpha')
+    xAlpha     = data(i).alpha.FFT.fftRange(data(i).alpha.FFT.subRange);
+    yAlphaFit  = data(i).alpha.FFT.fitGauss(xAlpha);
+    plot(hand.axFFT(i), xAlpha, yAlphaFit, '-', 'Color', fitColor, 'LineWidth', lnWidth);
+  end
+  
+  if isfield(data(i), 'beta')
+    xBeta     = data(i).beta.FFT.fftRange(data(i).beta.FFT.subRange);
+    yBetaFit  = data(i).beta.FFT.fitGauss(xGamma);
+    plot(hand.axFFT(i), xBeta, yBetaFit, '-', 'Color', fitColor, 'LineWidth', lnWidth);
+  end
+  
   if isfield(data(i), 'gamma')
     xGamma     = data(i).gamma.FFT.fftRange(data(i).gamma.FFT.subRange);
     yGammaFit  = data(i).gamma.FFT.fitGauss(xGamma);
@@ -70,27 +88,40 @@ for i = 1:nData
   end
   
   axis(hand.axFFT(i), [param.spectLim1 param.spectLim2 0 inf]);
-  set(hand.axFFT(i), 'FontSize', fontSz); 
+  set(hand.axFFT(i), 'FontSize', fontSz);
   title(hand.axFFT(i), 'FFT')
-  xlabel(hand.axFFT(i), 'Frequency (Hz)')
+  %   xlabel(hand.axFFT(i), 'Frequency (Hz)')
   
   % Phase-Amplitude Coupling
   hand.axPAC(i) = subplot('Position',[xPos marginSz plotWidth plotHeight]);
-  imagesc(hand.axPAC(i), data(i).LFP.xFreq.morlFreq, data(i).LFP.xFreq.morlFreq, data(i).LFP.xFreq.pacMI)
+
+  if isfield(data(i).LFP.xFreq, 'pacMI_LenZ')
+    pacMI  = data(i).LFP.xFreq.pacMI_LenZ;
+    pacLbl = 'Phase-Amplitude Modulation Index Z-Score';
+  else
+    pacMI = data(i).LFP.xFreq.pacMI_Len;
+    pacLbl = 'Phase-Amplitude Modulation Index';
+  end
+  imagesc(hand.axPAC(i), data(i).LFP.xFreq.morlFreq, data(i).LFP.xFreq.morlFreq, pacMI)
+  
   axis xy
-  set(hand.axPAC(i), 'FontSize', fontSz); 
-  minC = min(minC, min(min(data(i).LFP.xFreq.pacMI)));
-  maxC = max(maxC, max(max(data(i).LFP.xFreq.pacMI)));
-  title(hand.axPAC(i), 'Phase-Amplitude Modulation Index')
+  title(hand.axPAC(i), pacLbl)
   ylabel(hand.axPAC(i), 'Amplitude Freq. (Hz)')
   xlabel(hand.axPAC(i), 'Phase Freq. (Hz)')
+  set(hand.axPAC(i), 'FontSize', fontSz);
   
+  minC = min(minC, min(min(pacMI)));
+  maxC = max(maxC, max(max(pacMI)));
   xPos = xPos + plotWidth + marginSz;
+  
+  linkaxes([hand.axFFT(i), hand.axPAC(i)], 'x');
 end
 
 % Colorbar only on furthest right plot:
-colorbar(hand.axPAC(nData), 'Position', [1.01-marginSz marginSz 0.01 plotHeight]);
+colorbar(hand.axPAC(nData), 'Position', [1.01-marginSz marginSz 0.02 plotHeight]);
 colormap hot
 for i = 1:nData
   caxis(hand.axPAC(i), [minC maxC]);
 end
+
+

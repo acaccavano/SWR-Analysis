@@ -67,6 +67,7 @@ function [data, hand] = analyzeLFPFile(data, hand, param, dataFile, saveFile, ex
 %     param.xFreqOption      = boolean flag to perform cross-frequency analysis
 %     param.xFreqBin         = Frequency bin size for n x n PAC analysis (Default = 5 Hz)
 %     param.xFreqLow         = cell: low frequency band for x-freq (Theta, Alpha, Beta, SW)
+%     param.nShuffle         = # shuffles to calculate Z-value for total PAC - does not due for nxn or time PAC, very computationally expensive. (default = 200)
 %     param.morlWidth        = width/number of cycles of the morlet wavelet filter, default = 7
 %     param.winLength        = time binning for phase-amplitude analysis (s). Dictates min low freq (=1/winLength), so default = 0.5s results in min freq. of 2Hz
 %     param.winOverlap       = Amount to overlap time bins (default = 0.2s)
@@ -157,6 +158,7 @@ if ~isfield(param,'xFreqOption');      param.xFreqOption       = 1;    end
 if ~isfield(param,'xFreqBin');         param.xFreqBin          = 5;    end  % [Hz]
 if ~isfield(param,'xFreqLow');         param.xFreqLow          = 'Theta'; end
 if ~isfield(param,'morlWidth');        param.morlWidth         = 7;    end
+if ~isfield(param,'nShuffle');         param.nShuffle          = 200;  end 
 if ~isfield(param,'winLength');        param.winLength         = 0.5;  end  % [s]
 if ~isfield(param,'winOverlap');       param.winOverlap        = 0.2;  end  % [s]
 if ~isfield(param,'importStimOption'); param.importStimOption  = 0;    end
@@ -853,17 +855,16 @@ end
 
 
 %% Cross-Frequency Phase-Amplitude Coupling (PAC)
+%  Adapted from Canolty et al 2006 and Onslow et al 2011
 if param.xFreqOption
-  % Below is an adaptation/simplification of code written by Author: Angela Onslow, May 2010
-  fprintf(['calculating phase-amplitude coupling for file ' dataFileName '... ']);
-  
-  %% Total PAC Analysis for n x n matrix:
   % Assign a temp LFP tSeries (it will be trimmed later)
   tSeries  = data.LFP.tSeries;
   nSample  = length(data.LFP.tSeries);
-  nShuffle = 200; % Add to UI?
 
+  %% Total PAC Analysis for n x n matrix:
   if isfield(param, 'spectLim1') && isfield(param, 'spectLim2')
+    
+    fprintf(['calculating n x n phase-amplitude coupling (file ' dataFileName ')... ']);
     
     % Initialize data structures:
     if ~isfield(data.LFP,'xFreq'); data.LFP.xFreq = struct; end
@@ -876,29 +877,32 @@ if param.xFreqOption
     nFreq = length(data.LFP.xFreq.morlFreq);
     
     % Initialize phase, amplitude, and PAC arrays
-    data.LFP.xFreq.modPhase = zeros(nSample, nFreq);
-    data.LFP.xFreq.pacAmp   = zeros(nSample, nFreq);
-    data.LFP.xFreq.pacMI    = zeros(nFreq, nFreq);
+    data.LFP.xFreq.phsPAC = zeros(nSample, nFreq);
+    data.LFP.xFreq.ampPAC = zeros(nSample, nFreq);
+    data.LFP.xFreq.pacMI  = zeros(nFreq, nFreq);
     
     % Determine phase and amplitude via Morlet wavelet:
     for i = 1 : nFreq
-      data.LFP.xFreq.modPhase(:, i) = morletPhase(data.LFP.xFreq.morlFreq(i), tSeries, param.Fs, param.morlWidth);
-      data.LFP.xFreq.pacAmp(:, i)   = morletAmp(data.LFP.xFreq.morlFreq(i), tSeries, param.Fs, param.morlWidth);
+      data.LFP.xFreq.phsPAC(:,i) = morletPhase(data.LFP.xFreq.morlFreq(i), tSeries, param.Fs, param.morlWidth);
+      data.LFP.xFreq.ampPAC(:,i) = morletAmp(data.LFP.xFreq.morlFreq(i), tSeries, param.Fs, param.morlWidth);
     end
     
     % Calculate PAC modulation index (MI):
-    for i = 1 : nFreq
-      for j = 1 : nFreq
-        data.LFP.xFreq = calcPACMI(data.LFP.xFreq.modPhase(:,j), data.LFP.xFreq.pacAmp(:,i), nSample, param.Fs, nShuffle);
-      end
-    end
+    data.LFP.xFreq = calcPACMI(data.LFP.xFreq, param.Fs, 0); % nShuffle > 1 gets very computationally expensive!
+    
+    % Order structure:
+    data.LFP.xFreq = orderStruct(data.LFP.xFreq);
+    
+    fprintf('done\n');
   end
   
   %% Total PAC Analysis for each higher frequency band:
   % Calculate modulating phase (lower frequency) via Morlet wavelet:
   if isfield(data, param.xFreqLow)
+    fprintf(['calculating Z-corrected phase-amplitude coupling for frequency bands of interest (file ' dataFileName ')... ']);
+    
     morlFreqP = data.(param.xFreqLow).lim1 + floor((data.(param.xFreqLow).lim2 - data.(param.xFreqLow).lim1)/2);
-    modPhase  = morletPhase(morlFreqP, tSeries, param.Fs, param.morlWidth);
+    phsPAC    = morletPhase(morlFreqP, tSeries, param.Fs, param.morlWidth);
     
     % Determine available higher phase-modulated frequency(ies) available:
     nHi = 0;
@@ -920,29 +924,23 @@ if param.xFreqOption
     end
     
     if nHi > 0
-      
-      % Initialize higher frequency arrays:
-      morlFreqA = zeros(1, nHi);
-      pacAmp    = zeros(nSample, nHi);
-      
       for i = 1:nHi
-        
         if ~isfield(data.(xFreqHi{i}),'xFreq'); data.(xFreqHi{i}).xFreq = struct; end
         
         % Calculate amplitude of higher frequency(ies) via Morlet wavelet:
-        morlFreqA(i) = data.(xFreqHi{i}).lim1 + floor((data.(xFreqHi{i}).lim2 - data.(xFreqHi{i}).lim1)/2);
-        pacAmp(:,i)  = morletAmp(morlFreqA(i), tSeries, param.Fs, param.morlWidth);
-        
-        % Calculate total PAC measure:
-        data.(xFreqHi{i}).xFreq = calcPACMI(modPhase, pacAmp(:,i), nSample, Fs, nShuffle);
+        morlFreqA = data.(xFreqHi{i}).lim1 + floor((data.(xFreqHi{i}).lim2 - data.(xFreqHi{i}).lim1)/2);
+        ampPAC    = morletAmp(morlFreqA, tSeries, param.Fs, param.morlWidth);
         
         % Update data structure:
         data.(xFreqHi{i}).xFreq.xFreqLow  = param.xFreqLow;
         data.(xFreqHi{i}).xFreq.xFreqHi   = xFreqHi{i};
         data.(xFreqHi{i}).xFreq.morlFreqP = morlFreqP;
-        data.(xFreqHi{i}).xFreq.morlFreqA = morlFreqA(i);
-        data.(xFreqHi{i}).xFreq.modPhase  = modPhase;
-        data.(xFreqHi{i}).xFreq.pacAmp    = pacAmp(:,i);
+        data.(xFreqHi{i}).xFreq.morlFreqA = morlFreqA;
+        data.(xFreqHi{i}).xFreq.phsPAC    = phsPAC;
+        data.(xFreqHi{i}).xFreq.ampPAC    = ampPAC;
+
+        % Calculate total PAC measure:
+        data.(xFreqHi{i}).xFreq = calcPACMI(data.(xFreqHi{i}).xFreq, param.Fs, param.nShuffle);
       end
       
       %% Time PAC Analysis
@@ -950,33 +948,47 @@ if param.xFreqOption
       nSampWn   = ceil(param.winLength * param.Fs);
       nSampOl   = ceil(param.winOverlap * param.Fs);
       remSample = mod(nSample, nSampWn);
-      modPhase  = modPhase(1 : nSample - remSample);
-      pacAmp    = pacAmp(1 : nSample - remSample, :);
+      phsPAC    = phsPAC(1 : nSample - remSample);
+      ampPAC    = ampPAC(1 : nSample - remSample, :);
       
       % Update nSample
-      nSample = length(modPhase);
+      nSample = length(phsPAC);
       idx     = bsxfun(@plus, (1:nSampWn)', 1+(0:(fix((nSample - nSampOl)/(nSampWn - nSampOl)) - 1))*(nSampWn - nSampOl)) - 1;
       nWin    = size(idx,2);
       
       % Determine average time of windows:
       timingWin = zeros(nWin, 1);
-      for j = 1:size(idx, 2)
-        timingWin(j) = mean(data.LFP.timing(idx(:, j)));
+      for k = 1:size(idx, 2)
+        timingWin(k) = mean(data.LFP.timing(idx(:, k)));
       end
-
+      
       % Calculate windowed time-series PAC:
-      pacMIWin  = zeros(nWin, 1);
+      pacMIWin       = zeros(nWin, 1);
+      pacMIWin_Len   = zeros(nWin, 1);
+      pacMIWin_Phase = zeros(nWin, 1);
+      
       for i = 1:nHi
-        for j = 1:size(idx, 2)
+        for k = 1:size(idx, 2)
           
-          z = pacAmp(idx(:,j), i) .* exp(1i * modPhase(idx(:,j))); % Create composite signal
-          pacRaw = mean(z);  % Compute the mean length of composite signal
-          pacMIWin(j) = abs(pacRaw);
-
-          % Update data structure:
-          data.(xFreqHi{i}).xFreq.pacMIWin  = pacMIWin;
-          data.(xFreqHi{i}).xFreq.timingWin = timingWin;
+          z = ampPAC(idx(:,k), i) .* exp(1i * phsPAC(idx(:,k))); % Create composite signal
+          pacMIWin(k)       = mean(z);  % Compute the mean length of composite signal
+          pacMIWin_Len(k)   = abs(pacMIWin(k));
+          pacMIWin_Phase(k) = angle(pacMIWin(k));
+          
         end
+        
+        % Update data structure:
+        data.(xFreqHi{i}).xFreq.pacMIWin        = pacMIWin;
+        data.(xFreqHi{i}).xFreq.pacMIWin_Len    = pacMIWin_Len;
+        data.(xFreqHi{i}).xFreq.pacMIWin_Phase  = pacMIWin_Phase;
+        data.(xFreqHi{i}).xFreq.timingWin       = timingWin;
+        
+        % Linear interpolation of pacMIWin_Len to data samplingInt for later correlations
+        data.(xFreqHi{i}).xFreq.timingI = data.LFP.timing(1:nSample);
+        data.(xFreqHi{i}).xFreq.pacMIWin_LenI = interp1(timingWin, pacMIWin_Len, data.(xFreqHi{i}).xFreq.timingI);
+        
+        % Order structure:
+        data.(xFreqHi{i}).xFreq = orderStruct(data.(xFreqHi{i}).xFreq);
       end
     end
   end

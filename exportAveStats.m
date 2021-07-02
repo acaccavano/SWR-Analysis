@@ -78,15 +78,22 @@ end
 if isfield(data, 'gamma')
   % Total Stats:
   if isfield(data.gamma, 'tPower'); outTable = [outTable table(10^6 * data.gamma.tPower, 'VariableNames', {'Gamma_Tot_Power_uV2'})]; end
-  if isfield(data.gamma, 'FFT') 
+  if isfield(data.gamma, 'FFT')
     if isfield(data.gamma.FFT, 'pkFreq');  outTable = [outTable table(data.gamma.FFT.pkFreq, 'VariableNames', {'Gamma_FFT_pkFreq_Hz'})]; end
-  	if isfield(data.gamma.FFT, 'fitMean'); outTable = [outTable table(data.gamma.FFT.fitMean, 'VariableNames', {'Gamma_FFT_fitMean_Hz'})]; end
+    if isfield(data.gamma.FFT, 'fitMean'); outTable = [outTable table(data.gamma.FFT.fitMean, 'VariableNames', {'Gamma_FFT_fitMean_Hz'})]; end
     if isfield(data.gamma.FFT, 'fitSD');   outTable = [outTable table(data.gamma.FFT.fitSD, 'VariableNames', {'Gamma_FFT_fitSD_Hz'})]; end
-  	if isfield(data.gamma.FFT, 'fitFWHM'); outTable = [outTable table(data.gamma.FFT.fitFWHM, 'VariableNames', {'Gamma_FFT_fitFWHM_Hz'})]; end
+    if isfield(data.gamma.FFT, 'fitFWHM'); outTable = [outTable table(data.gamma.FFT.fitFWHM, 'VariableNames', {'Gamma_FFT_fitFWHM_Hz'})]; end
   end
-  if isfield(data.gamma, 'phase') 
+  if isfield(data.gamma, 'phase')
     if isfield(data.gamma.phase, 'nCycle'); outTable = [outTable table(data.gamma.phase.nCycle, 'VariableNames', {'Gamma_Tot_nCycle'})]; end
-  	if isfield(data.gamma.phase, 'phFreq'); outTable = [outTable table(data.gamma.phase.phFreq, 'VariableNames', {'Gamma_Tot_phFreq_Hz'})]; end
+    if isfield(data.gamma.phase, 'phFreq'); outTable = [outTable table(data.gamma.phase.phFreq, 'VariableNames', {'Gamma_Tot_phFreq_Hz'})]; end
+  end
+  if isfield(data.gamma, 'xFreq')
+    if isfield(data.gamma.xFreq, 'pacMI_Len');       outTable = [outTable table(data.gamma.xFreq.pacMI_Len, 'VariableNames', {'Gamma_pacMI_Len'})]; end
+    if isfield(data.gamma.xFreq, 'pacMI_Phase');     outTable = [outTable table(data.gamma.xFreq.pacMI_Phase, 'VariableNames', {'Gamma_pacMI_Phase'})]; end
+    if isfield(data.gamma.xFreq, 'pacMI_LenZ');      outTable = [outTable table(data.gamma.xFreq.pacMI_LenZ, 'VariableNames', {'Gamma_pacMI_LenZ'})]; end
+    if isfield(data.gamma.xFreq, 'pacMIShf_LenAve'); outTable = [outTable table(data.gamma.xFreq.pacMIShf_LenAve, 'VariableNames', {'Gamma_pacMIShf_LenAve'})]; end
+    if isfield(data.gamma.xFreq, 'pacMIShf_LenSTD'); outTable = [outTable table(data.gamma.xFreq.pacMIShf_LenSTD, 'VariableNames', {'Gamma_pacMIShf_LenSTD'})]; end
   end
   % SWR Stats:
   if isfield(data.gamma, 'SWR')
@@ -114,6 +121,13 @@ if isfield(data, 'hgamma')
   if isfield(data.hgamma, 'phase') 
     if isfield(data.hgamma.phase, 'nCycle'); outTable = [outTable table(data.hgamma.phase.nCycle, 'VariableNames', {'HGamma_Tot_nCycle'})]; end
   	if isfield(data.hgamma.phase, 'phFreq'); outTable = [outTable table(data.hgamma.phase.phFreq, 'VariableNames', {'HGamma_Tot_phFreq_Hz'})]; end
+  end
+  if isfield(data.hgamma, 'xFreq')
+    if isfield(data.hgamma.xFreq, 'pacMI_Len');       outTable = [outTable table(data.hgamma.xFreq.pacMI_Len, 'VariableNames', {'HGamma_pacMI_Len'})]; end
+    if isfield(data.hgamma.xFreq, 'pacMI_Phase');     outTable = [outTable table(data.hgamma.xFreq.pacMI_Phase, 'VariableNames', {'HGamma_pacMI_Phase'})]; end
+    if isfield(data.hgamma.xFreq, 'pacMI_LenZ');      outTable = [outTable table(data.hgamma.xFreq.pacMI_LenZ, 'VariableNames', {'HGamma_pacMI_LenZ'})]; end
+    if isfield(data.hgamma.xFreq, 'pacMIShf_LenAve'); outTable = [outTable table(data.hgamma.xFreq.pacMIShf_LenAve, 'VariableNames', {'HGamma_pacMIShf_LenAve'})]; end
+    if isfield(data.hgamma.xFreq, 'pacMIShf_LenSTD'); outTable = [outTable table(data.hgamma.xFreq.pacMIShf_LenSTD, 'VariableNames', {'HGamma_pacMIShf_LenSTD'})]; end
   end
   % SWR Stats:
   if isfield(data.hgamma, 'SWR')

@@ -60,6 +60,7 @@ function analyzeLFPBatch(param, dataFolder, saveFolder, expEvFolder, expDataFold
 %     param.xFreqBin         = Frequency bin size for n x n PAC analysis (Default = 5 Hz)
 %     param.xFreqLow         = cell: low frequency band for x-freq (Theta, Alpha, Beta, SW)
 %     param.morlWidth        = width/number of cycles of the morlet wavelet filter, default = 7
+%     param.nShuffle         = # shuffles to calculate Z-value for total PAC - does not due for nxn or time PAC, very computationally expensive. (default = 200)
 %     param.winLength        = time binning for phase-amplitude analysis (s). Dictates min low freq (=1/winLength), so default = 0.5s results in min freq. of 2Hz
 %     param.winOverlap       = Amount to overlap time bins (default = 0.2s)
 %     param.importStimOption = option to import stim file from pClamp (default = 0)
@@ -140,6 +141,7 @@ if ~isfield(param,'xFreqOption');      param.xFreqOption       = 1;    end
 if ~isfield(param,'xFreqBin');         param.xFreqBin          = 5;    end  % [Hz]
 if ~isfield(param,'xFreqLow');         param.xFreqLow          = 'Theta'; end
 if ~isfield(param,'morlWidth');        param.morlWidth         = 7;    end
+if ~isfield(param,'nShuffle');         param.nShuffle          = 200;  end 
 if ~isfield(param,'winLength');        param.winLength         = 0.5;  end
 if ~isfield(param,'winOverlap');       param.winOverlap        = 0.2;  end
 if ~isfield(param,'importStimOption'); param.importStimOption  = 0;    end
