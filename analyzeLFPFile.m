@@ -969,12 +969,10 @@ if param.xFreqOption
       
       for i = 1:nHi
         for k = 1:size(idx, 2)
-          
           z = ampPAC(idx(:,k), i) .* exp(1i * phsPAC(idx(:,k))); % Create composite signal
           pacMIWin(k)       = mean(z);  % Compute the mean length of composite signal
           pacMIWin_Len(k)   = abs(pacMIWin(k));
           pacMIWin_Phase(k) = angle(pacMIWin(k));
-          
         end
         
         % Update data structure:
