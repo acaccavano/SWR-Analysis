@@ -25,9 +25,17 @@ if (nargin < 1); param    = struct; end
 % Handle case in which empty variable is supplied:
 if isempty(param); param  = struct; end
 
-% % Set default parameters if not specified - PLACEHOLDER: CURRENTLY NO PARAMS
-% if ~isfield(param,'fileNum');              param.fileNum              = 2;   end
-% if ~isfield(param,'pscEventPolarity');     param.pscEventPolarity     = 0;   end
+% Set default parameters if not specified:
+if ~isfield(param,'traceCol');   param.traceCol   =  1;  end
+if ~isfield(param,'categCol');   param.categCol   =  3;  end
+if ~isfield(param,'pkAmpCol');   param.pkAmpCol   =  8;  end
+if ~isfield(param,'pkTimeCol');  param.pkTimeCol  = 10;  end
+if ~isfield(param,'halfWdCol');  param.halfWdCol  = 14;  end
+if ~isfield(param,'rTauCol');    param.rTauCol    = 18;  end
+if ~isfield(param,'dTauCol');    param.dTauCol    = 19;  end
+if ~isfield(param,'rTimeCol');   param.rTimeCol   = 25;  end
+if ~isfield(param,'dTimeCol');   param.dTimeCol   = 27;  end
+if ~isfield(param,'areaCol');    param.areaCol    = 28;  end
 
 if isempty(pscFile)
   [pscName, pscPath] = uigetfile('.csv', 'Select *.csv file of exported PSC events from Clampfit');
@@ -63,24 +71,42 @@ if isempty(duration)
   duration = str2double(answer{1});
 end
 
-pscTable = readtable(pscFile);
+% Force all imported columns to be numeric:
+tabOptions = detectImportOptions(pscFile);
+for i = 1:length(tabOptions.VariableTypes)
+  tabOptions.VariableTypes{i} = 'double';
+end
+pscTable = readtable(pscFile, tabOptions);
 
 % Remove duplicates with same time of peak:
-pscTable = sortrows(pscTable,[1 10 3]); % Sort based on trace, then time of peak, then category, ensures lower category events will have preference.
-[~, ia, ~] = unique(horzcat(pscTable{:, 1}, pscTable{:, 10}), 'rows');  % Unique value index of concatenation of trace and time of peak
+pscTable = sortrows(pscTable,[param.traceCol param.pkTimeCol param.categCol]); % Sort based on trace, then time of peak, then category, ensures lower category events will have preference.
+[~, ia, ~] = unique(horzcat(pscTable{:, 1}, pscTable{:, param.pkTimeCol}), 'rows');  % Unique value index of concatenation of trace and time of peak
 pscTable = pscTable(ia, :); % Remove duplicates
 
 % Calculate average statistics
-nTrace  = max(pscTable{:,1});
-trace   = 1:nTrace;
-trace   = trace';
-bins    = 1:nTrace+1;
-bins    = bins';
-nPSC    = histcounts(pscTable{:,1}, bins)';
-pscFreq = nPSC / duration;
-pscAmp  = zeros(nTrace, 1);
+nTrace    = max(pscTable{:,1});
+trace     = 1:nTrace;
+trace     = trace';
+bins      = 1 : nTrace + 1;
+bins      = bins';
+nPSC      = histcounts(pscTable{:,1}, bins)';
+freq      = nPSC / duration;
+amp       = zeros(nTrace, 1);
+halfWidth = zeros(nTrace, 1);
+riseTau   = zeros(nTrace, 1);
+decayTau  = zeros(nTrace, 1);
+riseTime  = zeros(nTrace, 1);
+decayTime = zeros(nTrace, 1);
+area      = zeros(nTrace, 1);      
+
 for i = 1:nTrace
-  pscAmp(i) = mean(pscTable{pscTable{:,1} == i,8});
+  amp(i)       = mean(pscTable{pscTable{:,1} == i, param.pkAmpCol},  'omitnan');
+  halfWidth(i) = mean(pscTable{pscTable{:,1} == i, param.halfWdCol}, 'omitnan');
+  riseTau(i)   = mean(pscTable{pscTable{:,1} == i, param.rTauCol},   'omitnan');
+  decayTau(i)  = mean(pscTable{pscTable{:,1} == i, param.dTauCol},   'omitnan');
+  riseTime(i)  = mean(pscTable{pscTable{:,1} == i, param.rTimeCol},  'omitnan');
+  decayTime(i) = mean(pscTable{pscTable{:,1} == i, param.dTimeCol},  'omitnan');
+  area(i)      = mean(pscTable{pscTable{:,1} == i, param.areaCol},   'omitnan');
 end
 
 % Export processed table, replacing NaN values with blanks:
@@ -95,8 +121,8 @@ end
 
 % Save average statistics, replacing NaN values with blanks:
 if all(statFile)
-  varNames = {'Trace', 'nPSC', 'pscFreq_Hz', 'pscAmp_pA'};
-  statTable = table(trace, nPSC, pscFreq, pscAmp, 'VariableNames', varNames);
+  varNames = {'Trace', 'nPSC', 'Freq_Hz', 'Amp_pA', 'HalfWidth_ms', 'RiseTau_ms', 'DecayTau_ms', 'RiseTime_ms', 'DecayTime_ms', 'Area_pAms'};
+  statTable = table(trace, nPSC, freq, amp, halfWidth, riseTau, decayTau, riseTime, decayTime, area, 'VariableNames', varNames);
   tmpCell  = table2cell(statTable);
   tmpCell(cell2mat(cellfun(@(x)any(isnan(x)),tmpCell,'UniformOutput',false))) = {[]};
   statTable = cell2table(tmpCell);

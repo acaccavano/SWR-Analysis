@@ -8,7 +8,7 @@ if (nargin < 3); exportFile = []; end
 if (nargin < 2); saveFile   = []; end
 if (nargin < 1); data       = []; end
 
-transposeOption = false; % Set to true to get one data column with headings as row titles
+transposeOption = true; % Set to true to get one data column with headings as row titles
 
 if isempty(data) || isempty(saveFile)
   error('Enter sufficient inputs to use function exportAveStats');
@@ -29,13 +29,19 @@ outTable = table;
 % LFP SWR event data
 if isfield(data, 'SWR')
   varNames = {'nSWRs', 'SWR_frequency_Hz', 'SWR_duration_ms', 'SWR_IEI_s', 'SWR_amplitude_uV', 'SWR_area_uVs', 'SWR_power_uV2'};
-  outTable = [outTable table(length(data.SWR.amp), data.SWR.frequency, mean(data.SWR.duration,'omitnan'), mean(data.SWR.IEI,'omitnan'), 10^3 * mean(data.SWR.amp,'omitnan'), mean(data.SWR.area,'omitnan'), 10^6 * mean(data.SWR.power,'omitnan'), 'VariableNames', varNames)];
+  outTable = [outTable table(length(data.SWR.evStart), data.SWR.frequency, mean(data.SWR.duration,'omitnan'), mean(data.SWR.IEI,'omitnan'), 10^3 * mean(data.SWR.amp,'omitnan'), mean(data.SWR.area,'omitnan'), 10^6 * mean(data.SWR.power,'omitnan'), 'VariableNames', varNames)];
 end
 
 % LFP Sharp Wave
 if isfield(data, 'SW')
+  
+  % SW Event Stats:
+  varNames = {'nSWs', 'SW_frequency_Hz', 'SW_duration_ms', 'SW_IEI_s', 'SW_Event_power_uV2'};
+  outTable = [outTable table(length(data.SW.evStart), data.SW.frequency, mean(data.SW.duration,'omitnan'), mean(data.SW.IEI,'omitnan'), 10^6 * mean(data.SW.power,'omitnan'), 'VariableNames', varNames)];
+  
   % Total Stats:
   if isfield(data.SW, 'tPower'); outTable = [outTable table(10^6 * data.SW.tPower, 'VariableNames', {'SW_Total_Power_uV2'})]; end
+  
   % SWR Stats:
   if isfield(data.SW, 'SWR')
     if isfield(data.SW.SWR, 'power'); outTable = [outTable table(10^6 * mean(data.SW.SWR.power,'omitnan'), 'VariableNames', {'SW_SWR_Power_uV2'})]; end
@@ -44,6 +50,7 @@ end
 
 % LFP Theta
 if isfield(data, 'theta')
+  
   % Total Stats:
   if isfield(data.theta, 'tPower'); outTable = [outTable table(10^6 * data.theta.tPower, 'VariableNames', {'Theta_Tot_Power_uV2'})]; end
   if isfield(data.theta, 'FFT')
@@ -60,6 +67,7 @@ end
 
 % LFP Beta
 if isfield(data, 'beta')
+  
   % Total Stats:
   if isfield(data.beta, 'tPower'); outTable = [outTable table(10^6 * data.beta.tPower, 'VariableNames', {'Beta_Tot_Power_uV2'})]; end
   if isfield(data.beta, 'FFT')
@@ -76,6 +84,7 @@ end
 
 % LFP Gamma
 if isfield(data, 'gamma')
+  
   % Total Stats:
   if isfield(data.gamma, 'tPower'); outTable = [outTable table(10^6 * data.gamma.tPower, 'VariableNames', {'Gamma_Tot_Power_uV2'})]; end
   if isfield(data.gamma, 'FFT')
@@ -95,6 +104,7 @@ if isfield(data, 'gamma')
     if isfield(data.gamma.xFreq, 'pacMIShf_LenAve'); outTable = [outTable table(data.gamma.xFreq.pacMIShf_LenAve, 'VariableNames', {'Gamma_pacMIShf_LenAve'})]; end
     if isfield(data.gamma.xFreq, 'pacMIShf_LenSTD'); outTable = [outTable table(data.gamma.xFreq.pacMIShf_LenSTD, 'VariableNames', {'Gamma_pacMIShf_LenSTD'})]; end
   end
+  
   % SWR Stats:
   if isfield(data.gamma, 'SWR')
     if isfield(data.gamma.SWR, 'power'); outTable = [outTable table(10^6 * mean(data.gamma.SWR.power,'omitnan'), 'VariableNames', {'Gamma_SWR_Power_uV2'})]; end
@@ -110,6 +120,7 @@ end
 
 % LFP High Gamma
 if isfield(data, 'hgamma')
+  
   % Total Stats:
   if isfield(data.hgamma, 'tPower'); outTable = [outTable table(10^6 * data.hgamma.tPower, 'VariableNames', {'HGamma_Tot_Power_uV2'})]; end
   if isfield(data.hgamma, 'FFT') 
@@ -129,6 +140,7 @@ if isfield(data, 'hgamma')
     if isfield(data.hgamma.xFreq, 'pacMIShf_LenAve'); outTable = [outTable table(data.hgamma.xFreq.pacMIShf_LenAve, 'VariableNames', {'HGamma_pacMIShf_LenAve'})]; end
     if isfield(data.hgamma.xFreq, 'pacMIShf_LenSTD'); outTable = [outTable table(data.hgamma.xFreq.pacMIShf_LenSTD, 'VariableNames', {'HGamma_pacMIShf_LenSTD'})]; end
   end
+  
   % SWR Stats:
   if isfield(data.hgamma, 'SWR')
     if isfield(data.hgamma.SWR, 'power'); outTable = [outTable table(10^6 * mean(data.hgamma.SWR.power,'omitnan'), 'VariableNames', {'HGamma_SWR_Power_uV2'})]; end
@@ -144,8 +156,14 @@ end
 
 % LFP Ripple
 if isfield(data, 'R')
+  
+  % R Event Stats:
+  varNames = {'nRipples', 'Ripple_frequency_Hz', 'Ripple_duration_ms', 'Ripple_IEI_s', 'Ripple_Event_power_uV2'};
+  outTable = [outTable table(length(data.R.evStart), data.R.frequency, mean(data.R.duration,'omitnan'), mean(data.R.IEI,'omitnan'), 10^6 * mean(data.R.power,'omitnan'), 'VariableNames', varNames)];
+
   % Total Stats:
   if isfield(data.R, 'tPower'); outTable = [outTable table(10^6 * data.R.tPower, 'VariableNames', {'Ripple_Tot_Power_uV2'})]; end
+  
   % SWR Stats:
   if isfield(data.R, 'SWR')
     if isfield(data.R.SWR, 'power'); outTable = [outTable table(10^6 * mean(data.R.SWR.power,'omitnan'), 'VariableNames', {'Ripple_SWR_Power_uV2'})]; end
@@ -157,12 +175,15 @@ if isfield(data, 'R')
       if isfield(data.R.SWR.phase, 'phFreq'); outTable = [outTable table(mean(data.R.SWR.phase.phFreq,'omitnan'), 'VariableNames', {'Ripple_SWR_phFreq_Hz'})]; end
     end
   end
+  
 end
 
 % LFP Fast Ripple
 if isfield(data, 'fR')
+  
   % Total Stats:
   if isfield(data.fR, 'tPower'); outTable = [outTable table(10^6 * data.fR.tPower, 'VariableNames', {'fastRipple_Tot_Power_uV2'})]; end
+  
   % SWR Stats:
   if isfield(data.fR, 'SWR')
     if isfield(data.fR.SWR, 'power'); outTable = [outTable table(10^6 * mean(data.fR.SWR.power,'omitnan'), 'VariableNames', {'fastRipple_SWR_Power_uV2'})]; end
@@ -178,6 +199,7 @@ end
 
 %% Cell-Attached
 if isfield(data, 'C')
+  
   % Spike Stats:
   if isfield(data.C, 'spike')
     

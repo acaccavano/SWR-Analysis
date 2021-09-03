@@ -247,7 +247,8 @@ end
 if ~isfield(data.LFP, 'dataFile')
   fprintf(['importing file ' dataFileName '... ']);
   if (param.fileType == 1)
-    [dataIn, samplingInt] = abfload(dataFile);
+    [dataIn, samplingInt, ~] = abfload(dataFile);
+
     data.LFP.samplingInt = samplingInt;
     data.LFP.tSeries = dataIn(:, param.lfpChannel);
     data.LFP.samplingInt = data.LFP.samplingInt / 1000; % convert from um to ms
@@ -519,7 +520,7 @@ if param.swrOption
     fprintf(['detecting events %4.0f standard deviations above baseline (%4.2f quantile) (file ' dataFileName ')... '], param.sdMult, param.baseQuant);
     
     %% Find sharp wave peak based on standard deviation of RMS of SW signal
-    if isfield(data,'SW') && param.swrType == 1 || param.swrType == 2
+    if isfield(data,'SW')
       % Re-initialize data structures
       data.SW.evStatus = [];
       data.SW.evStart  = [];
@@ -552,7 +553,7 @@ if param.swrOption
     end
     
     %% Find ripple peak based on standard deviation of RMS of ripple signal
-    if isfield(data,'R') && param.swrType == 1 || param.swrType == 3
+    if isfield(data,'R')
       % Re-initialize data structures
       data.R.evStatus = [];
       data.R.evStart  = [];

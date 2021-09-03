@@ -49,16 +49,18 @@ S.FFT.fftAve    = S.FFT.fftAve';
 S.FFT.pkFreqAve = S.FFT.fftRange(S.FFT.subRange(pkFreqInd));
 
 % Gaussian fit peak determination - fitting could cause warnings
-ft             = fittype('gauss1');
-loParams       = [0 min(S.FFT.fftRange(S.FFT.subRange)) 0];
-hiParams       = [Inf max(S.FFT.fftRange(S.FFT.subRange)) range(S.FFT.fftRange(S.FFT.subRange))];
-S.FFT.fitGauss = fit(S.FFT.fftRange(S.FFT.subRange)', S.FFT.fftAve(S.FFT.subRange), ft, 'Lower', loParams, 'Upper', hiParams, 'Robust', 'Bisquare');
-S.FFT.fitMean  = S.FFT.fitGauss.b1;
-S.FFT.fitSD    = S.FFT.fitGauss.c1/sqrt(2);
-S.FFT.fitFWHM  = 2 * sqrt(2 * log(2)) * S.FFT.fitSD;
-
-if param.plotFitFFT
-  plot(S.FFT.fitGauss, S.FFT.fftRange(S.FFT.subRange)', S.FFT.fftAve(S.FFT.subRange))
+if param.fitFFT
+  ft             = fittype('gauss1');
+  loParams       = [0 min(S.FFT.fftRange(S.FFT.subRange)) 0];
+  hiParams       = [Inf max(S.FFT.fftRange(S.FFT.subRange)) range(S.FFT.fftRange(S.FFT.subRange))];
+  S.FFT.fitGauss = fit(S.FFT.fftRange(S.FFT.subRange)', S.FFT.fftAve(S.FFT.subRange)', ft, 'Lower', loParams, 'Upper', hiParams, 'Robust', 'Bisquare');
+  S.FFT.fitMean  = S.FFT.fitGauss.b1;
+  S.FFT.fitSD    = S.FFT.fitGauss.c1/sqrt(2);
+  S.FFT.fitFWHM  = 2 * sqrt(2 * log(2)) * S.FFT.fitSD;
+  
+  if param.plotFitFFT
+    plot(S.FFT.fitGauss, S.FFT.fftRange(S.FFT.subRange)', S.FFT.fftAve(S.FFT.subRange))
+  end
 end
 
 S.FFT = orderStruct(S.FFT);

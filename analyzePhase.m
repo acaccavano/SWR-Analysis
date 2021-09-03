@@ -3,6 +3,8 @@ function [S, hand] = analyzePhase(T, param)
 %
 %  Function to combine table of individual cell circular stats and perform
 %  stats on two groups (CT and AD), and plot with different markers for males and females
+%  AC = version used to analyze A. Caccavano's J. Neurosci. 2020
+%  manuscript comparing 5xFAD and CT spike coupling to SWR-nested gamma and ripple
 
 if (nargin < 2); param = struct; end
 
