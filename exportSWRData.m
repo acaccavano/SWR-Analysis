@@ -8,7 +8,7 @@ if (nargin < 3); expDataFile = []; end
 if (nargin < 2); param = struct; end
 if (nargin < 1); error('Supply data structure to use exportSWRData'); end
 
-% param = []; % comment out normally, quick fix if want to use defaults below instead of GUI params. 
+param = []; % comment out normally, quick fix if want to use defaults below instead of GUI params. 
 
 % Select export file if not supplied
 if isempty(expDataFile)
@@ -20,6 +20,7 @@ if isempty(expDataFile)
 end
 
 % Set default parameters
+if ~isfield(param,'swOption');         param.swOption         = 1; end
 if ~isfield(param,'gammaOption');      param.gammaOption      = 1; end
 if ~isfield(param,'hgammaOption');     param.hgammaOption     = 1; end
 if ~isfield(param,'rOption');          param.rOption          = 1; end
@@ -29,7 +30,7 @@ if ~isfield(param,'cellRawOption');    param.cellRawOption    = 0; end
 if ~isfield(param,'cellGammaOption');  param.cellGammaOption  = 0; end
 if ~isfield(param,'cellRippleOption'); param.cellRippleOption = 0; end
 if ~isfield(param,'truncateEvs');      param.truncateEvs      = 1; end
-if ~isfield(param,'maxNumEvs');        param.maxNumEvs        =  50; end
+if ~isfield(param,'maxNumEvs');        param.maxNumEvs        = 100; end
 if ~isfield(param,'swrWindow');        param.swrWindow        = 100; end
 
 if param.truncateEvs
@@ -45,6 +46,7 @@ end
 % Check for partial first and last events, and remove if so:
 if (dataOutSize(1) < max(dataOutSize))
   data.SWR.event(1) = [];
+  if param.swOption;      data.SW.SWR.event(1)     = []; end 
   if param.gammaOption;   data.gamma.SWR.event(1)  = []; end
   if param.hgammaOption;  data.hgamma.SWR.event(1) = []; end
   if param.rOption;       data.R.SWR.event(1)      = []; end
@@ -61,6 +63,7 @@ end
 
 if (dataOutSize(nEvs) < max(dataOutSize))
   data.SWR.event(nEvs) = [];
+  if param.swOption;      data.SW.SWR.event(nEvs)     = []; end  
   if param.gammaOption;   data.gamma.SWR.event(nEvs)  = []; end
   if param.hgammaOption;  data.hgamma.SWR.event(nEvs) = []; end
   if param.rOption;       data.R.SWR.event(nEvs)      = []; end
@@ -76,7 +79,7 @@ if (dataOutSize(nEvs) < max(dataOutSize))
 end
 
 dataOut = (0: data.LFP.samplingInt : 2*param.swrWindow)';
-nSignals = 1 + param.gammaOption + param.hgammaOption + param.rOption + param.fROption;
+nSignals = 1 + param.swOption + param.gammaOption + param.hgammaOption + param.rOption + param.fROption;
 if param.cellOption; nSignals = nSignals + 1 + param.cellRawOption + param.cellGammaOption + param.cellRippleOption; end
 
 % Output table names
@@ -91,6 +94,13 @@ for i = 1:nEvs
   dataOut = horzcat(dataOut, data.SWR.event{i});
   tableVarNames{nameInd} = ['LFP_' num2str(i)];
   nameInd = nameInd + 1;
+ 
+  % SW event-locked data
+  if param.swOption
+    dataOut = horzcat(dataOut, data.SW.SWR.event{i});
+    tableVarNames{nameInd} = ['SW_' num2str(i)];
+    nameInd = nameInd + 1;
+  end
   
   % Gamma event-locked data
   if param.gammaOption
