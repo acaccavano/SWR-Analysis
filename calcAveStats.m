@@ -1,35 +1,29 @@
-function exportAveStats(data, saveFile, exportFile)
-%% exportAveStats(data, saveFile, exportFile)
+function [aveStats, varNames] = calcAveStats(data, param)
+%% [aveStats, varNames] = calcAveStats(data, param)
 %
-%  Function to export csv file of averages of all LFP data available
+%  Function to calculate 1D aveStats table of averages of all statistics available in data structure
 
 % Handle input arguments - if not entered
-if (nargin < 3); exportFile = []; end
-if (nargin < 2); saveFile   = []; end
-if (nargin < 1); data       = []; end
 
-transposeOption = false; % Set to true to get one data column with headings as row titles
+if (nargin < 2); param = struct; end
+if (nargin < 1); data  = struct; end
 
-if isempty(data) || isempty(saveFile)
-  error('Enter sufficient inputs to use function exportAveStats');
+if ~isfield(param,'fileNum');         param.fileNum         = 1; end
+if ~isfield(param,'transposeOption'); param.transposeOption = 0; end % Transpose exported average stats from row to column format
+
+if isempty(data)
+  error('Enter data structure to use function calcAveStats');
 end
 
-if isempty(exportFile)
-  [parentPath, saveFileName, ~] = parsePath(saveFile);
-  defaultName = [parentPath saveFileName '_aveStats.csv'];
-  [exportName, exportPath] = uiputfile('.csv','Select *.csv file to export average statistics', defaultName);
-  exportFile = [exportPath exportName];
-  if ~all(exportFile); error('Please select valid file'); end
-end
-
-% Initialize Table:
-outTable = table;
+% Initialize Table and assign filename:
+[~, fileName, ~] = parsePath(data.LFP.dataFile);
+outTable = table({fileName}, 'VariableNames', {'File'});
 
 %% LFP
 % LFP SWR event data
 if isfield(data, 'SWR')
   varNames = {'nSWRs', 'SWR_frequency_Hz', 'SWR_duration_ms', 'SWR_IEI_s', 'SWR_amplitude_uV', 'SWR_area_uVs', 'SWR_power_uV2'};
-  outTable = [outTable table(length(data.SWR.evStart), data.SWR.frequency, mean(data.SWR.duration,'omitnan'), mean(data.SWR.IEI,'omitnan'), 10^3 * mean(data.SWR.amp,'omitnan'), mean(data.SWR.area,'omitnan'), 10^6 * mean(data.SWR.power,'omitnan'), 'VariableNames', varNames)];
+  outTable = [outTable table(length(data.SWR.evStart) - sum(isnan(data.SWR.evStart)), data.SWR.frequency, mean(data.SWR.duration,'omitnan'), mean(data.SWR.IEI,'omitnan'), 10^3 * mean(data.SWR.amp,'omitnan'), mean(data.SWR.area,'omitnan'), 10^6 * mean(data.SWR.power,'omitnan'), 'VariableNames', varNames)];
 end
 
 % LFP Sharp Wave
@@ -37,7 +31,7 @@ if isfield(data, 'SW')
   
   % SW Event Stats:
   varNames = {'nSWs', 'SW_frequency_Hz', 'SW_duration_ms', 'SW_IEI_s', 'SW_Event_power_uV2'};
-  outTable = [outTable table(length(data.SW.evStart), data.SW.frequency, mean(data.SW.duration,'omitnan'), mean(data.SW.IEI,'omitnan'), 10^6 * mean(data.SW.power,'omitnan'), 'VariableNames', varNames)];
+  outTable = [outTable table(length(data.SW.evStart) - sum(isnan(data.SW.evStart)), data.SW.frequency, mean(data.SW.duration,'omitnan'), mean(data.SW.IEI,'omitnan'), 10^6 * mean(data.SW.power,'omitnan'), 'VariableNames', varNames)];
   
   % Total Stats:
   if isfield(data.SW, 'tPower'); outTable = [outTable table(10^6 * data.SW.tPower, 'VariableNames', {'SW_Total_Power_uV2'})]; end
@@ -159,7 +153,7 @@ if isfield(data, 'R')
   
   % R Event Stats:
   varNames = {'nRipples', 'Ripple_frequency_Hz', 'Ripple_duration_ms', 'Ripple_IEI_s', 'Ripple_Event_power_uV2'};
-  outTable = [outTable table(length(data.R.evStart), data.R.frequency, mean(data.R.duration,'omitnan'), mean(data.R.IEI,'omitnan'), 10^6 * mean(data.R.power,'omitnan'), 'VariableNames', varNames)];
+  outTable = [outTable table(length(data.R.evStart) - sum(isnan(data.R.evStart)), data.R.frequency, mean(data.R.duration,'omitnan'), mean(data.R.IEI,'omitnan'), 10^6 * mean(data.R.power,'omitnan'), 'VariableNames', varNames)];
 
   % Total Stats:
   if isfield(data.R, 'tPower'); outTable = [outTable table(10^6 * data.R.tPower, 'VariableNames', {'Ripple_Tot_Power_uV2'})]; end
@@ -270,23 +264,31 @@ if isfield(data, 'C')
   end
 end
 
-% Convert to cell array and replace NaN values with blanks:
-varNames = outTable.Properties.VariableNames;
-tmpCell  = table2cell(outTable);
-tmpCell(isnan(outTable.Variables)) = {[]};
+% If single-file, format table for final export, otherwise wait to do in batch:
+if (param.fileNum == 1)
+  
+  varNames = outTable.Properties.VariableNames(2:end); % Exclude filename
+  
+  % Convert data to cell array and replace NaN values with blanks:
+  tmpCell  = table2cell(outTable(:, 2:end)); % Excluding filename
+  tmpCell(isnan(outTable(:, 2:end).Variables)) = {[]};
 
-% Convert to array and transpose table:
-if transposeOption
-  tmpArray = cell2mat(tmpCell);
-  outTable = array2table(tmpArray.');
-  outTable.Properties.RowNames = varNames;
-  writetable(outTable, exportFile, 'Delimiter', ',', 'WriteVariableNames', false, 'WriteRowNames', true);
+  % Convert to array and transpose table:
+  if param.transposeOption
+    aveStats = cell2table(tmpCell');
+    aveStats.Properties.RowNames       = varNames;
+    aveStats.Properties.VariableNames  = {fileName};
+    aveStats.Properties.DimensionNames = {'Variable', 'File'};
+  else
+    aveStats = cell2table(tmpCell);
+    aveStats.Properties.RowNames       = {fileName};
+    aveStats.Properties.VariableNames  = varNames;
+    aveStats.Properties.DimensionNames = {'File', 'Variable'};
+  end
+
 else
-  outTable = cell2table(tmpCell);
-  outTable.Properties.VariableNames = varNames;
-  writetable(outTable, exportFile, 'Delimiter', ',');
+  aveStats = outTable;
+  varNames = outTable.Properties.VariableNames;
 end
-
-
 
 end

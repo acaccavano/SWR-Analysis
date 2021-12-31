@@ -75,8 +75,8 @@ if ~isfield(param,'smoothFactor');         param.smoothFactor         = 0.25; en
 if ~isfield(param,'interpOption');         param.interpOption         = 1;    end
 if ~isfield(param,'samplingInt');          param.samplingInt          = 0.5;  end
 if ~isfield(param,'cellTypeOption');       param.cellTypeOption       = 0;    end
-if ~isfield(param,'cellType1');            param.cellType1          = 'Deep'; end
-if ~isfield(param,'cellType2');            param.cellType2          = 'Supe'; end
+if ~isfield(param,'nCellTypes');           param.nCellTypes           = 2;    end
+if ~isfield(param,'cellTypeName');         param.cellTypeName{param.nCellTypes} = []; end
 if ~isfield(param,'peakDetectCa');         param.peakDetectCa         = 1;    end
 if ~isfield(param,'baseDetectMethod');     param.baseDetectMethod     = 2;    end
 if ~isfield(param,'baseQuant');            param.baseQuant            = 0.8;  end
@@ -415,10 +415,9 @@ if param.swrCaOption
   
   % If data separated by cell type, count for each type
   if isfield(data.Ca, 'cellType')
-    cellType = unique(data.Ca.cellType);
-    for i = 1:length(cellType)
-      varName = ['n' cellType{i} 'C'];
-      data.SWR.Ca.(varName) = sum(data.SWR.Ca.evMatrix(:,strcmp(cellType{i},data.Ca.cellType)), 2);
+    for i = 1:length(data.Ca.cellTypeName)
+      varName = ['nCellsC_' num2str(i)];
+      data.SWR.Ca.(varName) = sum(data.SWR.Ca.evMatrix(:,data.Ca.cellType == i), 2);
     end
   end
     
@@ -453,58 +452,45 @@ if param.swrCaOption
     data.Ca.SWR.corrAve    = mean(data.Ca.SWR.corrVector);
     [data.Ca.SWR.cdfF, data.Ca.SWR.cdfX] = ecdf(data.Ca.SWR.corrVector);
     
-    if param.cellTypeOption % Only set for Deep and Supe types
-      indC1    = strcmp(data.Ca.cellType, param.cellType1);
-      indC2    = strcmp(data.Ca.cellType, param.cellType2);
-      maskC1C1 = logical((indC1' * indC1) .* triu(true(size(data.Ca.SWR.corrMatrix)), 1));
-      maskC2C2 = logical((indC2' * indC2) .* triu(true(size(data.Ca.SWR.corrMatrix)), 1));
-      maskC1C2 = (maskC1C1 + maskC2C2) ./ 2;
-      maskC1C2 = logical(~maskC1C2 .* triu(true(size(data.Ca.SWR.corrMatrix)), 1));
-      maskC1   = logical(maskC1C1 + maskC1C2);
-      maskC2   = logical(maskC2C2 + maskC1C2);
+    if param.cellTypeOption
       
-      if sum(indC1) >= 3
-        data.Ca.SWR.corrVectorC1 = data.Ca.SWR.corrMatrix(maskC1);
-        data.Ca.SWR.corrAveC1    = mean(data.Ca.SWR.corrVectorC1);
-        [data.Ca.SWR.cdfC1F, data.Ca.SWR.cdfC1X] = ecdf(data.Ca.SWR.corrVectorC1);
+      indC  = zeros(param.nCellTypes, data.Ca.nChannels);
+      mask  = zeros(param.nCellTypes, param.nCellTypes, size(data.Ca.SWR.corrMatrix, 1), size(data.Ca.SWR.corrMatrix, 2));
+      maskC = zeros(param.nCellTypes, size(data.Ca.SWR.corrMatrix, 1), size(data.Ca.SWR.corrMatrix, 2));
+      
+      data.Ca.SWR.corrVectorC{param.nCellTypes} = [];
+      data.Ca.SWR.corrAveC = zeros(param.nCellTypes, 1);
+      data.Ca.SWR.cdfXC{param.nCellTypes} = [];
+      data.Ca.SWR.cdfFC{param.nCellTypes} = [];
+        
+      % Assign cell type index:
+      for i = 1:param.nCellTypes
+        indC(i,:) = (data.Ca.cellType == i);
       end
       
-      if sum(indC2) >= 3
-        data.Ca.SWR.corrVectorC2 = data.Ca.SWR.corrMatrix(maskC2);
-        data.Ca.SWR.corrAveC2    = mean(data.Ca.SWR.corrVectorC2);
-        [data.Ca.SWR.cdfC2F, data.Ca.SWR.cdfC2X] = ecdf(data.Ca.SWR.corrVectorC2);
+      % Assign pairwise cell-type mask:
+      for i = 1:param.nCellTypes-1
+        for j = i+1:param.nCellTypes
+          mask(i,i,:,:) = logical((indC(i,:)' * indC(i,:)) .* triu(true(size(data.Ca.SWR.corrMatrix)), 1));
+          mask(j,j,:,:) = logical((indC(j,:)' * indC(j,:)) .* triu(true(size(data.Ca.SWR.corrMatrix)), 1));
+          mask(i,j,:,:) = logical((indC(i,:)' * indC(j,:)) .* triu(true(size(data.Ca.SWR.corrMatrix)), 1));
+        end
       end
       
+      % Assign total cell-type mask including ixi and all other ixj areas:
+      for i = 1:param.nCellTypes
+        maskC(i,:,:) = logical(squeeze(sum(mask(i,:,:,:),2)) + squeeze(sum(mask(:,i,:,:),1)));
+      end
+      
+      for i = 1:param.nCellTypes
+        if sum(indC(i,:)) >= 3 % Will crash if <3 cells in a group
+          data.Ca.SWR.corrVectorC{i} = data.Ca.SWR.corrMatrix(logical(squeeze(maskC(i,:,:))));
+          data.Ca.SWR.corrAveC(i)    = mean(data.Ca.SWR.corrVectorC{i});
+          [data.Ca.SWR.cdfFC{i}, data.Ca.SWR.cdfXC{i}] = ecdf(data.Ca.SWR.corrVectorC{i});
+        end
+      end
     end
   end
-  
-%   % Plot Event Matrix:
-%   figure
-%   indC1  = strcmp(data.Ca.cellType,'Deep');
-%   indC2  = strcmp(data.Ca.cellType,'Supe');
-%   imagesc('XData', 1:size(data.SWR.Ca.evMatrixCorr,1), 'YData', find(indC1), 'CData', data.SWR.Ca.evMatrixCorr(:,indC1)');
-%   hold on
-%   imagesc('XData', 1:size(data.SWR.Ca.evMatrixCorr,1), 'YData', find(indC2), 'CData', 2*data.SWR.Ca.evMatrixCorr(:,indC2)');
-%   axis([0.5 size(data.SWR.Ca.evMatrixCorr,1) + 0.5 0.5 size(data.SWR.Ca.evMatrixCorr,2) + 0.5]);
-%   caxis([0 2]);
-%   evColMap = [255 255 255; 0 70 0; 128 0 128]/255;
-%   colormap(evColMap);
-% 
-%   % Plot SWR-SWR Correlation Matrix:
-%   figure
-%   imagesc('XData', 1:size(data.SWR.Ca.corrMatrix,1), 'YData', 1:size(data.SWR.Ca.corrMatrix,2), 'CData', data.SWR.Ca.corrMatrix');
-%   axis([0.5 size(data.SWR.Ca.corrMatrix,1) + 0.5 0.5 size(data.SWR.Ca.corrMatrix,2) + 0.5]);
-%   caxis([0 1]);
-%   colormap(flipud(hot));
-%   colorbar
-% 
-%   % Plot Cell-Cell Correlation Matrix:
-%   figure
-%   imagesc('XData', 1:size(data.Ca.SWR.corrMatrix,1), 'YData', 1:size(data.Ca.SWR.corrMatrix,2), 'CData', data.Ca.SWR.corrMatrix');
-%   axis([0.5 size(data.Ca.SWR.corrMatrix,1) + 0.5 0.5 size(data.Ca.SWR.corrMatrix,2) + 0.5]);
-%   caxis([0 1]);
-%   colormap(flipud(hot));
-%   colorbar
 
   % Re-order structure arrays
   data.Ca.SWR = orderfields(data.Ca.SWR);

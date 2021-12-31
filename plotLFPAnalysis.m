@@ -15,24 +15,24 @@ if isempty(hand);  hand  = struct; end
 if isempty(data);  data  = struct; end
 
 % Set default parameters if not specified
-if ~isfield(param,'swrOption');    param.swrOption    = 1;     end
-if ~isfield(param,'swOption');     param.swOption     = 1;     end
-if ~isfield(param,'rOption');      param.rOption      = 1;     end
-if ~isfield(param,'rmsOption');    param.rmsOption    = 1;     end
-if ~isfield(param,'swrType');      param.swrType      = 1;     end
-if ~isfield(param,'thetaOption');  param.thetaOption  = 0;     end
-if ~isfield(param,'betaOption');   param.betaOption   = 0;     end
-if ~isfield(param,'gammaOption');  param.gammaOption  = 1;     end
-if ~isfield(param,'hgammaOption'); param.hgammaOption = 0;     end
-if ~isfield(param,'fROption');     param.fROption     = 1;     end
-if ~isfield(param,'spectOption');  param.spectOption  = 1;     end
-if ~isfield(param,'spectLim1');    param.spectLim1    = 1;     end
-if ~isfield(param,'spectLim2');    param.spectLim2    = 500;   end
-if ~isfield(param,'spectZOption'); param.spectZOption = false; end
-if ~isfield(param,'limSpectCol');  param.limSpectCol  = true;  end
-if ~isfield(param,'maxPZScore');   param.maxPZScore   = 10;    end
-if ~isfield(param,'xFreqOption');  param.xFreqOption  = 1;     end
-if ~isfield(param,'colOption');    param.colOption    = false; end % If true will plot all traces of one data structure the same below defined colors, otherwise uses default ColorOrder
+if ~isfield(param,'swrOption');        param.swrOption        = 1;     end
+if ~isfield(param,'swOption');         param.swOption         = 1;     end
+if ~isfield(param,'rOption');          param.rOption          = 1;     end
+if ~isfield(param,'rmsOption');        param.rmsOption        = 1;     end
+if ~isfield(param,'peakDetectOption'); param.peakDetectOption = 1;     end
+if ~isfield(param,'thetaOption');      param.thetaOption      = 0;     end
+if ~isfield(param,'betaOption');       param.betaOption       = 0;     end
+if ~isfield(param,'gammaOption');      param.gammaOption      = 1;     end
+if ~isfield(param,'hgammaOption');     param.hgammaOption     = 0;     end
+if ~isfield(param,'fROption');         param.fROption         = 1;     end
+if ~isfield(param,'spectOption');      param.spectOption      = 1;     end
+if ~isfield(param,'spectLim1');        param.spectLim1        = 1;     end
+if ~isfield(param,'spectLim2');        param.spectLim2        = 500;   end
+if ~isfield(param,'spectZOption');     param.spectZOption     = true;  end
+if ~isfield(param,'limSpectCol');      param.limSpectCol      = true;  end
+if ~isfield(param,'maxPZScore');       param.maxPZScore       = 10;    end
+if ~isfield(param,'xFreqOption');      param.xFreqOption      = 1;     end
+if ~isfield(param,'colOption');        param.colOption        = false; end % If true will plot all traces of one data structure the same below defined colors, otherwise uses default ColorOrder
 
 % Initialization 
 convFact   = 1000; % Convert from mV to uV
@@ -51,6 +51,8 @@ for i = 1:nData
   dataName{i, nTrace} = 'LFP';
   if isfield(data(i).LFP, 'lim1')
     dataName{i, nTrace} = [dataName{i, nTrace} ' (' int2str(data(i).LFP.lim1) '-' int2str(data(i).LFP.lim2) 'Hz)'];
+  else
+    dataName{i, nTrace} = [dataName{i, nTrace} '  '];
   end
 end
 
@@ -71,7 +73,7 @@ if param.swOption
     dataName{i, nTrace}    = ['SW (' int2str(data(i).SW.lim1) '-' int2str(data(i).SW.lim2) 'Hz)'];
   end
   
-  if (param.swrType == 1 || param.swrType == 2)
+  if param.peakDetectOption
     nRaster = nRaster + 1;
     for i = 1:nData
       dataRaster{i, nRaster} = downsampleMax(data(i).SW.evStatus, dsPlot);
@@ -96,7 +98,7 @@ if param.rOption
     dataName{i, nTrace}    = ['R (' int2str(data(i).R.lim1) '-' int2str(data(i).R.lim2) 'Hz)'];
   end
   
-  if (param.swrType == 1 || param.swrType == 3)
+  if param.peakDetectOption
     nRaster = nRaster + 1;
     for i = 1:nData
       dataRaster{i, nRaster} = downsampleMax(data(i).R.evStatus, dsPlot);
@@ -268,10 +270,9 @@ rs = nRaster;
 xf = nXFreq;
 
 for tr = nTrace : -1 : 1
-  
   %% In forward x order, plot raster data (if applicable):
-  if (strcmp(dataName{1, tr}(1:4),'SW (') && (param.swrType == 1 || param.swrType == 2)) ...
-      || strcmp(dataName{1, tr}(1:3),'R (') && (param.swrType == 1 || param.swrType == 3) ...
+  if (strcmp(dataName{1, tr}(1:4),'SW (') && param.peakDetectOption) ...
+      || (strcmp(dataName{1, tr}(1:3),'R (') && param.peakDetectOption) ...
       || (strcmp(dataName{1, tr}(1:3),'LFP') && param.swrOption)
     xPos = marginSz;
     for i = 1:nData
@@ -322,10 +323,10 @@ for tr = nTrace : -1 : 1
     end
     
     % If RMS selected, plot thresholds for peak detection:
-    if strcmp(dataName{i, tr},'SW RMS') && (param.swrType == 1 || param.swrType == 2)
+    if (strcmp(dataName{i, tr},'SW RMS') && param.peakDetectOption)
       plot(hand.axTr(i, tr), [data(i).LFP.timing(1) data(i).LFP.timing(length(data(i).LFP.timing))/1000], convFact * [data(i).SW.peakThresh data(i).SW.peakThresh], 'Color', hand.plot.Color, 'LineWidth', 1.0, 'LineStyle', '--');
       plot(hand.axTr(i, tr), [data(i).LFP.timing(1) data(i).LFP.timing(length(data(i).LFP.timing))/1000], convFact * [data(i).SW.baseThresh data(i).SW.baseThresh], 'Color', hand.plot.Color, 'LineWidth', 0.6, 'LineStyle', '--');
-    elseif strcmp(dataName{tr},'R RMS') && (param.swrType == 1 || param.swrType == 3)
+    elseif (strcmp(dataName{tr},'R RMS') && param.peakDetectOption)
       plot(hand.axTr(i, tr), [data(i).LFP.timing(1) data(i).LFP.timing(length(data(i).LFP.timing))/1000], convFact * [data(i).R.peakThresh data(i).R.peakThresh], 'Color', hand.plot.Color, 'LineWidth', 1.0, 'LineStyle', '--');
       plot(hand.axTr(i, tr), [data(i).LFP.timing(1) data(i).LFP.timing(length(data(i).LFP.timing))/1000], convFact * [data(i).R.baseThresh data(i).R.baseThresh], 'Color', hand.plot.Color, 'LineWidth', 0.6, 'LineStyle', '--');
     end

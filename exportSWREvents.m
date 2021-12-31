@@ -180,20 +180,18 @@ end
 if isfield(data.SWR, 'Ca')
   if (length(data.SWR.evStart) > data.SWR.Ca.nEventsA)
     outTable = [outTable table(vertcat(data.SWR.Ca.nCellsC, NaN * (1: length(data.SWR.evStart) - data.SWR.Ca.nEventsA)'), 'VariableNames', {'nCellsCaC'})];
-    if isfield(data.Ca, 'cellType')
-      cellType = unique(data.Ca.cellType);
-      for i = 1:length(cellType)
-        varName = ['n' cellType{i} 'C'];
+    if isfield(data.Ca, 'cellTypeName')
+      for i = 1:length(data.Ca.cellTypeName)
+        varName = ['nCellsC_' num2str(i)];
         outTable = [outTable table(vertcat(data.SWR.Ca.(varName), NaN * (1: length(data.SWR.evStart) - data.SWR.Ca.nEventsA)'), 'VariableNames', {varName})];
       end
     end
 
   else
     outTable = [outTable table(data.SWR.Ca.nCellsC, 'VariableNames', {'nCellsCaC'})];
-    if isfield(data.Ca, 'cellType')
-      cellType = unique(data.Ca.cellType);
-      for i = 1:length(cellType)
-        varName = ['n' cellType{i} 'C'];
+    if isfield(data.Ca, 'cellTypeName')
+      for i = 1:length(data.Ca.cellTypeName)
+        varName = ['nCellsC_' num2str(i)];
         outTable = [outTable table(data.SWR.Ca.(varName), 'VariableNames', {varName})];
       end
     end

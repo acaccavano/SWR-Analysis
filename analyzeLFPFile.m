@@ -1,5 +1,5 @@
-function [data, hand] = analyzeLFPFile(data, hand, param, dataFile, saveFile, expEvFile, expDataFile, stimFile, expAveFile)
-%% [data, hand] = analyzeLFPFile(data, hand, param, dataFile, saveFile, expEvFile, expDataFile, stimFile, expAveFile)
+function [data, hand, aveStats, varNames] = analyzeLFPFile(data, hand, param, dataFile, saveFile, expEvFile, expDataFile, stimFile, expAveFile)
+%% [data, hand, aveStats] = analyzeLFPFile(data, hand, param, dataFile, saveFile, expEvFile, expDataFile, stimFile, expAveFile)
 %
 %  Function to detect sharp wave ripple (SWR) events, theta, beta, and gamma analysis, time-frequency 
 %  spectrogram analysis, and/or stimulation event pre-processing of single LFP recording. SWRs are detected
@@ -19,6 +19,7 @@ function [data, hand] = analyzeLFPFile(data, hand, param, dataFile, saveFile, ex
 %     param.lfpChannel       = channel to use for LFP input (default = 1, but depends on recording)
 %     param.cellOption       = boolean flag to determine if second cell channel to be imported
 %     param.cellChannel      = channel to use for optional cell input (default = 2, but depends on recording)
+%     param.filtType         = Option for filtering (1 = built-in MATLAB bandpass (default) or 2 = custom gaussian (perfect phase-response but computationally expensive and can create artifacts)
 %     param.notchOption      = option to perform comb filter to remove electrical line noise (default = 0)
 %     param.notchFreq        = frequency to remove (+harmonics) (default = 60Hz)
 %     param.lfpOption        = boolean flag to filter LFP signal
@@ -28,15 +29,27 @@ function [data, hand] = analyzeLFPFile(data, hand, param, dataFile, saveFile, ex
 %     param.swOption         = boolean flag to filter and analyze SW signal
 %     param.swLim1           = lower sharp wave band-pass lim (default = 1Hz)
 %     param.swLim2           = upper sharp wave band-pass lim (default = 30Hz)
+%     param.rmsPeriodSW      = root-mean square window [ms] (in Eschenko 2008 = 5ms), but had more luck with longer ~25ms
 %     param.rOption          = boolean flag to filter and analyze ripple signal
 %     param.rLim1            = lower ripple band-pass lim (default = 120)
 %     param.rLim2            = upper ripple band-pass lim (default = 220)
-%     param.rmsOption        = boolean flag to calculate RMS of SW and ripple
-%     param.rmsMinEvDiff     = min difference between detected RMS peaks [ms] (in Eschenko 2008 = 25ms)
-%     param.rmsPeriod        = root-mean square window [ms] (in Eschenko 2008 = 5ms)
+%     param.rmsPeriodR       = root-mean square window [ms] (in Eschenko 2008 = 5ms)
+%     param.baseDetectMethod = Method for baseline stats detection (0: none, 1: lower quantile, 2: iterative gaussian fitting (default))
+%     param.baseQuant        = Lower quantile for baseline cutoff (default = 0.95)
+%     param.skewedBL         = boolean option to indicate skewed BL distribution, and use both gaussians just for BL 
+%     param.pkDiffMin        = min distance between double gaussian peaks to consider them equivalent = abs(B1-B2) (default = 0.01 RMS)
+%     param.pkSimLim         = Peak amplitude similarity metric = (A1^2 + A2^2)/(A1*A2) (default = 2)
+%     param.kurtosisMin      = Min kurtosis limit to fit with 2 gaussians (otherwise skip 1st fit) (default = 0)
+%     param.kurtosisMax      = Max kurtosis limit until exclude high points (otherwise fit can fail) (default = 5)
+%     param.excludeQuant     = quantile above which to exclude if max kurtosis limit reached (default = 0.98)
+%     param.plotFitHisto     = boolean option to plot histograms and fits for each file
 %     param.peakDetectOption = boolean flag to detect SW and ripple reaks in RMS signals
-%     param.sdMult           = standard deviation threshold to detect peaks (default = 4)
-%     param.baseQuant        = quantile with which to determine baseline signal (default = 0.95)
+%     param.rmsMinEvDiff     = min difference between detected RMS peaks [ms] (in Eschenko 2008 = 25ms), had more luck with longer ~100ms, but may cut off doublets
+%     param.rmsMinEvDur      = min duration of RMS peaks [ms]
+%     param.sdMultSW         = SD of baseline for threshold detection (default = 4)
+%     param.sdBaseFactorSW   = Factor of sdMult to consider for event start/end times (default = 0.5 eg 2SD)
+%     param.sdMultR          = SD of baseline for threshold detection (default = 4)
+%     param.sdBaseFactorR    = Factor of sdMult to consider for event start/end times (default = 0.5 eg 2SD)
 %     param.swrType          = Option to determine what qualifies as SWR (1: SW & R (default), 2: SW only, 3: R only)
 %     param.swrWindow        = +/- window around SWR peak events for swrData file [ms]
 %     param.expSWREvOption   = boolean flag to determine whether to export csv table of SWR events
@@ -74,6 +87,7 @@ function [data, hand] = analyzeLFPFile(data, hand, param, dataFile, saveFile, ex
 %     param.importStimOption = option to import stim file from pClamp (default = 0)
 %     param.reAnalyzeOption  = option to re-analyze file - will prompt for *.mat instead of raw data file
 %     param.expAveOption     = boolean flag to determine whether to export csv table of average statistics
+%     param.transposeOption  = boolean flag to transpose exported average stats from row to column format
 %   dataFile    = full path to file/folder containing data to be analysed (if not set, will prompt)
 %   saveFile    = full path to matlab file to save (if not set, will prompt)
 %   expEvFile   = full path to exported csv event table (if not set and expSWREvOption = 1, will prompt
@@ -82,8 +96,9 @@ function [data, hand] = analyzeLFPFile(data, hand, param, dataFile, saveFile, ex
 %   expAveFile  = full path to exported csv average table (if not set and expAveOption = 1, will prompt
 %
 %  Outputs:
-%   data       = structure containing all data to be saved
-%   hand       = handle structure for figure
+%   data     = structure containing all data to be saved
+%   hand     = handle structure for figure
+%   aveStats = 1D array of average statistics (size variable, depending on options selected)
 
 %% Handle input arguments - if not entered
 if (nargin < 9); stimFile    = []; end
@@ -109,6 +124,7 @@ if ~isfield(param,'dsFactor');         param.dsFactor          = 1;    end
 if ~isfield(param,'lfpChannel');       param.lfpChannel        = 1;    end
 if ~isfield(param,'cellOption');       param.cellOption        = 1;    end
 if ~isfield(param,'cellChannel');      param.cellChannel       = 2;    end
+if ~isfield(param,'filtType');         param.filtType          = 1;    end
 if ~isfield(param,'notchOption');      param.notchOption       = 0;    end
 if ~isfield(param,'notchFreq');        param.notchFreq         = 60;   end  % [Hz]
 if ~isfield(param,'lfpOption');        param.lfpOption         = 1;    end
@@ -118,15 +134,27 @@ if ~isfield(param,'swrOption');        param.swrOption         = 1;    end
 if ~isfield(param,'swOption');         param.swOption          = 1;    end
 if ~isfield(param,'swLim1');           param.swLim1            = 1;    end  % [Hz]
 if ~isfield(param,'swLim2');           param.swLim2            = 30;   end  % [Hz]
+if ~isfield(param,'rmsPeriodSW');      param.rmsPeriodSW       = 25;   end  % [ms]
 if ~isfield(param,'rOption');          param.rOption           = 1;    end
 if ~isfield(param,'rLim1');            param.rLim1             = 120;  end  % [Hz]
 if ~isfield(param,'rLim2');            param.rLim2             = 220;  end  % [Hz]
-if ~isfield(param,'rmsOption');        param.rmsOption         = 1;    end
-if ~isfield(param,'rmsMinEvDiff');     param.rmsMinEvDiff      = 25;   end
-if ~isfield(param,'rmsPeriod');        param.rmsPeriod         = 5;    end
+if ~isfield(param,'rmsPeriodR');       param.rmsPeriodR        = 5;    end  % [ms]
+if ~isfield(param,'baseDetectMethod'); param.baseDetectMethod  = 2;    end
+if ~isfield(param,'baseQuant');        param.baseQuant         = 0.80; end
+if ~isfield(param,'skewedBL');         param.skewedBL          = 1;    end
+if ~isfield(param,'pkDiffMin');        param.pkDiffMin         = 0.1;  end 
+if ~isfield(param,'pkSimLim');         param.pkSimLim          = 2;    end
+if ~isfield(param,'kurtosisMin');      param.kurtosisMin       = 0;    end
+if ~isfield(param,'kurtosisMax');      param.kurtosisMax       = 5;    end
+if ~isfield(param,'excludeQuant');     param.excludeQuant      = 0.95; end
+if ~isfield(param,'plotFitHisto');     param.plotFitHisto      = 0;    end
 if ~isfield(param,'peakDetectOption'); param.peakDetectOption  = 1;    end
-if ~isfield(param,'sdMult');           param.sdMult            = 4;    end
-if ~isfield(param,'baseQuant');        param.baseQuant         = 0.95; end
+if ~isfield(param,'rmsMinEvDiff');     param.rmsMinEvDiff      = 100;  end  % [ms]
+if ~isfield(param,'rmsMinEvDur');      param.rmsMinEvDur       = 25;   end  % [ms]
+if ~isfield(param,'sdMultSW');         param.sdMultSW          = 4;    end
+if ~isfield(param,'sdBaseFactorSW');   param.sdBaseFactorSW    = 0.5;  end
+if ~isfield(param,'sdMultR');          param.sdMultR           = 4;    end
+if ~isfield(param,'sdBaseFactorR');    param.sdBaseFactorR     = 0.5;  end
 if ~isfield(param,'swrType');          param.swrType           = 1;    end
 if ~isfield(param,'swrWindow');        param.swrWindow         = 100;  end
 if ~isfield(param,'expSWREvOption');   param.expSWREvOption    = 1;    end
@@ -164,6 +192,7 @@ if ~isfield(param,'winOverlap');       param.winOverlap        = 0.2;  end  % [s
 if ~isfield(param,'importStimOption'); param.importStimOption  = 0;    end
 if ~isfield(param,'reAnalyzeOption');  param.reAnalyzeOption   = 0;    end
 if ~isfield(param,'expAveOption');     param.expAveOption      = 1;    end
+if ~isfield(param,'transposeOption');  param.transposeOption   = 0;    end 
 
 % Initialize LFP structure if it doesn't already exist
 if ~isfield(data,'LFP'); data.LFP = struct; end
@@ -250,7 +279,7 @@ if ~isfield(data.LFP, 'dataFile')
     [dataIn, samplingInt, ~] = abfload(dataFile);
 
     data.LFP.samplingInt = samplingInt;
-    data.LFP.tSeries = dataIn(:, param.lfpChannel);
+    data.LFP.tSeriesRaw  = dataIn(:, param.lfpChannel);
     data.LFP.samplingInt = data.LFP.samplingInt / 1000; % convert from um to ms
     
     if param.cellOption
@@ -329,7 +358,7 @@ if ~isfield(data.LFP, 'dataFile')
     
     % Concatenate data
     dataIn = vertcat(dataIn{:});
-    data.LFP.tSeries = dataIn(:,1);
+    data.LFP.tSeriesRaw  = dataIn(:,1);
     data.LFP.samplingInt = 1000 / param.Fs; % (ms)
     if param.cellOption
       data.C.tSeries = dataIn(:,2);
@@ -341,32 +370,36 @@ if ~isfield(data.LFP, 'dataFile')
   %% Assign parameters to structure array
   data.LFP.dataFile  = dataFile;
   
+  % Downsample data if selected
+  if (param.dsFactor > 1)
+    fprintf(['downsampling by factor of ' num2str(param.dsFactor) ' (file ' dataFileName ')... ']);
+    
+    % Display warning if downsampling results in non-integer Fs:
+    FsTemp = 1000 / (data.LFP.samplingInt * param.dsFactor);
+    if (round(FsTemp,3) ~= round(FsTemp))
+      warning('Downsampling to non-integer sampling rate, may cause timing mismatch')
+    end
+    
+    data.LFP.samplingInt  = data.LFP.samplingInt * param.dsFactor;
+    data.LFP.tSeriesRaw   = downsampleMean(data.LFP.tSeriesRaw, param.dsFactor);
+
+    if param.cellOption
+      data.C.samplingInt  = data.C.samplingInt * param.dsFactor;
+      data.C.tSeries      = downsampleMean(data.C.tSeries, param.dsFactor);
+    end
+    
+    fprintf('done\n');
+  end
+
   % Determine timing:
-  data.LFP.nSamples = length(data.LFP.tSeries);
+  data.LFP.nSamples = length(data.LFP.tSeriesRaw);
   data.LFP.timing   = (0: data.LFP.samplingInt : (data.LFP.nSamples-1) * data.LFP.samplingInt)';
   
   if param.cellOption
     data.C.nSamples = length(data.C.tSeries);
     data.C.timing   = (0: data.C.samplingInt : (data.C.nSamples-1) * data.C.samplingInt)';
   end
-  
-  % Downsample data if selected
-  if (param.dsFactor > 1)
-    fprintf(['downsampling by factor of ' num2str(param.dsFactor) ' (file ' dataFileName ')... ']);
-    data.LFP.samplingInt  = data.LFP.samplingInt * param.dsFactor;
-    data.LFP.tSeries      = downsampleMean(data.LFP.tSeries, param.dsFactor);
-    data.LFP.nSamples     = length(data.LFP.tSeries);
-    data.LFP.timing       = dsTiming;
 
-    if param.cellOption
-      data.C.samplingInt = data.C.samplingInt * param.dsFactor;
-      data.C.tSeries     = downsampleMean(data.C.tSeries, param.dsFactor);
-      data.C.nSamples    = length(data.C.tSeries);
-      data.C.timing      = dsTiming;
-    end
-    
-    fprintf('done\n');
-  end
 end
 
 data.saveFile  = saveFile;
@@ -380,32 +413,53 @@ data.param     = param;
 data.LFP.param = param; % Save to LFP structure, as subsequent analysis may alter data.param
 
 %% Filter data
+if param.notchOption
+  fprintf(['Notch filter %4.1fHz noise (file ' dataFileName ')... '], param.notchFreq);
+  nHarm =   5;  % Number of harmonics
+  Q     = 100;  % Quality Factor to determine bandwidth
+  
+  for i = 1:nHarm
+    W0 = (i * param.notchFreq / (round(param.Fs)/2));
+    BW = W0/Q;
+    [b, a] = iirnotch(W0, BW);
+    data.LFP.tSeries = filtfilt(b, a, data.LFP.tSeriesRaw);
+  end
+  fprintf('done\n');
+else
+  data.LFP.tSeries = data.LFP.tSeriesRaw;
+end
+
+% If filtering with MATLAB bandpass, append signal ends with flipped and reversed data to eliminate edge effects (already handled with custom gaussian filter)
+if (param.filtType == 1)
+  tSeriesApp1 = 2*data.LFP.tSeries(1) - flipud(data.LFP.tSeries(2 : round(param.Fs) + 1));
+  tSeriesApp2 = 2*data.LFP.tSeries(end) - flipud(data.LFP.tSeries(end - round(param.Fs) : end - 1));
+  tSeriesApp  = [tSeriesApp1; data.LFP.tSeries; tSeriesApp2];
+end
+
 if param.lfpOption
-  % Apply Gaussian filter to LFP signal for DC drift and HF noise
+  % Apply filter to LFP signal for DC drift and HF noise
   fprintf(['band-pass filtering LFP between %4.1f-%4.1fHz (file ' dataFileName ')... '], param.lfpLim1, param.lfpLim2);
-  data.LFP.tSeries = gaussianFilt(data.LFP.tSeries, param.lfpLim1, param.lfpLim2, data.LFP.samplingInt, 5);
+  if (param.filtType == 1)
+    data.LFP.tSeries = bandpass(tSeriesApp, [param.lfpLim1 param.lfpLim2], round(param.Fs));
+    data.LFP.tSeries = data.LFP.tSeries(round(param.Fs) + 1 : end - round(param.Fs));
+  elseif (param.filtType == 2)
+    data.LFP.tSeries = gaussianFilt(data.LFP.tSeries, param.lfpLim1, param.lfpLim2, data.LFP.samplingInt, 20);
+  end
   data.LFP.tPower  = bandpower(data.LFP.tSeries);
   data.LFP.lim1    = param.lfpLim1;
   data.LFP.lim2    = param.lfpLim2;
 end
 
-if param.notchOption
-  fprintf(['Notch filter 60Hz noise (file ' dataFileName ')... ']);
-  
-  Ord   = round(data.param.Fs / param.notchFreq);  % Order
-  BW    = 10;  % Bandwidth
-  Apass = 1;   % Bandwidth Attenuation
-  
-  [b, a] = iircomb(Ord, BW/(data.param.Fs/2), Apass);
-  data.LFP.tSeries = filtfilt(b, a, data.LFP.tSeries);
-  
-end
-
 if param.swOption
-  % Apply Gaussian filter to extract SW signal
+  % Apply filter to extract SW signal
   fprintf(['band-pass filtering sharp wave between %4.1f-%4.1fHz (file ' dataFileName ')... '], param.swLim1, param.swLim2);
   if ~isfield(data,'SW'); data.SW = struct; end
-  data.SW.tSeries = gaussianFilt(data.LFP.tSeries, param.swLim1, param.swLim2, data.LFP.samplingInt, 3);
+  if (param.filtType == 1)
+    data.SW.tSeries = bandpass(tSeriesApp, [param.swLim1 param.swLim2], round(param.Fs));
+    data.SW.tSeries = data.SW.tSeries(round(param.Fs) + 1 : end - round(param.Fs));
+  elseif (param.filtType == 2)
+    data.SW.tSeries = gaussianFilt(data.LFP.tSeries, param.swLim1, param.swLim2, data.LFP.samplingInt, 20);
+  end
   data.SW.tPower  = bandpower(data.SW.tSeries);
   data.SW.lim1    = param.swLim1;
   data.SW.lim2    = param.swLim2;
@@ -413,10 +467,15 @@ if param.swOption
 end
 
 if param.rOption
-  % Apply Gaussian filter to extract ripple signal
+  % Apply filter to extract ripple signal
   fprintf(['band-pass filtering ripple between %4.1f-%4.1fHz (file ' dataFileName ')... '], param.rLim1, param.rLim2);
   if ~isfield(data,'R'); data.R = struct; end
-  data.R.tSeries = gaussianFilt(data.LFP.tSeries, param.rLim1, param.rLim2, data.LFP.samplingInt, 1);
+  if (param.filtType == 1)
+    data.R.tSeries = bandpass(tSeriesApp, [param.rLim1 param.rLim2], round(param.Fs));
+    data.R.tSeries = data.R.tSeries(round(param.Fs) + 1 : end - round(param.Fs));
+  elseif (param.filtType == 2)
+    data.R.tSeries = gaussianFilt(data.LFP.tSeries, param.rLim1, param.rLim2, data.LFP.samplingInt, 1);
+  end
   data.R.tPower  = bandpower(data.R.tSeries);
   data.R.lim1    = param.rLim1;
   data.R.lim2    = param.rLim2;
@@ -427,7 +486,12 @@ if param.thetaOption
   % Apply Gaussian filter to extract theta signal
   fprintf(['band-pass filtering theta between %4.1f-%4.1fHz (file ' dataFileName ')... '], param.thetaLim1, param.thetaLim2);
   if ~isfield(data,'theta'); data.theta = struct; end
-  data.theta.tSeries = gaussianFilt(data.LFP.tSeries, param.thetaLim1, param.thetaLim2, data.LFP.samplingInt, 2);
+  if (param.filtType == 1)
+    data.theta.tSeries = bandpass(tSeriesApp, [param.thetaLim1 param.thetaLim2], round(param.Fs));
+    data.theta.tSeries = data.theta.tSeries(round(param.Fs) + 1 : end - round(param.Fs));
+  elseif (param.filtType == 2)
+    data.theta.tSeries = gaussianFilt(data.LFP.tSeries, param.thetaLim1, param.thetaLim2, data.LFP.samplingInt, 2);
+  end
   data.theta.tPower  = bandpower(data.theta.tSeries);
   data.theta.lim1    = param.thetaLim1;
   data.theta.lim2    = param.thetaLim2;
@@ -438,7 +502,12 @@ if param.alphaOption
   % Apply Gaussian filter to extract alpha signal
   fprintf(['band-pass filtering alpha between %4.1f-%4.1fHz (file ' dataFileName ')... '], param.alphaLim1, param.alphaLim2);
   if ~isfield(data,'alpha'); data.alpha = struct; end
-  data.alpha.tSeries = gaussianFilt(data.LFP.tSeries, param.alphaLim1, param.alphaLim2, data.LFP.samplingInt, 2);
+  if (param.filtType == 1)
+    data.alpha.tSeries = bandpass(tSeriesApp, [param.alphaLim1 param.alphaLim2], round(param.Fs));
+    data.alpha.tSeries = data.alpha.tSeries(round(param.Fs) + 1 : end - round(param.Fs));
+  elseif (param.filtType == 2)
+    data.alpha.tSeries = gaussianFilt(data.LFP.tSeries, param.alphaLim1, param.alphaLim2, data.LFP.samplingInt, 2);
+  end
   data.alpha.tPower  = bandpower(data.alpha.tSeries);
   data.alpha.lim1    = param.alphaLim1;
   data.alpha.lim2    = param.alphaLim2;
@@ -449,7 +518,12 @@ if param.betaOption
   % Apply Gaussian filter to extract beta signal
   fprintf(['band-pass filtering beta between %4.1f-%4.1fHz (file ' dataFileName ')... '], param.betaLim1, param.betaLim2);
   if ~isfield(data,'beta'); data.beta = struct; end
-  data.beta.tSeries = gaussianFilt(data.LFP.tSeries, param.betaLim1, param.betaLim2, data.LFP.samplingInt, 1);
+  if (param.filtType == 1)
+    data.beta.tSeries = bandpass(tSeriesApp, [param.betaLim1 param.betaLim2], round(param.Fs));
+    data.beta.tSeries = data.beta.tSeries(round(param.Fs) + 1 : end - round(param.Fs));
+  elseif (param.filtType == 2)
+    data.beta.tSeries = gaussianFilt(data.LFP.tSeries, param.betaLim1, param.betaLim2, data.LFP.samplingInt, 1);
+  end
   data.beta.tPower  = bandpower(data.beta.tSeries);
   data.beta.lim1    = param.betaLim1;
   data.beta.lim2    = param.betaLim2;
@@ -460,7 +534,12 @@ if param.gammaOption
   % Apply Gaussian filter to extract gamma signal
   fprintf(['band-pass filtering gamma between %4.1f-%4.1fHz (file ' dataFileName ')... '], param.gammaLim1, param.gammaLim2);
   if ~isfield(data,'gamma'); data.gamma = struct; end
-  data.gamma.tSeries = gaussianFilt(data.LFP.tSeries, param.gammaLim1, param.gammaLim2, data.LFP.samplingInt, 1);
+  if (param.filtType == 1)
+    data.gamma.tSeries = bandpass(tSeriesApp, [param.gammaLim1 param.gammaLim2], round(param.Fs));
+    data.gamma.tSeries = data.gamma.tSeries(round(param.Fs) + 1 : end - round(param.Fs));
+  elseif (param.filtType == 2)
+    data.gamma.tSeries = gaussianFilt(data.LFP.tSeries, param.gammaLim1, param.gammaLim2, data.LFP.samplingInt, 1);
+  end
   data.gamma.tPower  = bandpower(data.gamma.tSeries);
   data.gamma.lim1    = param.gammaLim1;
   data.gamma.lim2    = param.gammaLim2;
@@ -471,7 +550,12 @@ if param.hgammaOption
   % Apply Gaussian filter to extract high gamma signal
   fprintf(['band-pass filtering high gamma between %4.1f-%4.1fHz (file ' dataFileName ')... '], param.hgammaLim1, param.hgammaLim2);
   if ~isfield(data,'hgamma'); data.hgamma = struct; end
-  data.hgamma.tSeries = gaussianFilt(data.LFP.tSeries, param.hgammaLim1, param.hgammaLim2, data.LFP.samplingInt, 1);
+  if (param.filtType == 1)
+    data.hgamma.tSeries = bandpass(tSeriesApp, [param.hgammaLim1 param.hgammaLim2], round(param.Fs));
+    data.hgamma.tSeries = data.hgamma.tSeries(round(param.Fs) + 1 : end - round(param.Fs));
+  elseif (param.filtType == 2)
+    data.hgamma.tSeries = gaussianFilt(data.LFP.tSeries, param.hgammaLim1, param.hgammaLim2, data.LFP.samplingInt, 1);
+  end
   data.hgamma.tPower  = bandpower(data.hgamma.tSeries);
   data.hgamma.lim1    = param.hgammaLim1;
   data.hgamma.lim2    = param.hgammaLim2;
@@ -482,7 +566,12 @@ if param.fROption
   % Apply Gaussian filter to extract fast ripple signal
   fprintf(['band-pass filtering fast ripple between %4.1f-%4.1fHz (file ' dataFileName ')... '], param.fRLim1, param.fRLim2);
   if ~isfield(data,'fR'); data.fR = struct; end
-  data.fR.tSeries = gaussianFilt(data.LFP.tSeries, param.fRLim1, param.fRLim2, data.LFP.samplingInt, 1);
+  if (param.filtType == 1)
+    data.fR.tSeries = bandpass(tSeriesApp, [param.fRLim1 param.fRLim2], round(param.Fs));
+    data.fR.tSeries = data.fR.tSeries(round(param.Fs) + 1 : end - round(param.Fs));
+  elseif (param.filtType == 2)
+    data.fR.tSeries = gaussianFilt(data.LFP.tSeries, param.fRLim1, param.fRLim2, data.LFP.samplingInt, 1);
+  end
   data.fR.tPower  = bandpower(data.fR.tSeries);
   data.fR.lim1    = param.fRLim1;
   data.fR.lim2    = param.fRLim2;
@@ -494,50 +583,65 @@ end
 if param.swrOption
   if ~isfield(data,'SWR'); data.SWR = struct; end
   
-  % RMS Signal calculations for SWR detection
-  if param.rmsOption
-    fprintf(['calculating root mean square (RMS) in a %4.1fms sliding window (file ' dataFileName ')... '], param.rmsPeriod);
-    rmsFactor = round(param.rmsPeriod / data.LFP.samplingInt);
+  % RMS Signal calculation of SW signal
+  if isfield(data,'SW')
+    fprintf(['calculating root mean square (RMS) of SW in a %4.1fms sliding window (file ' dataFileName ')... '], param.rmsPeriodSW);
+    rmsFactor = round(param.rmsPeriodSW / data.LFP.samplingInt);
     nSamplesRMS = floor(data.LFP.nSamples / rmsFactor);
     data.SW.RMS = zeros(nSamplesRMS, 1);
-    data.R.RMS  = zeros(nSamplesRMS, 1);
     
     for i = 1:nSamplesRMS
       loAve          = max((i - 2) * rmsFactor, 1);
       hiAve          = min(i * rmsFactor, data.LFP.nSamples);
       data.SW.RMS(i) = rms(data.SW.tSeries(loAve:hiAve));
-      data.R.RMS(i)  = rms(data.R.tSeries(loAve:hiAve));
     end
-    data.param.rmsPeriod = rmsFactor * data.LFP.samplingInt; % Corrected rmsPeriod
-    timingRMS        = (0: data.param.rmsPeriod: (nSamplesRMS-1) * data.param.rmsPeriod)';
+    data.param.rmsPeriodSW = rmsFactor * data.LFP.samplingInt; % Corrected rmsPeriod
+    timingRMS        = (0: data.param.rmsPeriodSW: (nSamplesRMS-1) * data.param.rmsPeriodSW)';
     data.SW.RMS      = interp1(timingRMS, data.SW.RMS, data.LFP.timing, 'spline');
-    data.R.RMS       = interp1(timingRMS, data.R.RMS, data.LFP.timing, 'spline');
     fprintf('done\n');
   end
   
+  % RMS Signal calculation of ripple signal
+  if isfield(data,'R')
+    fprintf(['calculating root mean square (RMS) of ripple in a %4.1fms sliding window (file ' dataFileName ')... '], param.rmsPeriodR);
+    rmsFactor = round(param.rmsPeriodR / data.LFP.samplingInt);
+    nSamplesRMS = floor(data.LFP.nSamples / rmsFactor);
+    data.R.RMS  = zeros(nSamplesRMS, 1);
+    
+    for i = 1:nSamplesRMS
+      loAve          = max((i - 2) * rmsFactor, 1);
+      hiAve          = min(i * rmsFactor, data.LFP.nSamples);
+      data.R.RMS(i)  = rms(data.R.tSeries(loAve:hiAve));
+    end
+    data.param.rmsPeriodR = rmsFactor * data.LFP.samplingInt; % Corrected rmsPeriod
+    timingRMS        = (0: data.param.rmsPeriodR: (nSamplesRMS-1) * data.param.rmsPeriodR)';
+    data.R.RMS       = interp1(timingRMS, data.R.RMS, data.LFP.timing, 'spline');
+    fprintf('done\n');
+  end
+
+  
   %% Event Detection
   if param.peakDetectOption
-    fprintf(['detecting events %4.0f standard deviations above baseline (%4.2f quantile) (file ' dataFileName ')... '], param.sdMult, param.baseQuant);
-    
     %% Find sharp wave peak based on standard deviation of RMS of SW signal
     if isfield(data,'SW')
-      % Re-initialize data structures
-      data.SW.evStatus = [];
-      data.SW.evStart  = [];
-      data.SW.evPeak   = [];
-      data.SW.evEnd    = [];
-      data.SW.IEI      = [];
-      data.SW.power    = [];
-      data.SW.duration = [];
+      fprintf(['detecting SW events %4.0f standard deviations above baseline (file ' dataFileName ')... '], param.sdMultSW);
       
-      % Calculate baseline by taking bottom baseQuant quantile of signal to minimize false negatives for active fields
-      baseline = data.SW.RMS;
-      baseline(baseline > quantile(baseline, param.baseQuant)) = [];
-      sd = std(baseline);
-      mn = mean(baseline);
-      data.SW.peakThresh = mn + sd * param.sdMult;
-      data.SW.baseThresh = mn + 0.5 * sd * param.sdMult;
-      [data.SW.evStatus, data.SW.evStart, data.SW.evPeak, data.SW.evEnd] = peakFindUnique(data.SW.RMS, data.LFP.timing, data.SW.peakThresh, data.SW.baseThresh, 1, param.rmsMinEvDiff);
+      % Re-initialize data structures
+      data.SW.evStatus  = [];
+      data.SW.evStart   = [];
+      data.SW.evPeak    = [];
+      data.SW.evEnd     = [];
+      data.SW.IEI       = [];
+      data.SW.power     = [];
+      data.SW.duration  = [];
+      data.SW.frequency = 0;
+      
+      % Estimate baseline based on options selected, either taking param.baseQuant quantile of signal
+      % (unreliable for active/quiet recordings, or through an iterative gaussian fitting process (more robust)
+      [mn, sd] = calcBaseline(data.SW.RMS, param);
+      data.SW.peakThresh = mn + sd * param.sdMultSW;
+      data.SW.baseThresh = mn + param.sdBaseFactorSW * sd * param.sdMultSW;
+      [data.SW.evStatus, data.SW.evStart, data.SW.evPeak, data.SW.evEnd] = peakFindUnique(data.SW.RMS, data.LFP.timing, data.SW.peakThresh, data.SW.baseThresh, 1, param.rmsMinEvDiff, param.rmsMinEvDur);
       
       if ~isnan(data.SW.evStart)
         for i = 1:length(data.SW.evStart)
@@ -554,23 +658,24 @@ if param.swrOption
     
     %% Find ripple peak based on standard deviation of RMS of ripple signal
     if isfield(data,'R')
-      % Re-initialize data structures
-      data.R.evStatus = [];
-      data.R.evStart  = [];
-      data.R.evPeak   = [];
-      data.R.evEnd    = [];
-      data.R.IEI      = [];
-      data.R.power    = [];
-      data.R.duration = [];
+      fprintf(['detecting ripple events %4.0f standard deviations above baseline (file ' dataFileName ')... '], param.sdMultR);
       
-      % Calculate baseline by taking bottom baseQuant quantile of signal to minimize false negatives for active fields
-      baseline = data.R.RMS;
-      baseline(baseline > quantile(baseline, param.baseQuant)) = [];
-      sd = std(baseline);
-      mn = mean(baseline);
-      data.R.peakThresh = mn + sd * param.sdMult;
-      data.R.baseThresh = mn + 0.5 * sd * param.sdMult;
-      [data.R.evStatus, data.R.evStart, data.R.evPeak, data.R.evEnd] = peakFindUnique(data.R.RMS, data.LFP.timing, data.R.peakThresh, data.R.baseThresh, 1, param.rmsMinEvDiff);
+      % Re-initialize data structures
+      data.R.evStatus  = [];
+      data.R.evStart   = [];
+      data.R.evPeak    = [];
+      data.R.evEnd     = [];
+      data.R.IEI       = [];
+      data.R.power     = [];
+      data.R.duration  = [];
+      data.R.frequency = 0;
+      
+      % Estimate baseline based on options selected, either taking param.baseQuant quantile of signal
+      % (unreliable for active/quiet recordings, or through an iterative gaussian fitting process
+      [mn, sd] = calcBaseline(data.R.RMS, param);
+      data.R.peakThresh = mn + sd * param.sdMultR;
+      data.R.baseThresh = mn + param.sdBaseFactorR * sd * param.sdMultR;
+      [data.R.evStatus, data.R.evStart, data.R.evPeak, data.R.evEnd] = peakFindUnique(data.R.RMS, data.LFP.timing, data.R.peakThresh, data.R.baseThresh, 1, param.rmsMinEvDiff, param.rmsMinEvDur);
       
       if ~isnan(data.R.evStart)
         for i = 1:length(data.R.evStart)
@@ -588,16 +693,17 @@ if param.swrOption
     %% SWR Event Calculation
     
     % (Re)Initialize data arrays
-    data.SWR.evStatus = [];
-    data.SWR.evStart  = [];
-    data.SWR.evPeak   = [];
-    data.SWR.evEnd    = [];
-    data.SWR.IEI      = [];
-    data.SWR.duration = [];
-    data.SWR.amp      = [];
-    data.SWR.power    = [];
-    data.SWR.area     = [];
-    data.SWR.event    = [];
+    data.SWR.evStatus  = [];
+    data.SWR.evStart   = [];
+    data.SWR.evPeak    = [];
+    data.SWR.evEnd     = [];
+    data.SWR.IEI       = [];
+    data.SWR.duration  = [];
+    data.SWR.amp       = [];
+    data.SWR.power     = [];
+    data.SWR.area      = [];
+    data.SWR.event     = [];  
+    data.SWR.frequency = 0;
     
     % SW arrays:
     if isfield(data,'SW')
@@ -785,13 +891,13 @@ end
 if param.spectOption
   fprintf(['calculating spectrogram of total LFP signal (file ' dataFileName ')... ']);
   fRange = param.spectLim1 : param.spectLim2;
-  [data.LFP, ~] = calcSpect(data.LFP, [], fRange, data.param.Fs, 30, 0);
+  [data.LFP, ~] = calcSpect(data.LFP, [], fRange, round(param.Fs), 30, 0);
   fprintf('done\n');
       
   % If SWR events analyzed, detect spectrogram for event-locked data
   if (param.swrOption)
     fprintf(['calculating spectrograms of SWR-locked events (file ' dataFileName ')... ']);
-    [data.SWR, ~] = calcSpect(data.SWR, [], fRange, data.param.Fs, 3, 0);
+    [data.SWR, ~] = calcSpect(data.SWR, [], fRange, round(param.Fs), 3, 0);
     fprintf('done\n');
   end
 end
@@ -884,12 +990,12 @@ if param.xFreqOption
     
     % Determine phase and amplitude via Morlet wavelet:
     for i = 1 : nFreq
-      data.LFP.xFreq.phsPAC(:,i) = morletPhase(data.LFP.xFreq.morlFreq(i), tSeries, param.Fs, param.morlWidth);
-      data.LFP.xFreq.ampPAC(:,i) = morletAmp(data.LFP.xFreq.morlFreq(i), tSeries, param.Fs, param.morlWidth);
+      data.LFP.xFreq.phsPAC(:,i) = morletPhase(data.LFP.xFreq.morlFreq(i), tSeries, round(param.Fs), param.morlWidth);
+      data.LFP.xFreq.ampPAC(:,i) = morletAmp(data.LFP.xFreq.morlFreq(i), tSeries, round(param.Fs), param.morlWidth);
     end
     
     % Calculate PAC modulation index (MI):
-    data.LFP.xFreq = calcPACMI(data.LFP.xFreq, param.Fs, 0); % nShuffle > 1 gets very computationally expensive!
+    data.LFP.xFreq = calcPACMI(data.LFP.xFreq, round(param.Fs), 0); % nShuffle > 1 gets very computationally expensive!
     
     % Order structure:
     data.LFP.xFreq = orderStruct(data.LFP.xFreq);
@@ -903,7 +1009,7 @@ if param.xFreqOption
     fprintf(['calculating Z-corrected phase-amplitude coupling for frequency bands of interest (file ' dataFileName ')... ']);
     
     morlFreqP = data.(param.xFreqLow).lim1 + floor((data.(param.xFreqLow).lim2 - data.(param.xFreqLow).lim1)/2);
-    phsPAC    = morletPhase(morlFreqP, tSeries, param.Fs, param.morlWidth);
+    phsPAC    = morletPhase(morlFreqP, tSeries, round(param.Fs), param.morlWidth);
     
     % Determine available higher phase-modulated frequency(ies) available:
     nHi = 0;
@@ -930,7 +1036,7 @@ if param.xFreqOption
         
         % Calculate amplitude of higher frequency(ies) via Morlet wavelet:
         morlFreqA = data.(xFreqHi{i}).lim1 + floor((data.(xFreqHi{i}).lim2 - data.(xFreqHi{i}).lim1)/2);
-        ampPAC    = morletAmp(morlFreqA, tSeries, param.Fs, param.morlWidth);
+        ampPAC    = morletAmp(morlFreqA, tSeries, round(param.Fs), param.morlWidth);
         
         % Update data structure:
         data.(xFreqHi{i}).xFreq.xFreqLow  = param.xFreqLow;
@@ -941,13 +1047,13 @@ if param.xFreqOption
         data.(xFreqHi{i}).xFreq.ampPAC    = ampPAC;
 
         % Calculate total PAC measure:
-        data.(xFreqHi{i}).xFreq = calcPACMI(data.(xFreqHi{i}).xFreq, param.Fs, param.nShuffle);
+        data.(xFreqHi{i}).xFreq = calcPACMI(data.(xFreqHi{i}).xFreq, round(param.Fs), param.nShuffle);
       end
       
       %% Time PAC Analysis
       % Truncate signals to get integer number of time windows
-      nSampWn   = ceil(param.winLength * param.Fs);
-      nSampOl   = ceil(param.winOverlap * param.Fs);
+      nSampWn   = ceil(param.winLength * round(param.Fs));
+      nSampOl   = ceil(param.winOverlap * round(param.Fs));
       remSample = mod(nSample, nSampWn);
       phsPAC    = phsPAC(1 : nSample - remSample);
       ampPAC    = ampPAC(1 : nSample - remSample, :);
@@ -1131,12 +1237,16 @@ if all(expDataFile) && param.expSWRDataOption
   fprintf('done\n');
 end
 
-% Export average table
+% Export average statistics
 if all(expAveFile) && param.expAveOption
-  fprintf(['exporting averages statistics (file ' dataFileName ')... ']);
-  exportAveStats(data, saveFile, expAveFile);
+  fprintf(['calculating average statistics (file ' dataFileName ')... ']);
+  [aveStats, varNames] = calcAveStats(data, param);
   data.LFP.expAveFile = expAveFile;
+  if (param.fileNum == 1); writetable(aveStats, expAveFile, 'Delimiter', ',', 'WriteVariableNames', true, 'WriteRowNames', true); end
   fprintf('done\n');
+else
+  aveStats{1} = [];
+  varNames{1} = [];
 end
 
 % Save matlab file

@@ -72,9 +72,9 @@ if ~isfield(param,'CaFiltAlpha');          param.CaFiltAlpha          = 2.5;  en
 if ~isfield(param,'smoothFactor');         param.smoothFactor         = 0.25; end
 if ~isfield(param,'interpOption');         param.interpOption         = 1;    end
 if ~isfield(param,'samplingInt');          param.samplingInt          = 0.5;  end
-if ~isfield(param,'cellTypeOption');       param.cellTypeOption       = 0;    end
-if ~isfield(param,'cellType1');            param.cellType1          = 'Deep'; end
-if ~isfield(param,'cellType2');            param.cellType2          = 'Supe'; end
+if ~isfield(param,'cellTypeOption');       param.cellTypeOption       = 1;    end
+if ~isfield(param,'nCellTypes');           param.nCellTypes           = 2;    end
+if ~isfield(param,'cellTypeName');         param.cellTypeName{param.nCellTypes} = []; end
 if ~isfield(param,'peakDetectCa');         param.peakDetectCa         = 1;    end
 if ~isfield(param,'baseDetectMethod');     param.baseDetectMethod     = 2;    end
 if ~isfield(param,'baseQuant');            param.baseQuant            = 0.8;  end
@@ -190,26 +190,40 @@ if ~param.reAnalyzeOption
   data.Ca.nChannels   = size(data.Ca.tSeries, 2);
   data.Ca.CaFile      = CaFile;
   data.Ca.timingFile  = timingFile;
+  data.Ca.cellName{data.Ca.nChannels} = [];
   
-  % Import cell type from variable names (last four characters of dFoF file column headings)
+  % Import cell type from variable names (last character after underscore of dFoF file column headings)
   if param.cellTypeOption
-    fprintf(['sorting by arrays by cell type (file ' dataFileName ')... ']);
+    fprintf(['sorting Calcium tSeries array by cell type (file ' dataFileName ')... ']);
+    data.Ca.cellTypeName = param.cellTypeName;
+    data.Ca.cellNameR{data.Ca.nChannels} = [];
     
-    data.Ca.cellTypeRaw{data.Ca.nChannels} = [];
+    data.Ca.cellTypeR = zeros(1,data.Ca.nChannels);
+    data.Ca.cellType  = [];
+    
     for i = 1:data.Ca.nChannels
       colName = CaTable.Properties.VariableNames{i};
-      data.Ca.cellTypeRaw{i} = colName(length(colName) - 3 : length(colName));
+      data.Ca.cellNameR{i} = colName(1 : strfind(colName, '_') - 1);
+      data.Ca.cellTypeR(i) = str2double(colName(strfind(colName, '_') + 1 : end));
     end
     
     % Sort cells by cell-type
-    data.Ca.sortInd  = horzcat(find(strcmp(data.Ca.cellTypeRaw, param.cellType1)), find(strcmp(data.Ca.cellTypeRaw, param.cellType2)));
-    data.Ca.tSeriesS = data.Ca.tSeriesR(:, data.Ca.sortInd);
+    data.Ca.sortInd  = (data.Ca.cellTypeR == 1);
+    data.Ca.cellName = data.Ca.cellNameR(data.Ca.sortInd);
+    data.Ca.cellType = data.Ca.cellTypeR(data.Ca.sortInd);
+    tSeriesS = data.Ca.tSeriesR(:, data.Ca.sortInd);
     
-    % Update tSeries and cellType variables
-    data.Ca.tSeries  = zeros(size(data.Ca.tSeriesS, 1), size(data.Ca.tSeriesS, 2));
-    data.Ca.tSeries  = data.Ca.tSeriesS;
-    data.Ca.cellType = data.Ca.cellTypeRaw(data.Ca.sortInd);
+    for i = 2:param.nCellTypes
+      data.Ca.sortInd  = (data.Ca.cellTypeR == i);
+      data.Ca.cellName = horzcat(data.Ca.cellName, data.Ca.cellNameR(data.Ca.sortInd));
+      data.Ca.cellType = horzcat(data.Ca.cellType, data.Ca.cellTypeR(data.Ca.sortInd));
+      tSeriesS = horzcat(tSeriesS, data.Ca.tSeriesR(:, data.Ca.sortInd));
+    end
+    
+    data.Ca.tSeries = tSeriesS;
     fprintf('done\n');
+  else
+    data.Ca.cellName = CaTable.Properties.VariableNames;
   end
 end
 

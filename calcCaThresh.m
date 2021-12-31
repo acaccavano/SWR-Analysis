@@ -40,7 +40,7 @@ baseThresh = zeros(1, nChannels);
 peakThresh = zeros(1, nChannels);
 
 for ch = 1:nChannels
-  [baseMean(ch), baseSD(ch)] = calcCaBaseline(tSeries(:,ch), param);
+  [baseMean(ch), baseSD(ch)] = calcBaseline(tSeries(:,ch), param);
   baseThresh(ch) = baseMean(ch) + param.sdBaseFactor * baseSD(ch) * param.sdMult;
   peakThresh(ch) = baseMean(ch) + baseSD(ch) * param.sdMult;
 end

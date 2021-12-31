@@ -1,14 +1,18 @@
-function [evStatus, evStart, evPeak, evEnd] = peakFindUnique(dataIn, timeArray, peakThresh, baseThresh, peakPolarity, minEvDiff)
+function [evStatus, evStart, evPeak, evEnd] = peakFindUnique(dataIn, timeArray, peakThresh, baseThresh, peakPolarity, minEvDiff, minEvDur)
 %% [evStatus, evStart, evPeak, evEnd] = peakFindUnique(dataIn, timeArray, peakThresh, baseThresh, peakPolarity)
 % 
 %  Function to find unique peaks given two thresholds, one for peak
 %  detection and a second optionally lower one for start and end times.
 %  peakPolarity = +1 for maxima, -1 for minima
+%  Required inputs are the signal data, time array, and threshold. Below optional: 
 
-if (nargin < 6); minEvDiff   = 0;   end
+if (nargin < 7); minEvDur     = 0; end
+if (nargin < 6); minEvDiff    = 0; end
+if (nargin < 5); peakPolarity = 1; end
+if (nargin < 4); baseThresh   = peakThresh; end
 
 % Initialize array for raster plots:
-evStatus = zeros(size(timeArray,1),1);
+evStatus    = zeros(size(timeArray,1),1);
 samplingInt = timeArray(2) - timeArray(1);
 
 % Find all peaks > peakThresh
@@ -48,6 +52,9 @@ else
         evPeak(ev2) = peakLoc(ev1);
       end
       
+    % Check if min duration is violated, if so ignore event
+    elseif (ev1~=1) && (endTemp - startTemp) * samplingInt < minEvDur
+      
     % Check if min difference between events is violated, if so combine events
     elseif (ev1~=1) && (startTemp - evEnd(ev2)) * samplingInt < minEvDiff
       % Update peak if greater
@@ -61,7 +68,7 @@ else
         evStatus(i) = 1;
       end
       
-    % Non- duplicate event - update everything
+    % Non-duplicate event - update everything
     else
       % First iteration
       if (ev1~=1)

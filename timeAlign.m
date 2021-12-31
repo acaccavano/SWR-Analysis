@@ -22,31 +22,41 @@ samplingInt  = max(samplingInt1, samplingInt2);
 % Determine most restrictive bounds for common time array:
 minTime      = max(timeArray1(1), timeArray2(1));
 maxTime      = min(timeArray1(end), timeArray2(end));
-nSamples     = floor((maxTime - minTime) / samplingInt) + 1;
 timeArray    = (minTime:samplingInt:maxTime)';
 
 % Match Timing:
 if (samplingInt == samplingInt1) % evStatus2 to be downsampled
- 
-  if ~alignEndOption % Align from start of files and trim end:
-    evStatusA1 = evStatus1(1:nSamples);
-  else % Align from end of files and trim beginning:
-    evStatusA1 = evStatus1(end-nSamples+1:end);
-  end
   
   % Downsample evStatus2
   [evStatusA2, ~] = downsampleMax(evStatus2, timeArray2, timeArray);
-
-elseif (samplingInt == samplingInt2) % evStatus1 to be downsampled
   
+  % Ensure both have same nSamples and trim if necessary:
+  nSamples = min([length(evStatus1), length(evStatusA2), length(timeArray)]);
+  if ~alignEndOption % Align from start of files and trim end:
+    evStatusA1 = evStatus1(1:nSamples);
+    evStatusA2 = evStatusA2(1:nSamples);
+  else % Align from end of files and trim beginning:
+    evStatusA1 = evStatus1(end-nSamples+1:end);
+    evStatusA2 = evStatusA2(end-nSamples+1:end);
+  end
+  timeArray = timeArray(1:nSamples);
+  
+elseif (samplingInt == samplingInt2) % evStatus1 to be downsampled
+
   % Downsample evStatus1
   [evStatusA1, ~] = downsampleMax(evStatus1, timeArray1, timeArray);
   
-  if alignEndOption % Align from end of files:
+  % Ensure both have same nSamples and trim if necessary:
+  nSamples = min([length(evStatusA1), length(evStatus2), length(timeArray)]);
+  if ~alignEndOption % Align from start of files and trim end:
+    evStatusA1 = evStatusA1(1:nSamples);
     evStatusA2 = evStatus2(1:nSamples);
-  else % Align from start of files:
-    evStatusA2 = evStatus2(1:nSamples);
+  else % Align from end of files and trim beginning:
+    evStatusA1 = evStatusA1(end-nSamples+1:end);
+    evStatusA2 = evStatus2(end-nSamples+1:end);
   end
+  timeArray = timeArray(1:nSamples);
+  
 end
 
 % update start and end times in case event runs through end and has been truncated

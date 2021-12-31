@@ -7,20 +7,22 @@ if (nargin < 3); param     = struct; end
 if (nargin < 2); hand      = struct; end
 if (nargin < 1); data      = struct; end
 
-nData = length(data);
-
 % Set default parameters if not specified
 if ~isfield(param,'skipDetectLim');  param.skipDetectLim  =  2; end
 if ~isfield(param,'swrCaOption');    param.swrCaOption    =  0; end
 if ~isfield(param,'spkCaOption');    param.spkCaOption    =  0; end
-if ~isfield(param,'colOption');      param.colOption      =  0; end % If enabled plots keeps all traces same colors, reserves below defined colors for different datasets
+if ~isfield(param,'colOption');      param.colOption      =  1; end % If enabled plots keeps all traces same colors, reserves below defined colors for different datasets
 if ~isfield(param,'threshOption');   param.threshOption   =  0; end
 if ~isfield(param,'peakOption');     param.peakOption     =  0; end
 if ~isfield(param,'stimCaOption');   param.swrCaOption    =  0; end
 if ~isfield(param,'cellLimOption');  param.cellLimOption  =  0; end % Limits number of Ca cells plotted - useful for comparisons where equal number of traces preferable
 if ~isfield(param,'cellLim');        param.cellLim        = 50; end 
-if ~isfield(param,'cellTypeOption'); param.cellTypeOption =  0; end
+if ~isfield(param,'cellTypeOption'); param.cellTypeOption =  1; end
+if ~isfield(param,'nCellTypes');     param.nCellTypes     =  2; end
+if ~isfield(param,'cellTypeName');   param.cellTypeName{param.nCellTypes} = []; end
 if ~isfield(param,'alignEndOption'); param.alignEndOption =  0; end
+
+nData = length(data);
 
 % Plot dimension parameters
 convFact     = 1000;
@@ -35,22 +37,39 @@ axWidth      = (1 - (nData + 1) * marginSz) / nData;
 axCaRsSz     = 0.20;
 axCaTrSz     = 1 - axCaRsSz - spacerSz - 2*marginSz;
 if param.swrCaOption || param.stimCaOption
-  axLFPTrSz    = 0.12;
-  axLFPRsSz    = 0.01;
-  axCaTrSz     = axCaTrSz - (axLFPTrSz + axLFPRsSz + 2*spacerSz);
+  axLFPTrSz  = 0.12;
+  axLFPRsSz  = 0.01;
+  axCaTrSz   = axCaTrSz - (axLFPTrSz + axLFPRsSz + 2*spacerSz);
 end
-offsetFactor = 0.2;
+offsetFactor = 2;
 
-% Plot colors (for colOption = 1)
+% LFP colors for data sets 1-3:
 lfpCol{1}  = [ 48  70 160]/255;
 lfpCol{2}  = [ 50  50  50]/255;
-cellCol1   = [  0  90   0]/255;
-cellCol2   = [128   0 128]/255; 
-swrCol     = [180 180 180]/255;
-swrCCol    = lfpCol;
-CaCol      = swrCol;
-CaCCol1    = cellCol1;
-CaCCol2    = cellCol2;
+lfpCol{3}  = [160  70  48]/255;
+
+% SWR raster event colors:
+swrCol     = [180 180 180]/255; % Non-coincident
+swrCCol    = lfpCol;            % Coincident
+
+% For Cell Types 1-6:
+% cellCol{1} = [ 68 114 196]/255; % 1 = blue
+% cellCol{2} = [192   0   0]/255; % 2 = red
+% cellCol{3} = [255 192   0]/255; % 3 = yellow
+% cellCol{4} = [ 84 130  53]/255; % 4 = green
+% cellCol{5} = [204   0 153]/255; % 5 = purple
+% cellCol{6} = [237 125  49]/255; % 6 = orange
+colMap = lines;
+cellCol{1} = colMap(2,:); 
+cellCol{2} = colMap(3,:);
+cellCol{3} = colMap(4,:);
+cellCol{4} = colMap(5,:);
+cellCol{5} = colMap(6,:);
+cellCol{6} = colMap(7,:);
+
+% Calcium event colors
+CaCol      = swrCol;  % Non-coincident
+CaCCol     = cellCol; % Coincident
 
 % Initialize graphical structures
 hand.scale   = struct;
@@ -66,10 +85,18 @@ for i = 1:nData
   timingCa{i} = downsampleMean(data(i).Ca.timing/1000, dsPlot);
   CaRange{i}  = find(data(i).Ca.timing >= 1000 * param.skipDetectLim);
   
-  if param.cellLimOption == 1
+  if param.cellLimOption
     nCells(i) = min(param.cellLim, data(i).Ca.nChannels);
+    if param.cellTypeOption
+      cellType(i,:) = data(i).Ca.cellType(1:param.cellLim);
+      nCellTypes(i) = unique(cellType(i));
+    end
   else
     nCells(i) = data(i).Ca.nChannels;
+    if param.cellTypeOption
+      cellType(i,:) = data(i).Ca.cellType;
+      nCellTypes(i) = param.nCellTypes;
+    end
   end
   
   for ch = 1:nCells(i)
@@ -158,9 +185,7 @@ if param.swrCaOption || param.stimCaOption
       timingLFPRs{i} = downsampleMean(data(i).stim.Ca.timingA/1000, dsPlot);
       rasterLFP{i}   = downsampleMax(data(i).stim.Ca.evStatusA, dsPlot);
       rasterLFPC{i}  = downsampleMax(data(i).stim.Ca.evStatusSumC, dsPlot);
-      
     end
-    
   end
 end
 
@@ -252,12 +277,12 @@ for i = 1:nData
   hand.axCaTr(i).ColorOrderIndex = colInd;
   if param.colOption
     if param.cellTypeOption
-      deepInd  = strcmp(data(i).Ca.cellType,'Deep');
-      supeInd  = strcmp(data(i).Ca.cellType,'Supe');
-      plot(hand.axCaTr(i), timingCa{i}, offsetArray(:,deepInd) + tSeriesCa{i}(:,deepInd), 'LineWidth', lnWidth, 'Color', cellCol1);
-      plot(hand.axCaTr(i), timingCa{i}, offsetArray(:,supeInd) + tSeriesCa{i}(:,supeInd), 'LineWidth', lnWidth, 'Color', cellCol2);
+      for j = 1:nCellTypes(i)
+        cellInd = (cellType(i,:) == j);
+        plot(hand.axCaTr(i), timingCa{i}, offsetArray(:, cellInd) + tSeriesCa{i}(:, cellInd), 'LineWidth', lnWidth, 'Color', cellCol{j});
+      end
     else
-      plot(hand.axCaTr(i), timingCa{i}, offsetArray + tSeriesCa{i}, 'LineWidth', lnWidth, 'Color', cellCol1);
+      plot(hand.axCaTr(i), timingCa{i}, offsetArray + tSeriesCa{i}, 'LineWidth', lnWidth, 'Color', cellCol{1});
     end
   else
     plot(hand.axCaTr(i), timingCa{i}, offsetArray + tSeriesCa{i}, 'LineWidth', lnWidth);
@@ -268,7 +293,11 @@ for i = 1:nData
     for ch = 1:nCells(i)
       offsetThresh = offsetArray(1,ch) + data(i).Ca.peakThresh(ch);
       if param.colOption
-        plot(hand.axCaTr(i), [timingCaRs{i}(1) timingCaRs{i}(length(timingCaRs{i}))],[offsetThresh offsetThresh], 'LineWidth', 0.25, 'LineStyle', '--', 'Color', cellCol1);
+        if param.cellTypeOption
+          plot(hand.axCaTr(i), [timingCaRs{i}(1) timingCaRs{i}(length(timingCaRs{i}))],[offsetThresh offsetThresh], 'LineWidth', 0.25, 'LineStyle', '--', 'Color', cellCol{cellType(i,ch)});
+        else
+          plot(hand.axCaTr(i), [timingCaRs{i}(1) timingCaRs{i}(length(timingCaRs{i}))],[offsetThresh offsetThresh], 'LineWidth', 0.25, 'LineStyle', '--', 'Color', cellCol{1});
+        end
       else
         plot(hand.axCaTr(i), [timingCaRs{i}(1) timingCaRs{i}(length(timingCaRs{i}))],[offsetThresh offsetThresh], 'LineWidth', 0.25, 'LineStyle', '--');
       end
@@ -298,7 +327,7 @@ for i = 1:nData
       if param.peakOption
         offsetPeaks = peakCaVal{i}{ch} + offsetArray(1,ch) + 0.2;
         if param.colOption
-          plot(hand.axCaTr(i), peakCaTime{i}{ch}, offsetPeaks, 'v', 'MarkerSize', markerSz - 1, 'Color', cellCol1);
+          plot(hand.axCaTr(i), peakCaTime{i}{ch}, offsetPeaks, 'v', 'MarkerSize', markerSz - 1, 'Color', cellCol{1});
         else
           plot(hand.axCaTr(i), peakCaTime{i}{ch}, offsetPeaks, 'v', 'MarkerSize', markerSz - 1);
         end
@@ -313,11 +342,14 @@ for i = 1:nData
     if param.swrCaOption || param.stimCaOption
       
       if param.colOption
-        rasterCol1 = CaCCol1;
-        rasterCol2 = CaCCol2;
+        rasterCol = cellCol;
       else
-        rasterCol1 = [0 0 0];
-        rasterCol2 = [0 0 0];
+        rasterCol{1} = [0 0 0];
+        rasterCol{2} = [0 0 0];
+        rasterCol{3} = [0 0 0];
+        rasterCol{4} = [0 0 0];
+        rasterCol{5} = [0 0 0];
+        rasterCol{6} = [0 0 0];
       end
       
       if (sum(rasterCaC{i}(:,ch)) == 0)
@@ -329,13 +361,9 @@ for i = 1:nData
       end
       
       if param.cellTypeOption
-        if deepInd(ch)
-          plot(hand.axCaRs(i), evPoints, evChannel, 's', 'MarkerSize', markerSz, 'MarkerEdgeColor', rasterCol1, 'MarkerFaceColor', rasterCol1);
-        elseif supeInd(ch)
-          plot(hand.axCaRs(i), evPoints, evChannel, 's', 'MarkerSize', markerSz, 'MarkerEdgeColor', rasterCol2, 'MarkerFaceColor', rasterCol2);
-        end
+        plot(hand.axCaRs(i), evPoints, evChannel, 's', 'MarkerSize', markerSz, 'MarkerEdgeColor', rasterCol{cellType(i,ch)}, 'MarkerFaceColor', rasterCol{cellType(i,ch)});
       else
-        plot(hand.axCaRs(i), evPoints, evChannel, 's', 'MarkerSize', markerSz, 'MarkerEdgeColor', rasterCol1, 'MarkerFaceColor', rasterCol1);
+        plot(hand.axCaRs(i), evPoints, evChannel, 's', 'MarkerSize', markerSz, 'MarkerEdgeColor', rasterCol{1}, 'MarkerFaceColor', rasterCol{1});
       end
     end
   end
