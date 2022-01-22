@@ -5,7 +5,7 @@ function analyzeLFPBatch(param, dataFolder, saveFolder, expEvFolder, expDataFold
 %
 %   param      = structure containing all parameters including:
 %     param.fileNum          = 1 = Single Recording, 2 = Multiple/Batch analysis (disables plotting)
-%     param.fileType         = 1 = pClamp (.abf), 2 = ASCII data (folder of data files)
+%     param.fileType         = 1 = pClamp (.abf), 2 = ASCII data (folder ofdata files), 3 = Matlab (.mat)
 %     param.Fs               = sampling rate (ASCII recordings are usually 3000, not needed for pClamp files)
 %     param.dsFactor         = downsample factor (default = 1, no downsampling)
 %     param.lfpChannel       = channel to use for LFP input (default = 1, but depends on recording)
@@ -101,7 +101,7 @@ if isempty(param); param       = struct; end
 
 % Set default parameters if not specified
 if ~isfield(param,'fileNum');          param.fileNum           = 2;    end
-if ~isfield(param,'fileType');         param.fileType          = 2;    end
+if ~isfield(param,'fileType');         param.fileType          = 1;    end
 if ~isfield(param,'Fs');               param.Fs                = 3000; end  % [Hz]
 if ~isfield(param,'dsFactor');         param.dsFactor          = 1;    end
 if ~isfield(param,'lfpChannel');       param.lfpChannel        = 1;    end
@@ -192,6 +192,8 @@ if isempty(dataFolder)
     dataFolder = uigetdir(pwd, 'Select folder containing set of pClamp *.abf files');
   elseif (param.fileType == 2)
     dataFolder = uigetdir(pwd, 'Select folder containing subfolders of recordings');
+  elseif (param.fileType == 3)
+    dataFolder = uigetdir(pwd, 'Select folder containing preprocessed single-channel LFP *.mat files');
   end
 end
 if (dataFolder == 0); return; end
@@ -263,6 +265,10 @@ elseif (param.fileType == 2)
   dir_flag = [dir_temp.isdir] & ~strcmp({dir_temp.name},'.') & ~strcmp({dir_temp.name},'..'); % assign flag only for subfolders
   dir_sub = dir_temp(dir_flag);
   file = {dir_sub.name};
+elseif (param.fileType == 3)
+  dir_temp = dir('*.mat'); % Find only mat files
+  names = {dir_temp.name}; % extract all the names in the struct returned by 'dir': ".", "..", file 1,2....
+  file = names([dir_temp.isdir] == 0); % extract the name for all files, but no "." and ".."
 end
 nDataFiles = length(file);
 

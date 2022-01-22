@@ -13,7 +13,7 @@ function [data, hand, aveStats, varNames] = analyzeLFPFile(data, hand, param, da
 %   hand       = handle structure to specify where figure should be drawn
 %   param      = structure containing all parameters including:
 %     param.fileNum          = 1 = Single Recording, 2 = Multiple/Batch analysis (disables plotting)
-%     param.fileType         = 1 = pClamp (.abf), 2 = ASCII data (folder of data files)
+%     param.fileType         = 1 = pClamp (.abf), 2 = ASCII data (folder of data files), 3 = Matlab (.mat)
 %     param.Fs               = sampling rate (ASCII recordings are usually 3000, not needed for pClamp files)
 %     param.dsFactor         = downsample factor (default = 1, no downsampling)
 %     param.lfpChannel       = channel to use for LFP input (default = 1, but depends on recording)
@@ -118,7 +118,7 @@ if isempty(data);  data      = struct; end
 
 % Set default parameters if not specified
 if ~isfield(param,'fileNum');          param.fileNum           = 1;    end
-if ~isfield(param,'fileType');         param.fileType          = 2;    end
+if ~isfield(param,'fileType');         param.fileType          = 1;    end
 if ~isfield(param,'Fs');               param.Fs                = 3000; end  % [Hz]
 if ~isfield(param,'dsFactor');         param.dsFactor          = 1;    end
 if ~isfield(param,'lfpChannel');       param.lfpChannel        = 1;    end
@@ -208,9 +208,12 @@ if isfield(data.LFP, 'dataFile')
 elseif isempty(dataFile)
   if (param.fileType == 1)
     [fileName, filePath] = uigetfile('.abf', 'Select *.abf file to analyze');
-    dataFile = strcat(filePath,fileName);
+    dataFile = strcat(filePath, fileName);
   elseif (param.fileType == 2)
     dataFile = uigetdir();
+  elseif (param.fileType == 3)
+    [fileName, filePath] = uigetfile('.mat', 'Select *.mat file to analyze');
+    dataFile = strcat(filePath, fileName);
   end
   if ~all(dataFile); return; end
 end
@@ -275,7 +278,7 @@ end
 %% Import data
 if ~isfield(data.LFP, 'dataFile')
   fprintf(['importing file ' dataFileName '... ']);
-  if (param.fileType == 1)
+  if (param.fileType == 1) % abf file
     [dataIn, samplingInt, ~] = abfload(dataFile);
 
     data.LFP.samplingInt = samplingInt;
@@ -288,7 +291,7 @@ if ~isfield(data.LFP, 'dataFile')
       data.C.samplingInt = data.C.samplingInt / 1000; % convert from um to ms
     end
     
-  elseif (param.fileType == 2)
+  elseif (param.fileType == 2) % ASCII files
     
     % Ensure current directory is in path so helper functions work
     curPath = pwd;
@@ -364,6 +367,13 @@ if ~isfield(data.LFP, 'dataFile')
       data.C.tSeries = dataIn(:,2);
       data.C.samplingInt = 1000 / param.Fs; % (ms)
     end
+    
+  elseif (param.fileType == 3) % mat file
+    inStruct = load(dataFile);
+    varNames = fieldnames(inStruct);
+    data.LFP.tSeriesRaw  = inStruct.(varNames{1})/1000;
+    data.LFP.samplingInt = 1000 / param.Fs; % (ms)
+    
   end
   fprintf('done\n');
   
