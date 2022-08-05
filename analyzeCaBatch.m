@@ -32,6 +32,7 @@ function analyzeCaBatch(param, dataFolder, saveFolder, CaFolder, timingFile, exp
 %     param.useSWRWindowOption   = option to use standard swrWindow for coincidence detection (default = 0)
 %     param.swrWindow            = +/- window around SWR peak events (default = 100 ms)
 %     param.expCaEvOption        = option to export csv table of Calcium events (default = 1)
+%     param.CaFreqOption         = option to consider the frequency of cells with no events as zero. Set to 1 if a cell having no events is meaningful, but set to 0 (and thus frequency->NaN) if chance of improper ROI. Only real impact is for calcAveStats (default = 1)
 %     param.expSWREvOption       = option to export csv table of SWR events (default = 1)
 %     param.spkCaOption          = option to perform coincidence detection for SWRs and Ca transients (default = 0, placeholder: code not written yet)
 %     param.stimCaOption         = option to perform coincidence detection for Stim and Ca transients (default = 0)
@@ -91,6 +92,7 @@ if ~isfield(param,'sdBaseFactor');         param.sdBaseFactor         = 0.75; en
 if ~isfield(param,'skipDetectLim');        param.skipDetectLim        = 1;    end
 if ~isfield(param,'consThreshOption');     param.consThreshOption     = 0;    end
 if ~isfield(param,'expCaEvOption');        param.expCaEvOption        = 1;    end
+if ~isfield(param,'CaFreqOption');         param.CaFreqOption         = 1;    end
 if ~isfield(param,'swrCaOption');          param.swrCaOption          = 1;    end
 if ~isfield(param,'useSWRDurationOption'); param.useSWRDurationOption = 1;    end
 if ~isfield(param,'useSWRWindowOption');   param.useSWRWindowOption   = 0;    end
@@ -130,20 +132,22 @@ else
 end
 
 % Select folders to save analyzed matlab files
+matDataFolder = [];
 if isempty(saveFolder)
   saveFolder = uigetdir(parentPath, 'Select folder to save analyzed *.mat files');
   if (saveFolder == 0)
     warning('No *.mat files will be saved - Save folder not selected');
   else
-    [parentPath, ~, ~] = parsePath(saveFolder);
+    [parentPath, matDataFolder, ~] = parsePath(saveFolder);
   end
 end
 
 % Select folder of Calcium dFoF exported from ImageJ
+CaDataFolder = [];
 if isempty(CaFolder) && ~param.reAnalyzeOption
   CaFolder = uigetdir(parentPath, 'Select folder of dFoF *.csv files exported from ImageJ');
   if (CaFolder == 0); return; end
-  [parentPath, ~, ~] = parsePath(CaFolder);
+  [parentPath, CaDataFolder, ~] = parsePath(CaFolder);
 end
 
 % Prompt for timing file
@@ -175,7 +179,13 @@ end
 
 % Select file to export table of average stats, if option selected
 if isempty(expAveFile) && param.expAveOption
-  [~, dataFolderName, ~] = parsePath(parentPath(1:end-1));
+  if ~isempty(CaDataFolder)
+    dataFolderName = CaDataFolder;
+  elseif ~isempty(matDataFolder)
+    dataFolderName = matDataFolder;
+  else
+    [~, dataFolderName, ~] = parsePath(parentPath(1:end-1));
+  end
   defaultPath = [parentPath dataFolderName '_aveStats.csv'];
   [exportName, exportPath] = uiputfile('.csv','Select *.csv file to export table of average statistics', defaultPath);
   expAveFile = [exportPath exportName];

@@ -34,6 +34,7 @@ function [data, hand, aveStats, varNames] = analyzeCaFile(data, hand, param, sav
 %     param.useSWRWindowOption   = option to use standard swrWindow for coincidence detection (default = 0)
 %     param.swrWindow            = +/- window around SWR peak events (default = 100 ms)
 %     param.expCaEvOption        = option to export csv table of Calcium events (default = 1)
+%     param.CaFreqOption         = option to consider the frequency of cells with no events as zero. Set to 1 if a cell having no events is meaningful, but set to 0 (and thus frequency->NaN) if chance of improper ROI. Only real impact is for calcAveStats (default = 1)
 %     param.expSWREvOption       = option to export csv table of SWR events (default = 1)
 %     param.spkCaOption          = option to perform coincidence detection for SWRs and Ca transients (default = 0, placeholder: code not written yet)
 %     param.stimCaOption         = option to perform coincidence detection for Stim and Ca transients (default = 0)
@@ -94,6 +95,7 @@ if ~isfield(param,'sdBaseFactor');         param.sdBaseFactor         = 0.75; en
 if ~isfield(param,'skipDetectLim');        param.skipDetectLim        = 1;    end
 if ~isfield(param,'consThreshOption');     param.consThreshOption     = 0;    end
 if ~isfield(param,'expCaEvOption');        param.expCaEvOption        = 1;    end
+if ~isfield(param,'CaFreqOption');         param.CaFreqOption         = 1;    end
 if ~isfield(param,'swrCaOption');          param.swrCaOption          = 1;    end
 if ~isfield(param,'useSWRDurationOption'); param.useSWRDurationOption = 1;    end
 if ~isfield(param,'useSWRWindowOption');   param.useSWRWindowOption   = 0;    end
@@ -209,7 +211,11 @@ if param.peakDetectCa
   data.Ca.amp{1, data.Ca.nChannels}      = [];
   data.Ca.area{1, data.Ca.nChannels}     = [];
   
-  data.Ca.frequency = zeros(1, data.Ca.nChannels);
+  if param.CaFreqOption
+    data.Ca.frequency = zeros(1, data.Ca.nChannels);
+  else
+    data.Ca.frequency = NaN * zeros(1, data.Ca.nChannels);
+  end
   data.Ca.ampAve    = NaN * zeros(1, data.Ca.nChannels);
   data.Ca.areaAve   = NaN * zeros(1, data.Ca.nChannels);  
   data.Ca.durAve    = NaN * zeros(1, data.Ca.nChannels);
