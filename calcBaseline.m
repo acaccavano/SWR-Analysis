@@ -39,12 +39,15 @@ if ~isfield(param,'nSDLim');           param.nSDLim           = 2;    end
 % Calc simple baseline for both methods:
 baseline = tSeries;
 baseline(baseline > quantile(baseline, param.baseQuant)) = [];
-  
+
 if (param.baseDetectMethod == 1)
   baseMean = mean(baseline);
   baseSD   = std(baseline);
-  
+
 elseif (param.baseDetectMethod == 2)
+
+  % Fitting method generates many non-breaking warnings, with logic in place to handle special cases
+  warning('off','all')
 
   % Bin all data across tSeries:
   nBins = floor(param.minBins * range(tSeries) / range(baseline));
@@ -71,8 +74,23 @@ elseif (param.baseDetectMethod == 2)
     % Double gaussian model:
     ft = fittype('gauss2');
 
-    loParams = [0 max(0.5*(xPeak1 + min(xVal)), min(xVal)) 0 0 max(0.5*(xPeak2 + min(xVal)), min(xVal)) 0];
-    hiParams = [Inf min(0.5*(3*xPeak1 - min(xVal)), max(xVal)) range(xVal) Inf min(0.5*(3*xPeak2 - min(xVal)), max(xVal)) range(xVal)];
+    % Cosntrain parameters within physically plausible values for the baseline
+    a1_lo = 0;
+    b1_lo = max(0.5*(xPeak1 + min(xVal)), min(xVal));
+    c1_lo = 2*param.nSDLim*binWidth/sqrt(2); % ensure adequate # points over gaussian width to exclude non-sensical spikes
+    a2_lo = 0;
+    b2_lo = max(0.5*(xPeak2 + min(xVal)), min(xVal));
+    c2_lo = 2*param.nSDLim*binWidth/sqrt(2); % ensure adequate # points over gaussian width to exclude non-sensical spikes
+
+    a1_hi = Inf;
+    b1_hi = min(0.5*(3*xPeak1 - min(xVal)), max(xVal));
+    c1_hi = range(xVal);
+    a2_hi = Inf;
+    b2_hi = min(0.5*(3*xPeak2 - min(xVal)), max(xVal));
+    c2_hi = range(xVal);
+
+    loParams = [a1_lo b1_lo c1_lo a2_lo b2_lo c2_lo];
+    hiParams = [a1_hi b1_hi c1_hi a2_hi b2_hi c2_hi];
 
     % Exclude extreme kurtosis values to help with fitting:
     if kurtosis(tSeries) > param.kurtosisMax
@@ -83,7 +101,7 @@ elseif (param.baseDetectMethod == 2)
     % Weight lower values more within inclusion range:
     weightEq = exp(-param.weightFact*linspace(1,nBins,nBins)'/(nBins-sum(exRange)));
     
-    f = fit(xVal, yVal, ft, 'Lower', loParams, 'Upper', hiParams, 'Robust', 'Bisquare', 'Weights', weightEq, 'Exclude', exRange);
+    [f,~,~] = fit(xVal, yVal, ft, 'Lower', loParams, 'Upper', hiParams, 'Robust', 'Bisquare', 'Weights', weightEq, 'Exclude', exRange);
     
     if param.plotFitHisto 
       yyaxis left
@@ -131,7 +149,7 @@ elseif (param.baseDetectMethod == 2)
     ft = fittype('gauss1');
     loParams = [0 max(0.5*(xPeak1 + min(xVal)), min(xVal)) 0];
     hiParams = [Inf min(0.5*(3*xPeak1 - min(xVal)), max(xVal)) range(xVal)];
-    f = fit(xVal, yVal, ft, 'Lower', loParams, 'Upper', hiParams, 'Robust', 'Bisquare');
+    [f,~,~] = fit(xVal, yVal, ft, 'Lower', loParams, 'Upper', hiParams, 'Robust', 'Bisquare');
     baseMean = f.b1;
     baseSD   = f.c1/sqrt(2);
     if param.plotFitHisto
@@ -146,7 +164,7 @@ elseif (param.baseDetectMethod == 2)
     loParams = [0 min(tSeries) 0];
     hiParams = [Inf max(tSeries) range(tSeries)];
     exRange  = (xVal < loLimX) | (xVal > hiLimX);
-    f = fit(xVal, yVal, ft, 'Lower', loParams, 'Upper', hiParams, 'Robust', 'Bisquare', 'Exclude', exRange);
+    [f,~,~] = fit(xVal, yVal, ft, 'Lower', loParams, 'Upper', hiParams, 'Robust', 'Bisquare', 'Exclude', exRange);
     baseMean = f.b1;
     baseSD   = f.c1/sqrt(2);
     if param.plotFitHisto

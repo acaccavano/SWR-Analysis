@@ -25,8 +25,8 @@ outTable = table(cellInd', 'VariableNames', {'Cell'});
 
 if isfield(data.Ca, 'cellType'); outTable = [outTable table(data.Ca.cellType', 'VariableNames', {'CellType'})]; end
 
-varNames = {'nEvents', 'frequency_Hz', 'aveIEI_s', 'aveAmplitude_dFoF', 'aveDuration_s'};
-outTable = [outTable table(data.Ca.nEvents', data.Ca.frequency', data.Ca.IEIAve', data.Ca.ampAve', data.Ca.durAve'/1000, 'VariableNames', varNames)];
+varNames = {'nEvents', 'frequency_Hz', 'aveIEI_s', 'aveAmplitude_dFoF', 'aveDuration_s', 'aveArea_dFoFs'};
+outTable = [outTable table(data.Ca.nEvents', data.Ca.frequency', data.Ca.IEIAve', data.Ca.ampAve', data.Ca.durAve'/1000, data.Ca.areaAve'/1000, 'VariableNames', varNames)];
 
 % If SWR-Ca correlation has been performed:
 if isfield(data.Ca, 'SWR')

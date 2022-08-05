@@ -88,7 +88,7 @@ function analyzeLFPBatch(param, dataFolder, saveFolder, expEvFolder, expDataFold
 %   expAveFile    = full path to file of exported csv table of averages (if not set and expAveOption = 1, will prompt)
 
 %% Handle optional arguments
-if (nargin < 7); expAveFile  = []; end
+if (nargin < 7); expAveFile    = []; end
 if (nargin < 6); stimFolder    = []; end
 if (nargin < 5); expDataFolder = []; end
 if (nargin < 4); expEvFolder   = []; end
@@ -346,7 +346,7 @@ parfor i = 1:nDataFiles
 
 end
 
-% Write expAveStats file:
+%% Write expAveStats file:
 if param.expAveOption
   fileNames = aveStats{:,1};
   

@@ -1,5 +1,5 @@
 function [data, hand, aveStats, varNames] = analyzeLFPFile(data, hand, param, dataFile, saveFile, expEvFile, expDataFile, stimFile, expAveFile)
-%% [data, hand, aveStats] = analyzeLFPFile(data, hand, param, dataFile, saveFile, expEvFile, expDataFile, stimFile, expAveFile)
+%% [data, hand, aveStats, varNames] = analyzeLFPFile(data, hand, param, dataFile, saveFile, expEvFile, expDataFile, stimFile, expAveFile)
 %
 %  Function to detect sharp wave ripple (SWR) events, theta, beta, and gamma analysis, time-frequency 
 %  spectrogram analysis, and/or stimulation event pre-processing of single LFP recording. SWRs are detected
@@ -99,11 +99,12 @@ function [data, hand, aveStats, varNames] = analyzeLFPFile(data, hand, param, da
 %   data     = structure containing all data to be saved
 %   hand     = handle structure for figure
 %   aveStats = 1D array of average statistics (size variable, depending on options selected)
+%   varNames = 1D array of average statistics (size variable, depending on options selected)
 
 %% Handle input arguments - if not entered
-if (nargin < 9); stimFile    = []; end
-if (nargin < 8); expDataFile = []; end
-if (nargin < 7); expAveFile  = []; end
+if (nargin < 9); expAveFile  = []; end
+if (nargin < 8); stimFile    = []; end
+if (nargin < 7); expDataFile = []; end
 if (nargin < 6); expEvFile   = []; end
 if (nargin < 5); saveFile    = []; end
 if (nargin < 4); dataFile    = []; end

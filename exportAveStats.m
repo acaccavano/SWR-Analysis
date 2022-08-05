@@ -1,7 +1,7 @@
 function exportAveStats(data, saveFile, exportFile)
 %% exportAveStats(data, saveFile, exportFile)
 %
-%  Function to export csv file of averages of all LFP data available
+%  Function to export csv file of averages of all data available
 
 % Handle input arguments - if not entered
 if (nargin < 3); exportFile = []; end
@@ -268,6 +268,12 @@ if isfield(data, 'C')
     if isfield(data.C.burst, 'nSpike'); outTable = [outTable table(mean(data.C.burst.nSpike,'omitnan'), 'VariableNames', {'nSpikesinBurst'})]; end
     if isfield(data.C.burst, 'intraBI'); outTable = [outTable table(mean(data.C.burst.intraBI,'omitnan'), 'VariableNames', {'intraBurstInt_ms'})]; end
   end
+end
+
+%% Calcium
+if isfield(data, 'Ca')
+  varNames = {'nCells', 'nCellsActive', 'nEvents', 'frequency_Hz', 'aveIEI_s', 'aveAmplitude_dFoF', 'aveDuration_s', 'aveArea_dFoFs'};
+  outTable = [outTable table(mean(data.Ca.nEvents,'omitnan'), mean(data.Ca.frequency,'omitnan'), mean(data.Ca.IEIAve,'omitnan'), mean(data.Ca.ampAve,'omitnan'), mean(data.Ca.durAve/1000,'omitnan'), mean(data.Ca.areaAve/1000,'omitnan'), 'VariableNames', varNames)];
 end
 
 % Convert to cell array and replace NaN values with blanks:

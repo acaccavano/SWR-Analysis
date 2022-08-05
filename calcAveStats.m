@@ -16,7 +16,7 @@ if isempty(data)
 end
 
 % Initialize Table and assign filename:
-[~, fileName, ~] = parsePath(data.LFP.dataFile);
+[~, fileName, ~] = parsePath(data.saveFile);
 outTable = table({fileName}, 'VariableNames', {'File'});
 
 %% LFP
@@ -262,6 +262,12 @@ if isfield(data, 'C')
     if isfield(data.C.burst, 'nSpike'); outTable = [outTable table(mean(data.C.burst.nSpike,'omitnan'), 'VariableNames', {'nSpikesinBurst'})]; end
     if isfield(data.C.burst, 'intraBI'); outTable = [outTable table(mean(data.C.burst.intraBI,'omitnan'), 'VariableNames', {'intraBurstInt_ms'})]; end
   end
+end
+
+%% Calcium
+if isfield(data, 'Ca')
+  varNames = {'nCells', 'nCellsActive', 'nEvents', 'frequency_Hz', 'aveIEI_s', 'aveAmplitude_dFoF', 'aveDuration_s', 'aveArea_dFoFs'};
+  outTable = [outTable table(sum(length(data.Ca.nEvents)), sum(~isnan(data.Ca.nEvents)), mean(data.Ca.nEvents,'omitnan'), mean(data.Ca.frequency,'omitnan'), mean(data.Ca.IEIAve,'omitnan'), mean(data.Ca.ampAve,'omitnan'), mean(data.Ca.durAve/1000,'omitnan'), mean(data.Ca.areaAve/1000,'omitnan'), 'VariableNames', varNames)];
 end
 
 % If single-file, format table for final export, otherwise wait to do in batch:

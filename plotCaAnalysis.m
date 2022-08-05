@@ -14,8 +14,8 @@ if ~isfield(param,'spkCaOption');    param.spkCaOption    =  0; end
 if ~isfield(param,'threshOption');   param.threshOption   =  0; end
 if ~isfield(param,'peakOption');     param.peakOption     =  0; end
 if ~isfield(param,'stimCaOption');   param.swrCaOption    =  0; end
-if ~isfield(param,'cellLimOption');  param.cellLimOption  =  0; end % Limits number of Ca cells plotted - useful for comparisons where equal number of traces preferable
-if ~isfield(param,'cellLim');        param.cellLim        = 50; end 
+if ~isfield(param,'cellLimOption');  param.cellLimOption  =  1; end % Limits number of Ca cells plotted - useful for comparisons where equal number of traces preferable
+if ~isfield(param,'cellLim');        param.cellLim        = 80; end 
 if ~isfield(param,'cellTypeOption'); param.cellTypeOption =  1; end
 if ~isfield(param,'nCellTypes');     param.nCellTypes     =  2; end
 if ~isfield(param,'cellTypeName');   param.cellTypeName{param.nCellTypes} = []; end
@@ -30,7 +30,7 @@ spacerSz     = 0.02;
 fontSz       = 5 * (5 - nData);
 tFact        = 0.01;
 lnWidth      = 1;
-markerSz     = 3;
+markerSz     = 1;
 colInd       = 1;
 axWidth      = (1 - (nData + 1) * marginSz) / nData;
 axCaRsSz     = 0.20;
@@ -40,31 +40,45 @@ if param.swrCaOption || param.stimCaOption
   axLFPRsSz  = 0.01;
   axCaTrSz   = axCaTrSz - (axLFPTrSz + axLFPRsSz + 2*spacerSz);
 end
-offsetFactor = 2;
+offsetFactor = 1;
+
+lfpCol{1}    = [  0   0   0]/255; % Baseline = black
+% lfpCol{2}    = [ 66  93 154]/255; % Control  = blue
+lfpCol{2}    = [128 128 128]/255; % Sema3a   = grey
+
+cellCol{1,1} = lfpCol{1}; % Set same as LFP
+cellCol{2,1} = lfpCol{2}; % Set same as LFP
+
+swrCol{1}    = lfpCol{1}; % Non-coincident
+swrCol{2}    = lfpCol{2}; % Non-coincident
+
+swrCCol{1}   = lfpCol{1}; % Coincident
+swrCCol{2}   = lfpCol{2}; % Coincident
 
 % LFP colors for data sets 1-3:
-lfpCol{1}  = [ 48  70 160]/255;
-lfpCol{2}  = [ 50  50  50]/255;
-lfpCol{3}  = [160  70  48]/255;
+% lfpCol{1}  = [ 48  70 160]/255;
+% lfpCol{2}  = [ 50  50  50]/255;
+% lfpCol{3}  = [160  70  48]/255;
 
-% SWR raster event colors:
-swrCol     = [180 180 180]/255; % Non-coincident
-swrCCol    = lfpCol;            % Coincident
+% % SWR raster event colors:
+% swrCol     = [180 180 180]/255; % Non-coincident
+% swrCCol    = lfpCol;            % Coincident
 
-% For Cell Types 1-6:
+% % For Cell Types 1-6:
 % cellCol{1} = [ 68 114 196]/255; % 1 = blue
 % cellCol{2} = [192   0   0]/255; % 2 = red
 % cellCol{3} = [255 192   0]/255; % 3 = yellow
 % cellCol{4} = [ 84 130  53]/255; % 4 = green
 % cellCol{5} = [204   0 153]/255; % 5 = purple
 % cellCol{6} = [237 125  49]/255; % 6 = orange
-colMap = lines;
-cellCol{1} = colMap(2,:); 
-cellCol{2} = colMap(3,:);
-cellCol{3} = colMap(4,:);
-cellCol{4} = colMap(5,:);
-cellCol{5} = colMap(6,:);
-cellCol{6} = colMap(7,:);
+
+% colMap = lines;
+% cellCol{1} = colMap(2,:); 
+% cellCol{2} = colMap(3,:);
+% cellCol{3} = colMap(4,:);
+% cellCol{4} = colMap(5,:);
+% cellCol{5} = colMap(6,:);
+% cellCol{6} = colMap(7,:);
 
 % Initialize graphical structures
 hand.scale   = struct;
@@ -273,23 +287,22 @@ for i = 1:nData
   if param.cellTypeOption
     for j = 1:nCellTypes(i)
       cellInd = (cellType(i,:) == j);
-      plot(hand.axCaTr(i), timingCa{i}, offsetArray(:, cellInd) + tSeriesCa{i}(:, cellInd), 'LineWidth', lnWidth, 'Color', cellCol{j});
+      plot(hand.axCaTr(i), timingCa{i}, offsetArray(:, cellInd) + tSeriesCa{i}(:, cellInd), 'LineWidth', lnWidth, 'Color', cellCol{i,j});
       axis(hand.axCaTr(i), [0 timingCa{i}(length(timingCa{i})) min(min(offsetArray + tSeriesCa{i})) max(max(offsetArray(:, cellInd) + tSeriesCa{i}(:, cellInd)))]);
       text(hand.axCaTr(i), hand.axCaTr(i).XLim(1), min(offsetArray(:, find(cellInd, 1, 'last')) + tSeriesCa{i}(:, find(cellInd, 1, 'last'))) - (fontSz - 5), param.cellTypeName{j}, 'FontSize', fontSz - 5, 'Color', [0 0 0]);
     end
   else
-    plot(hand.axCaTr(i), timingCa{i}, offsetArray + tSeriesCa{i}, 'LineWidth', lnWidth, 'Color', cellCol{1});
+    plot(hand.axCaTr(i), timingCa{i}, offsetArray + tSeriesCa{i}, 'LineWidth', lnWidth, 'Color', cellCol{i,1});
   end
-  
   
   % Add thresholds channel by channel
   if param.threshOption
     for ch = 1:nCells(i)
       offsetThresh = offsetArray(1,ch) + data(i).Ca.peakThresh(ch);
       if param.cellTypeOption
-        plot(hand.axCaTr(i), [timingCaRs{i}(1) timingCaRs{i}(length(timingCaRs{i}))],[offsetThresh offsetThresh], 'LineWidth', 0.25, 'LineStyle', '--', 'Color', cellCol{cellType(i,ch)});
+        plot(hand.axCaTr(i), [timingCaRs{i}(1) timingCaRs{i}(length(timingCaRs{i}))],[offsetThresh offsetThresh], 'LineWidth', 0.25, 'LineStyle', '--', 'Color', cellCol{i,cellType(i,ch)});
       else
-        plot(hand.axCaTr(i), [timingCaRs{i}(1) timingCaRs{i}(length(timingCaRs{i}))],[offsetThresh offsetThresh], 'LineWidth', 0.25, 'LineStyle', '--', 'Color', cellCol{1});
+        plot(hand.axCaTr(i), [timingCaRs{i}(1) timingCaRs{i}(length(timingCaRs{i}))],[offsetThresh offsetThresh], 'LineWidth', 0.25, 'LineStyle', '--', 'Color', cellCol{i,1});
       end
     end
     hand.axCaTr(i).ColorOrderIndex = colInd;
@@ -314,7 +327,7 @@ for i = 1:nData
       evPoints  = timingCaRs{i}(find(rasterCa{i}(:,ch) .* timingCaRs{i}));
       evChannel = ch * ones(size(evPoints,1),1);
     end
-    plot(hand.axCaRs(i), evPoints, evChannel, 's', 'MarkerSize', markerSz, 'MarkerEdgeColor', swrCol, 'MarkerFaceColor', swrCol);
+    plot(hand.axCaRs(i), evPoints, evChannel, 's', 'MarkerSize', markerSz, 'MarkerEdgeColor', swrCol{i}, 'MarkerFaceColor', swrCol{i});
     
     % Assign Calcium events coicident with SWRs to an additional raster:
     if param.swrCaOption || param.stimCaOption
@@ -328,9 +341,9 @@ for i = 1:nData
       end
       
       if param.cellTypeOption
-        plot(hand.axCaRs(i), evPoints, evChannel, 's', 'MarkerSize', markerSz, 'MarkerEdgeColor', cellCol{cellType(i,ch)}, 'MarkerFaceColor', cellCol{cellType(i,ch)});
+        plot(hand.axCaRs(i), evPoints, evChannel, 's', 'MarkerSize', markerSz, 'MarkerEdgeColor', cellCol{i,cellType(i,ch)}, 'MarkerFaceColor', cellCol{i,cellType(i,ch)});
       else
-        plot(hand.axCaRs(i), evPoints, evChannel, 's', 'MarkerSize', markerSz, 'MarkerEdgeColor', cellCol{1}, 'MarkerFaceColor', cellCol{1});
+        plot(hand.axCaRs(i), evPoints, evChannel, 's', 'MarkerSize', markerSz, 'MarkerEdgeColor', cellCol{i,1}, 'MarkerFaceColor', cellCol{i,1});
       end
     end
   end
@@ -347,7 +360,7 @@ for i = 1:nData
   axis(hand.axCaTr(i), [0 timingCa{i}(length(timingCa{i})) minY maxY]); % timingCa{i}(1)
   axis(hand.axCaRs(i), [0 timingCaRs{i}(length(timingCaRs{i})) 0 nChannelsMax]); % timingCaRs{i}(1)
 %   hand.lblCaTr(i) = text(hand.axCaTr(i), hand.axCaTr(i).XLim(1), hand.axCaTr(i).YLim(2) - tFact * (hand.axCaTr(i).YLim(2) - hand.axCaTr(i).YLim(1)), data(i).saveName, 'FontSize', fontSz, 'Interpreter', 'none');
-  hand.scale.(['scale' int2str(i)]) = createScaleBar(hand.axCaTr(i), [], 1, 1, fontSz, 's', '\DeltaF/F', 30, 50);
+  hand.scale.(['scale' int2str(i)]) = createScaleBar(hand.axCaTr(i), [], 1, 1, fontSz, 's', '\DeltaF/F', 10, 30);
 end
 
 %% Plot LFP trace and SWR raster (if selected)
@@ -363,7 +376,7 @@ if param.swrCaOption || param.stimCaOption
       evChannel = (1:20);
     end
     evChannel = evChannel(ones(1,length(evPoints)),:);
-    plot(hand.axLFPRs(i), evPoints, evChannel, '.', 'MarkerSize', markerSz, 'Color', swrCol);
+    plot(hand.axLFPRs(i), evPoints, evChannel, '.', 'MarkerSize', markerSz, 'Color', swrCol{i});
     
     % Assign SWR events coincident with at least one Ca transient to an additional raster:
     if (sum(rasterLFPC{i}) == 0)

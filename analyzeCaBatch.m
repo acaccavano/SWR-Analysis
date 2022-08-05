@@ -1,5 +1,5 @@
-function analyzeCaBatch(param, dataFolder, saveFolder, CaFolder, timingFile, expCaFolder, expSWRFolder, expStimFolder)
-%% analyzeCaBatch(param, dataFolder, saveFolder, CaFolder, timingFile, expCaFolder, expSWRFolder, expStimFolder)
+function analyzeCaBatch(param, dataFolder, saveFolder, CaFolder, timingFile, expCaFolder, expSWRFolder, expStimFolder, expAveFile) 
+%% analyzeCaBatch(param, dataFolder, saveFolder, CaFolder, timingFile, expCaFolder, expSWRFolder, expStimFolder, expAveFile)
 %
 %  Function to run processCaFile, calcCaThresh, and analyzeCaFile on batch of files
 %
@@ -39,6 +39,8 @@ function analyzeCaBatch(param, dataFolder, saveFolder, CaFolder, timingFile, exp
 %     param.stimCaLim2           = time after stim start to end stim window (default = 1000ms)
 %     param.expStimEvOption      = option to export csv table of stim events (default = 0)
 %     param.reAnalyzeOption      = option to re-analyze file (default = 0)
+%     param.expAveOption     = boolean flag to determine whether to export csv table of average statistics
+%     param.transposeOption  = boolean flag to transpose exported average stats from row to column format
 %   dataFolder    = full path to matlab folder to import (if not set, will prompt)
 %   saveFolder    = full path to matlab folder to save (can be same, if not set, will prompt)
 %   CaFolder      = full path to dFoF csv folder exported from ImageJ (if not set, will prompt)
@@ -46,8 +48,10 @@ function analyzeCaBatch(param, dataFolder, saveFolder, CaFolder, timingFile, exp
 %   expCaFolder   = full path to calcium event csv folder to export (if not set, will prompt)
 %   expSWRFolder  = full path to SWR event csv folder to export (if not set, will prompt)
 %   expStimFolder = full path to stim event csv folder to export (if not set, will prompt)
+%   expAveFile    = full path to file of exported csv table of averages (if not set and expAveOption = 1, will prompt)
 
 %% Handle input arguments
+if (nargin < 9); expAveFile    = []; end
 if (nargin < 8); expStimFolder = []; end
 if (nargin < 7); expSWRFolder  = []; end
 if (nargin < 6); expCaFolder   = []; end
@@ -98,7 +102,9 @@ if ~isfield(param,'stimCaLim1');           param.stimCaLim1           = 0;    en
 if ~isfield(param,'stimCaLim2');           param.stimCaLim2           = 1000; end
 if ~isfield(param,'expStimEvOption');      param.expStimEvOption      = 0;    end
 if ~isfield(param,'reAnalyzeOption');      param.reAnalyzeOption      = 0;    end
-    
+if ~isfield(param,'expAveOption');         param.expAveOption         = 1;    end
+if ~isfield(param,'transposeOption');      param.transposeOption      = 0;    end  
+
 % Assign OS specific variables:
 if ispc
   slash = '\';
@@ -165,6 +171,15 @@ end
 if isempty(expStimFolder) && param.expStimEvOption
   expStimFolder = uigetdir(parentPath, 'Select folder to export stimulation event *.csv files');
   if (expStimFolder == 0); warning('No stimulation event files to be exported - folder not selected'); end
+end
+
+% Select file to export table of average stats, if option selected
+if isempty(expAveFile) && param.expAveOption
+  [~, dataFolderName, ~] = parsePath(parentPath(1:end-1));
+  defaultPath = [parentPath dataFolderName '_aveStats.csv'];
+  [exportName, exportPath] = uiputfile('.csv','Select *.csv file to export table of average statistics', defaultPath);
+  expAveFile = [exportPath exportName];
+  if ~all(expAveFile); warning('No average statistics to be exported - no file selected'); end
 end
 
 % ensure current dir is in path so we can call helper funcs
@@ -307,7 +322,7 @@ if param.baseDetectMethod > 0
   % Otherwise calculate each threshold individually
   else
     stimCaOption = param.stimCaOption;
-    parfor i = 1:nFiles
+    parfor i = 1:nFiles %% CHANGE BACK TO "PARFOR" - ONLY "FOR" FOR DEBUG
       data = load(saveFile{i});
       if stimCaOption
         tSeries = trimCaFile(data.Ca.tSeries, data.Ca.samplingInt, data.LFP.samplingInt, data.stim.evStart, param);
@@ -323,6 +338,13 @@ end
 reAnalyzeOption = param.reAnalyzeOption;
 baseCorrectMethod = param.baseCorrectMethod;
 interpOption = param.interpOption;
+
+% Initialize aveStats Cell Array and Table:
+if param.expAveOption
+  varNames{nFiles} = [];
+  aveStats = table;
+end
+
 parfor i = 1:nFiles
   if ~reAnalyzeOption || (baseCorrectMethod > 0) || interpOption
     data = load(saveFile{i});
@@ -333,7 +355,31 @@ parfor i = 1:nFiles
   data.Ca.baseSD     = baseSD{i};
   data.Ca.baseThresh = baseThresh{i};
   data.Ca.peakThresh = peakThresh{i};
-  analyzeCaFile(data, [], param, saveFile{i}, expCaFile{i}, expSWRFile{i}, expStimFile{i});
+  [~, ~, aveStats(i, :), varNames{i}] = analyzeCaFile(data, [], param, saveFile{i}, expCaFile{i}, expSWRFile{i}, expStimFile{i}, expAveFile);
 end
+
+%% Write expAveStats file:
+if param.expAveOption
+  fileNames = aveStats{:,1};
+  
+  % Convert to cell array and replace NaN values with blanks:
+  tmpCell = table2cell(aveStats(:, 2:end)); % Excluding filename
+  tmpCell(isnan(aveStats(:, 2:end).Variables)) = {[]};
+  
+  % Convert to array and transpose table:
+  if param.transposeOption
+    aveStats = cell2table(tmpCell');
+    aveStats.Properties.RowNames       = varNames{1}(2:end);
+    aveStats.Properties.VariableNames  = fileNames;
+    aveStats.Properties.DimensionNames = {'Variable', 'File'};
+  else
+    aveStats = cell2table(tmpCell);
+    aveStats.Properties.RowNames       = fileNames;
+    aveStats.Properties.VariableNames  = varNames{1}(2:end);
+    aveStats.Properties.DimensionNames = {'File', 'Variable'};
+  end
+  writetable(aveStats, expAveFile, 'Delimiter', ',', 'WriteVariableNames', true, 'WriteRowNames', true);
+end
+
 fprintf('complete\n');
 end

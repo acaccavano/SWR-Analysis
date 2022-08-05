@@ -1,5 +1,5 @@
-function [data, hand] = analyzeCaFile(data, hand, param, saveFile, expCaFile, expSWRFile, expStimFile)
-%% [data, hand] = analyzeCaFile(data, hand, param, saveFile, expCaFile, expSWRFile, expStimFile)
+function [data, hand, aveStats, varNames] = analyzeCaFile(data, hand, param, saveFile, expCaFile, expSWRFile, expStimFile, expAveFile)
+%% [data, hand, aveStats, varNames] = analyzeCaFile(data, hand, param, saveFile, expCaFile, expSWRFile, expStimFile, expAveFile)
 %
 %  Function to detect Ca transients above thresholds (previously calculated), and perform coicidence to SWR, Stim events
 %
@@ -41,11 +41,14 @@ function [data, hand] = analyzeCaFile(data, hand, param, saveFile, expCaFile, ex
 %     param.stimCaLim2           = time after stim start to end stim window (default = 1000ms)
 %     param.expStimEvOption      = option to export csv table of stim events (default = 0)
 %     param.reAnalyzeOption      = option to re-analyze file (default = 0)
+%     param.expAveOption     = boolean flag to determine whether to export csv table of average statistics
+%     param.transposeOption  = boolean flag to transpose exported average stats from row to column format
 %   saveFile    = full path to matlab file to save (if not set, will prompt)
 %   expCaFile   = full path to calcium event csv file to export (if not set, will prompt)
 %   expSWRFile  = full path to SWR event csv file to export (if not set, will prompt)
 %   expStimFile = full path to stim event csv file to export (if not set, will prompt)
-%
+%   expAveFile  = full path to file of exported csv table of averages (if not set and expAveOption = 1, will prompt)
+
 %  Outputs:
 %   data       = structure containing all data to be saved
 %   hand       = handle structure for figure
@@ -102,6 +105,8 @@ if ~isfield(param,'stimCaLim1');           param.stimCaLim1           = 0;    en
 if ~isfield(param,'stimCaLim2');           param.stimCaLim2           = 1000; end
 if ~isfield(param,'expStimEvOption');      param.expStimEvOption      = 0;    end
 if ~isfield(param,'reAnalyzeOption');      param.reAnalyzeOption      = 0;    end
+if ~isfield(param,'expAveOption');         param.expAveOption         = 1;    end
+if ~isfield(param,'transposeOption');      param.transposeOption      = 0;    end 
 
 % Check if necessary data structures are present
 if ~isfield(data,'Ca')
@@ -159,6 +164,14 @@ if isempty(expStimFile) && param.expStimEvOption
   expStimFile = [exportPath exportName];
 end
 
+% Select export average statistics file, if option selected
+if isempty(expAveFile) && param.expAveOption
+  defaultPath = [parentPath dataFileName '_aveStats.csv'];
+  [exportName, exportPath] = uiputfile('.csv','Select *.csv file to export table of average statistics', defaultPath);
+  expAveFile = [exportPath exportName];
+  if ~all(expAveFile); warning('No average statistics to be exported - no file selected'); end
+end
+
 % Set alignment range of Calcium based on param.skipDetectLim
 CaRange = find(data.Ca.timing >= 1000 * param.skipDetectLim);
 
@@ -185,7 +198,8 @@ if param.peakDetectCa
   data.Ca.IEI       = [];
   data.Ca.duration  = [];
   data.Ca.amp       = [];
-  
+  data.Ca.area      = [];
+    
   data.Ca.evStatus = zeros(length(data.Ca.timing(CaRange)), data.Ca.nChannels);
   data.Ca.evStart{1, data.Ca.nChannels}  = [];
   data.Ca.evPeak{1, data.Ca.nChannels}   = [];
@@ -193,8 +207,11 @@ if param.peakDetectCa
   data.Ca.IEI{1, data.Ca.nChannels}      = [];
   data.Ca.duration{1, data.Ca.nChannels} = [];
   data.Ca.amp{1, data.Ca.nChannels}      = [];
+  data.Ca.area{1, data.Ca.nChannels}     = [];
+  
   data.Ca.frequency = zeros(1, data.Ca.nChannels);
   data.Ca.ampAve    = NaN * zeros(1, data.Ca.nChannels);
+  data.Ca.areaAve   = NaN * zeros(1, data.Ca.nChannels);  
   data.Ca.durAve    = NaN * zeros(1, data.Ca.nChannels);
   data.Ca.IEIAve    = NaN * zeros(1, data.Ca.nChannels);
   data.Ca.nEvents   = NaN * zeros(1, data.Ca.nChannels);
@@ -213,11 +230,13 @@ if param.peakDetectCa
       for i = 1:length(data.Ca.evStart{ch})
         data.Ca.duration{ch}(i) = (timingWin(data.Ca.evEnd{ch}(i)) - timingWin(data.Ca.evStart{ch}(i)));
         data.Ca.amp{ch}(i)      = tSeriesWin(data.Ca.evPeak{ch}(i)) - data.Ca.baseMean(ch);
+        data.Ca.area{ch}(i)     = data.Ca.samplingInt * sum(sum(tSeriesWin(data.Ca.evStart{ch}(i) : data.Ca.evEnd{ch}(i))));
         if (i > 1); data.Ca.IEI{ch} = horzcat(data.Ca.IEI{ch}, (timingWin(data.Ca.evPeak{ch}(i)) - timingWin(data.Ca.evPeak{ch}(i-1))) / 1000); end
       end
       data.Ca.nEvents(ch)   = length(data.Ca.evStart{ch});
       data.Ca.frequency(ch) = length(data.Ca.evStart{ch}) / ((timingWin(length(timingWin)) - timingWin(1)) / 1000);
       data.Ca.ampAve(ch)    = mean(data.Ca.amp{ch});
+      data.Ca.areaAve(ch)   = mean(data.Ca.area{ch});      
       data.Ca.durAve(ch)    = mean(data.Ca.duration{ch});
       data.Ca.IEIAve(ch)    = mean(data.Ca.IEI{ch});
     end
@@ -754,32 +773,44 @@ data.param = orderfields(data.param);
 data.Ca    = orderfields(data.Ca);
 data.Ca.param = orderfields(data.Ca.param);
 
-%% Save file
+%% Save and Export Results
 if all(saveFile)
   fprintf(['saving file ' dataFileName '... ']);
   save(saveFile,'-struct','data');
   fprintf('done\n');
 end
 
-%% Export Calcium event file
+% Export Calcium event file
 if (all(expCaFile) && param.expCaEvOption)
   fprintf(['exporting Ca events (file ' dataFileName ')... ']);
   exportCaEvents(data, saveFile, expCaFile)
   fprintf('done\n');
 end
 
-%% Export SWR event file
+% Export SWR event file
 if (all(expSWRFile) && param.expSWREvOption)
   fprintf(['exporting SWR events (file ' dataFileName ')... ']);
   exportSWREvents(data, saveFile, expSWRFile)
   fprintf('done\n');
 end
 
-%% Export stim event file
+% Export stim event file
 if (all(expStimFile) && param.expStimEvOption)
   fprintf(['exporting stimulation events (file ' dataFileName ')... ']);
   exportStimEvents(data, saveFile, expStimFile)
   fprintf('done\n');
+end
+
+% Export average statistics
+if all(expAveFile) && param.expAveOption
+  fprintf(['calculating average statistics (file ' dataFileName ')... ']);
+  [aveStats, varNames] = calcAveStats(data, param);
+  data.LFP.expAveFile = expAveFile;
+  if (param.fileNum == 1); writetable(aveStats, expAveFile, 'Delimiter', ',', 'WriteVariableNames', true, 'WriteRowNames', true); end
+  fprintf('done\n');
+else
+  aveStats{1} = [];
+  varNames{1} = [];
 end
 
 end
