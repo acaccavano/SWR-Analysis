@@ -2,7 +2,7 @@ function hand = plotCaAnalysis(data, hand, param, dsPlot)
 %% hand = plotCaAnalysis(data, hand, param, dsPlot)
 %  Function to plot output of analyzeCaFile
 
-if (nargin < 4); dsPlot    = 1; end
+if (nargin < 4); dsPlot    = 4; end
 if (nargin < 3); param     = struct; end
 if (nargin < 2); hand      = struct; end
 if (nargin < 1); data      = struct; end
@@ -14,10 +14,10 @@ if ~isfield(param,'spkCaOption');    param.spkCaOption    =  0; end
 if ~isfield(param,'threshOption');   param.threshOption   =  1; end
 if ~isfield(param,'peakOption');     param.peakOption     =  0; end
 if ~isfield(param,'stimCaOption');   param.swrCaOption    =  0; end
-if ~isfield(param,'cellLimOption');  param.cellLimOption  =  0; end % Limits number of Ca cells plotted - useful for comparisons where equal number of traces preferable
-if ~isfield(param,'cellLim');        param.cellLim        = 80; end 
-if ~isfield(param,'cellTypeOption'); param.cellTypeOption =  1; end
-if ~isfield(param,'nCellTypes');     param.nCellTypes     =  2; end
+if ~isfield(param,'cellLimOption');  param.cellLimOption  =  1; end % Limits visual number of Ca cells plotted - useful for comparisons where equal number of traces preferable or for large number of cells
+if ~isfield(param,'cellLim');        param.cellLim        = 50; end 
+if ~isfield(param,'cellTypeOption'); param.cellTypeOption =  0; end
+if ~isfield(param,'nCellTypes');     param.nCellTypes     =  1; end
 if ~isfield(param,'cellTypeName');   param.cellTypeName{param.nCellTypes} = []; end
 if ~isfield(param,'alignEndOption'); param.alignEndOption =  0; end
 

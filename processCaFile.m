@@ -8,6 +8,8 @@ function [data, hand] = processCaFile(data, hand, param, saveFile, CaFile, timin
 %   hand       = handle structure to specify where figure should be drawn
 %   param      = structure containing all parameters including:
 %     param.fileNum              = 1 = Single Recording, 2 = Multiple/Batch analysis (disables plotting)
+%     param.CaFrameRateOption    = Option to use constant frame rate specified by param.CaFrameRate, otherwise import timing.csv file
+%     param.CaFrameRate          = Constant Frame rate in Hz of raw Calcium data, only used if param.CaFrameRateOption = true
 %     param.interpOption         = boolean flag to interpolate file (needed if comparing to LFP) (default = 1)
 %     param.samplingInt          = interpolated sampling interval (default = 0.5ms)
 %     param.baseCorrectMethod    = Method for baseline correction (0: none, 1: gassuian filter, 2: smoothed average (default))
@@ -34,6 +36,7 @@ function [data, hand] = processCaFile(data, hand, param, saveFile, CaFile, timin
 %     param.useSWRWindowOption   = option to use standard swrWindow for coincidence detection (default = 0)
 %     param.swrWindow            = +/- window around SWR peak events (default = 100 ms)
 %     param.expCaEvOption        = option to export csv table of Calcium events (default = 1)
+%     param.CaFreqOption         = option to consider the frequency of cells with no events as zero. Set to 1 if a cell having no events is meaningful, but set to 0 (and thus frequency->NaN) if chance of improper ROI. Only real impact is for calcAveStats (default = 1)
 %     param.expSWREvOption       = option to export csv table of SWR events (default = 1)
 %     param.spkCaOption          = option to perform coincidence detection for SWRs and Ca transients (default = 0, placeholder: code not written yet)
 %     param.stimCaOption         = option to perform coincidence detection for Stim and Ca transients (default = 0)
@@ -41,6 +44,8 @@ function [data, hand] = processCaFile(data, hand, param, saveFile, CaFile, timin
 %     param.stimCaLim2           = time after stim start to end stim window (default = 1000ms)
 %     param.expStimEvOption      = option to export csv table of stim events (default = 0)
 %     param.reAnalyzeOption      = option to re-analyze file (default = 0)
+%     param.expAveOption         = boolean flag to determine whether to export csv table of average statistics
+%     param.transposeOption      = boolean flag to transpose exported average stats from row to column format
 %   saveFile    = full path to matlab file to save (if not set, will prompt)
 %   CaFile      = full path to dFoF csv file exported from ImageJ (if not set, will prompt)
 %   timingFile  = full path to timing csv file previously setup (if not set, will prompt)
@@ -64,6 +69,8 @@ if isempty(data);  data     = struct; end
 
 % Set default parameters if not specified
 if ~isfield(param,'fileNum');              param.fileNum              = 1;    end
+if ~isfield(param,'CaFrameRateOption');    param.CaFrameRateOption    = 0;    end
+if ~isfield(param,'CaFrameRate');          param.CaFrameRate          = 1;    end
 if ~isfield(param,'baseCorrectMethod');    param.baseCorrectMethod    = 2;    end
 if ~isfield(param,'CaFiltLim1');           param.CaFiltLim1           = 0.03; end
 if ~isfield(param,'CaFiltLim2');           param.CaFiltLim2           = 4;    end
@@ -89,6 +96,7 @@ if ~isfield(param,'sdBaseFactor');         param.sdBaseFactor         = 0.75; en
 if ~isfield(param,'skipDetectLim');        param.skipDetectLim        = 1;    end
 if ~isfield(param,'consThreshOption');     param.consThreshOption     = 0;    end
 if ~isfield(param,'expCaEvOption');        param.expCaEvOption        = 1;    end
+if ~isfield(param,'CaFreqOption');         param.CaFreqOption         = 1;    end
 if ~isfield(param,'swrCaOption');          param.swrCaOption          = 1;    end
 if ~isfield(param,'useSWRDurationOption'); param.useSWRDurationOption = 1;    end
 if ~isfield(param,'useSWRWindowOption');   param.useSWRWindowOption   = 0;    end
@@ -100,6 +108,8 @@ if ~isfield(param,'stimCaLim1');           param.stimCaLim1           = 0;    en
 if ~isfield(param,'stimCaLim2');           param.stimCaLim2           = 1000; end
 if ~isfield(param,'expStimEvOption');      param.expStimEvOption      = 0;    end
 if ~isfield(param,'reAnalyzeOption');      param.reAnalyzeOption      = 0;    end
+if ~isfield(param,'expAveOption');         param.expAveOption         = 1;    end
+if ~isfield(param,'transposeOption');      param.transposeOption      = 0;    end  
 
 % Re-initialize path variables:
 parentPath   = [];
@@ -157,8 +167,8 @@ if isempty(CaFile) && ~param.reAnalyzeOption
   end
 end
 
-% If not supplied, prompt for timing file
-if isempty(timingFile) && ~param.reAnalyzeOption
+% If not supplied and necessary, prompt for timing file
+if isempty(timingFile) && ~param.reAnalyzeOption && ~param.CaFrameRateOption
   [fileName, filePath] = uigetfile('.csv', 'Select the corresponding timing.csv file', parentPath);
   timingFile = strcat(filePath,fileName);
   if ~all(timingFile); return; end
@@ -181,13 +191,22 @@ end
 %% Import data
 if ~param.reAnalyzeOption
   CaTable             = readtable(CaFile,'Delimiter',',','ReadRowNames',1);
-  timingTable         = readtable(timingFile,'ReadVariableNames',0);
   data.Ca.tSeries     = CaTable{:,:};
-  data.Ca.timing      = round(1000 * timingTable{:,:}); % Convert from s to ms
-  data.Ca.tSeriesR    = data.Ca.tSeries; % Static raw data variable that won't change with subsequent processing
-  data.Ca.timingR     = data.Ca.timing; % Static raw data variable that won't change with subsequent processing
+  [data.Ca.nSamplesR, data.Ca.nChannels] = size(data.Ca.tSeries);
+
+  % Calculate timing based on param.CaFrameRate (if selected), or import from csv file
+  if param.CaFrameRateOption
+    data.Ca.samplingInt = 1000 / param.CaFrameRate; % [ms]
+    data.Ca.timing = (0: data.Ca.samplingInt : (data.Ca.nSamplesR-1) * data.Ca.samplingInt)';
+  else
+    timingTable       = readtable(timingFile,'ReadVariableNames',0);
+    data.Ca.timing    = round(1000 * timingTable{:,:}); % Convert from s to ms
+  end
   data.Ca.samplingInt = data.Ca.timing(2) - data.Ca.timing(1);
-  data.Ca.nChannels   = size(data.Ca.tSeries, 2);
+  
+  % Assign static raw data variable that won't change with subsequent processing:
+  data.Ca.tSeriesR    = data.Ca.tSeries;
+  data.Ca.timingR     = data.Ca.timing;
   data.Ca.CaFile      = CaFile;
   data.Ca.timingFile  = timingFile;
   data.Ca.cellName{data.Ca.nChannels} = [];

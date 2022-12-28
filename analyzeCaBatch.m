@@ -6,6 +6,8 @@ function analyzeCaBatch(param, dataFolder, saveFolder, CaFolder, timingFile, exp
 %  Inputs: (all optional - will be prompted for or use defaults)
 %   param      = structure containing all parameters including:
 %     param.fileNum              = 1 = Single Recording, 2 = Multiple/Batch analysis (disables plotting)
+%     param.CaFrameRateOption    = Option to use constant frame rate specified by param.CaFrameRate, otherwise import timing.csv file
+%     param.CaFrameRate          = Constant Frame rate in Hz of raw Calcium data, only used if param.CaFrameRateOption = true
 %     param.interpOption         = boolean flag to interpolate file (needed if comparing to LFP) (default = 1)
 %     param.samplingInt          = interpolated sampling interval (default = 0.5ms)
 %     param.baseCorrectMethod    = Method for baseline correction (0: none, 1: gassuian filter, 2: smoothed average (default))
@@ -40,8 +42,8 @@ function analyzeCaBatch(param, dataFolder, saveFolder, CaFolder, timingFile, exp
 %     param.stimCaLim2           = time after stim start to end stim window (default = 1000ms)
 %     param.expStimEvOption      = option to export csv table of stim events (default = 0)
 %     param.reAnalyzeOption      = option to re-analyze file (default = 0)
-%     param.expAveOption     = boolean flag to determine whether to export csv table of average statistics
-%     param.transposeOption  = boolean flag to transpose exported average stats from row to column format
+%     param.expAveOption         = boolean flag to determine whether to export csv table of average statistics
+%     param.transposeOption      = boolean flag to transpose exported average stats from row to column format
 %   dataFolder    = full path to matlab folder to import (if not set, will prompt)
 %   saveFolder    = full path to matlab folder to save (can be same, if not set, will prompt)
 %   CaFolder      = full path to dFoF csv folder exported from ImageJ (if not set, will prompt)
@@ -67,6 +69,8 @@ if isempty(param); param      = struct; end
 
 % Set default parameters if not specified
 if ~isfield(param,'fileNum');              param.fileNum              = 2;    end
+if ~isfield(param,'CaFrameRateOption');    param.CaFrameRateOption    = 0;    end
+if ~isfield(param,'CaFrameRate');          param.CaFrameRate          = 1;    end
 if ~isfield(param,'baseCorrectMethod');    param.baseCorrectMethod    = 2;    end
 if ~isfield(param,'CaFiltLim1');           param.CaFiltLim1           = 0.03; end
 if ~isfield(param,'CaFiltLim2');           param.CaFiltLim2           = 4;    end
@@ -150,8 +154,8 @@ if isempty(CaFolder) && ~param.reAnalyzeOption
   [parentPath, CaDataFolder, ~] = parsePath(CaFolder);
 end
 
-% Prompt for timing file
-if isempty(timingFile) && ~param.reAnalyzeOption
+% Prompt for timing file, if necessary
+if isempty(timingFile) && ~param.reAnalyzeOption && ~param.CaFrameRateOption
   [fileName, filePath] = uigetfile('.csv', 'Select the corresponding timing.csv file', parentPath);
   timingFile = strcat(filePath,fileName);
   if ~all(timingFile); return; end
@@ -310,7 +314,7 @@ peakThresh{nFiles} = [];
 
 % Only calculate if enabled (otherwise thresholds must have been previously calculated)
 if param.baseDetectMethod > 0
-  
+
   % If consistent threshold must open each file first then calculate
   if param.consThreshOption
     tSeries{nFiles}   = [];
@@ -323,7 +327,7 @@ if param.baseDetectMethod > 0
         tSeries{i} = trimCaFile(data.Ca.tSeries, data.Ca.samplingInt, [], [], param);
       end
     end
-    [baseMn, baseSd, baseTh, peakTh] = calcCaThresh(tSeries, param);
+    [baseMn, baseSd, baseTh, peakTh, ~] = calcCaThresh(tSeries, [], param);
     baseMean(:)   = {baseMn};
     baseSD(:)     = {baseSd};
     baseThresh(:) = {baseTh};
@@ -339,7 +343,7 @@ if param.baseDetectMethod > 0
       else
         tSeries = trimCaFile(data.Ca.tSeries, data.Ca.samplingInt, [], [], param);
       end
-      [baseMean{i}, baseSD{i}, baseThresh{i}, peakThresh{i}] = calcCaThresh(tSeries, param);
+      [baseMean{i}, baseSD{i}, baseThresh{i}, peakThresh{i}, ~] = calcCaThresh(tSeries, [], param);
     end
   end
 end

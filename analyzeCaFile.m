@@ -8,6 +8,8 @@ function [data, hand, aveStats, varNames] = analyzeCaFile(data, hand, param, sav
 %   hand       = handle structure to specify where figure should be drawn
 %   param      = structure containing all parameters including:
 %     param.fileNum              = 1 = Single Recording, 2 = Multiple/Batch analysis (disables plotting)
+%     param.CaFrameRateOption    = Option to use constant frame rate specified by param.CaFrameRate, otherwise import timing.csv file
+%     param.CaFrameRate          = Constant Frame rate in Hz of raw Calcium data, only used if param.CaFrameRateOption = true
 %     param.interpOption         = boolean flag to interpolate file (needed if comparing to LFP) (default = 1)
 %     param.samplingInt          = interpolated sampling interval (default = 0.5ms)
 %     param.baseCorrectMethod    = Method for baseline correction (0: none, 1: gassuian filter, 2: smoothed average (default))
@@ -42,8 +44,8 @@ function [data, hand, aveStats, varNames] = analyzeCaFile(data, hand, param, sav
 %     param.stimCaLim2           = time after stim start to end stim window (default = 1000ms)
 %     param.expStimEvOption      = option to export csv table of stim events (default = 0)
 %     param.reAnalyzeOption      = option to re-analyze file (default = 0)
-%     param.expAveOption     = boolean flag to determine whether to export csv table of average statistics
-%     param.transposeOption  = boolean flag to transpose exported average stats from row to column format
+%     param.expAveOption         = boolean flag to determine whether to export csv table of average statistics
+%     param.transposeOption      = boolean flag to transpose exported average stats from row to column format
 %   saveFile    = full path to matlab file to save (if not set, will prompt)
 %   expCaFile   = full path to calcium event csv file to export (if not set, will prompt)
 %   expSWRFile  = full path to SWR event csv file to export (if not set, will prompt)
@@ -55,6 +57,7 @@ function [data, hand, aveStats, varNames] = analyzeCaFile(data, hand, param, sav
 %   hand       = handle structure for figure
 
 %% Handle input arguments - if not entered
+if (nargin < 8); expAveFile  = []; end
 if (nargin < 7); expStimFile = []; end
 if (nargin < 6); expSWRFile  = []; end
 if (nargin < 5); expCaFile   = []; end
@@ -70,6 +73,8 @@ if isempty(data);  data     = struct; end
 
 % Set default parameters if not specified
 if ~isfield(param,'fileNum');              param.fileNum              = 1;    end
+if ~isfield(param,'CaFrameRateOption');    param.CaFrameRateOption    = 0;    end
+if ~isfield(param,'CaFrameRate');          param.CaFrameRate          = 1;    end
 if ~isfield(param,'baseCorrectMethod');    param.baseCorrectMethod    = 2;    end
 if ~isfield(param,'CaFiltLim1');           param.CaFiltLim1           = 0.03; end
 if ~isfield(param,'CaFiltLim2');           param.CaFiltLim2           = 4;    end
@@ -230,6 +235,7 @@ if param.peakDetectCa
     warning ('off','all');
     [data.Ca.evStatus(:,ch), data.Ca.evStart{ch}, data.Ca.evPeak{ch}, data.Ca.evEnd{ch}] = ...
       peakFindUnique(tSeriesWin, timingWin, data.Ca.peakThresh(ch), data.Ca.baseThresh(ch), 1);
+    data.Ca.evStatusSum = sum(data.Ca.evStatus,2);
     warning ('on','all');
     
     if ~isnan(data.Ca.evStart{ch})

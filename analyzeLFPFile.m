@@ -649,7 +649,7 @@ if param.swrOption
       
       % Estimate baseline based on options selected, either taking param.baseQuant quantile of signal
       % (unreliable for active/quiet recordings, or through an iterative gaussian fitting process (more robust)
-      [mn, sd] = calcBaseline(data.SW.RMS, param);
+      [mn, sd, hand] = calcBaseline(data.SW.RMS, hand, param);
       data.SW.peakThresh = mn + sd * param.sdMultSW;
       data.SW.baseThresh = mn + param.sdBaseFactorSW * sd * param.sdMultSW;
       [data.SW.evStatus, data.SW.evStart, data.SW.evPeak, data.SW.evEnd] = peakFindUnique(data.SW.RMS, data.LFP.timing, data.SW.peakThresh, data.SW.baseThresh, 1, param.rmsMinEvDiff, param.rmsMinEvDur);
@@ -683,7 +683,7 @@ if param.swrOption
       
       % Estimate baseline based on options selected, either taking param.baseQuant quantile of signal
       % (unreliable for active/quiet recordings, or through an iterative gaussian fitting process
-      [mn, sd] = calcBaseline(data.R.RMS, param);
+      [mn, sd, hand] = calcBaseline(data.R.RMS, hand, param);
       data.R.peakThresh = mn + sd * param.sdMultR;
       data.R.baseThresh = mn + param.sdBaseFactorR * sd * param.sdMultR;
       [data.R.evStatus, data.R.evStart, data.R.evPeak, data.R.evEnd] = peakFindUnique(data.R.RMS, data.LFP.timing, data.R.peakThresh, data.R.baseThresh, 1, param.rmsMinEvDiff, param.rmsMinEvDur);
