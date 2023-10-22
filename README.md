@@ -22,4 +22,4 @@ SWR RMS-based detection modeled after Siapas and Wilson 1998; Csicsvari et al. 1
 Spike-phase coupling modeled after Varga et al. 2012
 LFP-Spike phase-amplitude coupling adapted from Canolty et al. 2006 and Onslow et al. 2011
 
-Please cite Caccavano et al. 2020 and above acknowledgements (if using those specific functions)
+Please cite Caccavano et al. J. Neurosci. 2020 and above acknowledgements (if using those specific functions)
